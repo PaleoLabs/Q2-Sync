@@ -33,28 +33,24 @@ The current guess (`PlaylistFormat.documentedQ2Format`):
 | Header lines | `#EXTM3U`, and `#EXTINF:<seconds>,<Artist> - <Title>` per song |
 | Paths | `/mnt/mmc/Music/<Artist>/<Album>/<file>` |
 
+Q2 Pod's Playlists page offers no Export in practice (checked 2026-11-21),
+so the format is checked by importing Q2 Sync's playlists directly. A first
+import on 2026-11-21 started creating them (it was interrupted).
+
 Steps:
 
-1. On the Q2, make a playlist with 2–3 songs, including one with an accented
-   or non-English name. Export it (Q2 Pod: Library → Playlists → Select
-   Playlists… → Export; stock: the Playlists menu).
-2. Connect the Q2 to the Mac (USB Storage) and look in `_explaylist_data/`.
-3. Inspect the exported file without changing it:
-   ```bash
-   cd "/Volumes/<card>/_explaylist_data"
-   file "<playlist>.m3u"
-   xxd "<playlist>.m3u" | head -20
-   ```
-4. Compare it with the table above: encoding (UTF-8, GBK, UTF-16?), BOM,
-   line endings (`0d 0a` = CRLF, `0a` = LF), path style (`/mnt/mmc/...` or
-   `A:\...`), header lines.
-5. Then test Q2 Sync's playlists: sync one playlist, and on the Q2 choose
-   Library → Playlists → Import.
-   - [ ] It imports, with every song playable.
-   - [ ] Accented or non-English song names work.
-   - [ ] Re-importing replaces the playlist instead of duplicating it.
-6. If anything differs, change `PlaylistFormat` for that firmware and set
-   `isVerifiedOnDevice: true`.
+1. Sync, eject, and on the Q2 choose **Library → Playlists → Import**. Wait:
+   it shows no progress and large playlists take minutes.
+2. Check:
+   - [ ] Every playlist imports.
+   - [ ] A few playlists have the same number of songs as in Music
+         (cloud-only songs are left out, so compare with downloaded songs).
+   - [ ] Songs play, and the order matches Music.
+   - [ ] Songs with accented or non-English names are there and play.
+   - [ ] Re-importing replaces a playlist instead of duplicating it.
+3. If all pass, set `isVerifiedOnDevice: true` in `PlaylistFormat`. If songs
+   are missing, keep a copy of one `.m3u` and the matching song paths, and
+   compare encoding, line endings and path style with the table above.
 
 ## 3. Menu wording
 

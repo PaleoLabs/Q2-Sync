@@ -193,6 +193,17 @@ Importing a playlist with the same name replaces the old one. The Q2 keeps up
 to 100 playlists. If you unticked a playlist, delete it on the Q2 too: removing
 its file from the card doesn't remove a playlist you already imported.
 
+**Importing takes a while.** The Q2 reads every song in every playlist and
+shows no progress while it does, so big playlists can look frozen for
+several minutes. Leave it until it finishes.
+
+**Which playlists go on the card:** your own regular, smart and Genius
+playlists, and Apple's music smart playlists (My Top Rated, Recently Played,
+Recently Added, Top 25 Most Played…). Built-in lists that aren't songs
+(Purchased, Movies, Podcasts, Voice Memos) and folders themselves are left
+out. If two playlists share a name and one is in a folder, it's named after
+the folder on the Q2, e.g. **Decades - 1980's Music**.
+
 Q2 Sync shows these steps after each sync, for your Q2's firmware.
 
 ---

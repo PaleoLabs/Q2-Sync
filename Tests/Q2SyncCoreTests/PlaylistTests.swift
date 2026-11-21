@@ -207,3 +207,40 @@ struct PlaylistSyncTests {
         #expect(second.isEmpty)
     }
 }
+
+@Suite("Playlist names on the card")
+struct PlaylistNamingTests {
+
+    func playlist(_ id: String, _ name: String, kind: PlaylistKind = .regular, in parent: String? = nil) -> Playlist {
+        Playlist(id: id, name: name, kind: kind, parentID: parent, trackIDs: [])
+    }
+
+    @Test("Same-named playlists in a folder are named after it")
+    func folderPrefix() {
+        let folders = [playlist("F", "Decades", kind: .folder)]
+        let named = PlaylistNaming.disambiguate([
+            playlist("A", "1980's Music", kind: .smart, in: "F"),
+            playlist("B", "1980's Music"),
+            playlist("C", "Workout", in: "F"),          // unique: unchanged
+            playlist("D", "100 Most Played", kind: .smart),
+            playlist("E", "100 Most Played"),           // both top level: unchanged
+        ], folders: folders)
+        #expect(named.map(\.name) == ["Decades - 1980's Music", "1980's Music", "Workout",
+                                      "100 Most Played", "100 Most Played"])
+    }
+
+    @Test("A renamed playlist's old (2) file is replaced by the new name")
+    func replacesOldFile() {
+        var manifest = SyncManifest()
+        manifest.playlistFiles = ["A": "_explaylist_data/1980's Music (2).m3u", "B": "_explaylist_data/1980's Music.m3u"]
+        let files = Dictionary(manifest.playlistFiles.values.map { (CardLayout.caseKey($0), CardFile(path: $0, size: 100)) },
+                               uniquingKeysWith: { a, _ in a })
+        let playlists = PlaylistNaming.disambiguate(
+            [playlist("A", "1980's Music", kind: .smart, in: "F"), playlist("B", "1980's Music")],
+            folders: [playlist("F", "Decades", kind: .folder)])
+        let plan = PlaylistWriter.plan(playlists: playlists, manifest: manifest, folderFiles: files, profile: .q2Pod)
+        #expect(Set(plan.writes.map(\.path)) == ["_explaylist_data/Decades - 1980's Music.m3u",
+                                                  "_explaylist_data/1980's Music.m3u"])
+        #expect(plan.removals.map(\.path) == ["_explaylist_data/1980's Music (2).m3u"])
+    }
+}

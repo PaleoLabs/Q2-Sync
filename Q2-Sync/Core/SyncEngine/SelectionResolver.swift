@@ -102,6 +102,7 @@ enum SelectionResolver {
             }
             playlists.sort { SortKey.compare($0.name, $1.name) }
         }
+        playlists = PlaylistNaming.disambiguate(playlists, folders: snapshot.playlists.filter { $0.kind == .folder })
 
         // Step 2: split into copyable and skipped, in a stable order.
         let selectedTracks = snapshot.tracks
@@ -128,5 +129,34 @@ enum SelectionResolver {
         if a.trackNumber != b.trackNumber { return a.trackNumber < b.trackNumber }
         if a.title != b.title { return a.title.localizedStandardCompare(b.title) == .orderedAscending }
         return a.id < b.id
+    }
+}
+
+/// Gives playlists that share a name a clearer name for the card.
+///
+/// Music allows several playlists with the same name (say "1980's Music" in
+/// a "Decades" folder and another at the top level). On the Q2 the name is
+/// all you see, and the card would get "1980's Music (2)". Instead, each
+/// same-named playlist inside a folder is named after it:
+/// "Decades - 1980's Music". Playlists still sharing a name after that
+/// (both at the top level) keep it, and `PlaylistWriter` numbers them.
+enum PlaylistNaming {
+
+    /// - Parameters:
+    ///   - playlists: The selected playlists (no folders).
+    ///   - folders: The library's playlist folders, for their names.
+    /// - Returns: The playlists, with clashing names in folders prefixed.
+    static func disambiguate(_ playlists: [Playlist], folders: [Playlist]) -> [Playlist] {
+        let folderNames = Dictionary(folders.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        var counts: [String: Int] = [:]
+        for playlist in playlists { counts[playlist.name.lowercased(), default: 0] += 1 }
+        return playlists.map { playlist in
+            guard counts[playlist.name.lowercased(), default: 0] > 1,
+                  let parent = playlist.parentID, let folder = folderNames[parent], !folder.isEmpty else {
+                return playlist
+            }
+            return Playlist(id: playlist.id, name: "\(folder) - \(playlist.name)", kind: playlist.kind,
+                            parentID: playlist.parentID, trackIDs: playlist.trackIDs)
+        }
     }
 }
