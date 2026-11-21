@@ -175,6 +175,30 @@ struct DeviceSettingsView: View {
                 Text("Puts a cover.jpg in each album folder, made from the album's artwork in Apple Music, so the Q2 shows covers even for songs without embedded artwork. Turning it on adds covers at your next sync; turning it off removes the covers Q2 Sync added. Artwork is only read from your library, never changed, and your own cover.jpg or folder.jpg files are never touched.")
             }
 
+            Section {
+                Toggle("Only put changed playlists up for import", isOn: Binding(
+                    get: { connected.device.effectiveImportOnlyChangedPlaylists },
+                    set: { devices.setImportOnlyChangedPlaylists($0) }))
+                HStack {
+                    if connected.device.reimportAllPlaylists == true {
+                        Label("Every playlist goes up for import at your next sync.", systemImage: "clock")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Cancel") { devices.setReimportAllPlaylists(false) }
+                    } else {
+                        Text("After a reset or a new card, or if a playlist on the Q2 looks out of date.")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Put All Up for Import") { devices.setReimportAllPlaylists(true) }
+                    }
+                }
+                .disabled(!connected.device.effectiveImportOnlyChangedPlaylists)
+            } header: {
+                Text("Playlists")
+            } footer: {
+                Text("The Q2's Import reads every playlist in the card's playlist folder, which takes minutes. With this on, each sync leaves there only playlists that are new or changed, and takes out ones you imported after the previous sync, so Import only does what's needed. Playlists already on the Q2 stay there.")
+            }
+
             PodDataSection(model: autoSync.podData, connected: connected,
                            isBlocked: autoSync.sync.phase != .idle || autoSync.verifier.isBusy)
 

@@ -53,6 +53,11 @@ struct SyncManifest: Codable, Sendable, Equatable {
     /// or removes its own playlists.
     var playlistFiles: [PersistentID: CardPath] = [:]
 
+    /// SHA-256 of each playlist file as it was last put up for import, by
+    /// playlist ID. Lets a sync put only changed playlists in the import
+    /// folder. Optional so older manifests still load.
+    var playlistDigests: [PersistentID: String]?
+
     /// Album covers Q2 Sync wrote, by card path (`…/cover.jpg`). Optional
     /// so manifests from before covers existed still load.
     var albumCovers: [CardPath: CoverEntry]?

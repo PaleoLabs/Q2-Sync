@@ -64,6 +64,10 @@ struct SyncReport: Sendable, Equatable {
     var playlistsWritten = 0
     var playlistsUnchanged = 0
     var playlistsRemoved = 0
+    /// Playlists in the import folder for the Q2 to import after this sync.
+    var playlistsToImport = 0
+    /// Unchanged playlists taken out of the import folder (already imported).
+    var playlistsTakenOut = 0
     var coversWritten = 0
     var coversRemoved = 0
     /// Songs left out of playlists because they aren't on the card.
@@ -149,7 +153,8 @@ struct SyncExecutor: Sendable {
         let playlistPlan = plan.playlistPlan
         var progress = SyncProgress(
             totalOperations: cardOnlyCopies.count + cardOnlyRemovals.count + removals.count + plan.adoptions.count + plan.moves.count + plan.copies.count
-                + playlistPlan.writes.count + playlistPlan.removals.count + plan.coverWrites.count
+                + playlistPlan.writes.count + playlistPlan.leavingImport.count + playlistPlan.removals.count
+                + plan.coverWrites.count
                 + plan.coverRemovals.count,
             totalBytes: plan.bytesToCopy)
         var lastReport = clock.now
@@ -360,7 +365,7 @@ struct SyncExecutor: Sendable {
                 }
                 try finishOperation()
             }
-            for planned in playlistPlan.writes {
+            for planned in playlistPlan.writes + playlistPlan.leavingImport {
                 try Task.checkCancellation()
                 progress.currentItem = "Writing playlist “\(planned.playlist.name)”"
                 publish(force: true)
@@ -368,14 +373,34 @@ struct SyncExecutor: Sendable {
                                                      tracks: plan.tracksByID, profile: fileSystem.pathGuard.profile)
                 report.playlistSongsMissing += rendered.missingCount
                 do {
-                    // Skip the write if the file already has exactly these bytes.
                     let existing = try? Data(contentsOf: fileSystem.urlForReading(planned.path))
-                    if existing == rendered.data {
+                    let id = planned.playlist.id
+                    let upForImport = !playlistPlan.onlyChangedForImport
+                        || PlaylistImportRule.needsImport(rendered.data, previousDigest: manifest.playlistDigests?[id],
+                                                          fileOnCard: existing, reimportAll: playlistPlan.reimportAll)
+                    if manifest.playlistDigests == nil { manifest.playlistDigests = [:] }
+                    if !upForImport {
+                        // Unchanged and imported after an earlier sync: take
+                        // it out so the Q2's Import doesn't read it again.
+                        if existing != nil, manifest.playlistFiles[id] == planned.path {
+                            try fileSystem.removeFile(planned.path)
+                            report.playlistsTakenOut += 1
+                            log.write("TAKE OUT OF IMPORT  \(planned.path)  (unchanged, already imported)")
+                        } else {
+                            report.playlistsUnchanged += 1
+                        }
+                        manifest.playlistDigests?[id] = PlaylistImportRule.digest(rendered.data)
+                    } else if existing == rendered.data {
+                        // Skip the write: the file already has exactly these bytes.
                         report.playlistsUnchanged += 1
+                        if playlistPlan.onlyChangedForImport { report.playlistsToImport += 1 }
+                        manifest.playlistDigests?[id] = PlaylistImportRule.digest(rendered.data)
                     } else {
                         try fileSystem.writeAtomically(rendered.data, to: planned.path)
                         fileSystem.removeAppleDoubleCompanion(of: planned.path)
                         report.playlistsWritten += 1
+                        report.playlistsToImport += 1
+                        manifest.playlistDigests?[id] = PlaylistImportRule.digest(rendered.data)
                         log.write("PLAYLIST  \(planned.path)  (\(rendered.songCount) songs"
                             + (rendered.missingCount > 0 ? ", \(rendered.missingCount) not on card)" : ")"))
                     }

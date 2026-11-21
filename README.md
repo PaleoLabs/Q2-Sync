@@ -51,6 +51,8 @@ date, and writes your playlists in a format the Q2 can import.
   Apple Music's artwork, so the Q2 shows covers even for songs without
   embedded art. Off by default; turning it off later removes them again.
   Your own cover files are never touched.
+- **Quick playlist imports:** only new or changed playlists are left for
+  the Q2's Import, so it doesn't re-read every playlist each time.
 - **Time remaining** while syncing.
 - **Verify Card:** compares every song on the card with your Mac's copy,
   byte for byte, and copies damaged or missing ones again.

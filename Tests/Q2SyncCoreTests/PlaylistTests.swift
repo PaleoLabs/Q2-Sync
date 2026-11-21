@@ -244,3 +244,124 @@ struct PlaylistNamingTests {
         #expect(plan.removals.map(\.path) == ["_explaylist_data/1980's Music (2).m3u"])
     }
 }
+
+@Suite("Only changed playlists up for import")
+struct PlaylistImportTests {
+
+    /// A card with two songs synced, and a helper that syncs playlists.
+    struct Fixture {
+        let card: TestCard
+        let mac: URL
+        let logs: URL
+        let tracks: [Track]
+
+        func cleanUp() {
+            card.cleanUp()
+            try? FileManager.default.removeItem(at: mac)
+            try? FileManager.default.removeItem(at: logs)
+        }
+
+        func sync(_ playlists: [Playlist], onlyChanged: Bool = true, reimportAll: Bool = false) async throws
+            -> (SyncPlan, SyncReport) {
+            let manifest = try SyncManifest.load(from: card.fileSystem)
+            let selection = ResolvedSelection(tracksToSync: tracks, skippedTracks: [], playlists: playlists,
+                                              missingSelectionCount: 0)
+            var plan = SyncPlanner.plan(selection: selection, allSelectedIDs: Set(tracks.map(\.id)), manifest: manifest,
+                                        cardFiles: CardScanner.scan(folder: "Music", on: card.fileSystem),
+                                        playlistFolderFiles: CardScanner.scan(folder: "_explaylist_data", on: card.fileSystem),
+                                        layout: CardLayout(profile: .q2Pod))
+            plan.playlistPlan.onlyChangedForImport = onlyChanged
+            plan.playlistPlan.reimportAll = reimportAll
+            PlaylistWriter.dropUnchangedWrites(in: &plan, manifest: manifest, profile: .q2Pod) { path in
+                try? Data(contentsOf: card.fileSystem.urlForReading(path))
+            }
+            let report = await SyncExecutor(fileSystem: card.fileSystem, deviceName: "T", logsDirectory: logs)
+                .run(plan: plan, manifest: manifest, options: SyncOptions()) { _ in }
+            return (plan, report)
+        }
+
+        func inImportFolder() -> Set<String> {
+            let folder = card.root.appending(path: "_explaylist_data")
+            return Set(((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).filter { $0.hasSuffix(".m3u") })
+        }
+    }
+
+    func makeFixture() throws -> Fixture {
+        let card = try TestCard(), mac = try makeTempFolder(), logs = try makeTempFolder()
+        var tracks: [Track] = []
+        for (index, id) in ["A", "B"].enumerated() {
+            let url = mac.appending(path: "\(id).mp3")
+            try Data(repeating: UInt8(index + 1), count: 1_000 + index).write(to: url)
+            tracks.append(makeCopyableTrack(id: id, title: "Song \(id)", number: index + 1,
+                                            size: UInt64(1_000 + index), fileURL: url))
+        }
+        return Fixture(card: card, mac: mac, logs: logs, tracks: tracks)
+    }
+
+    func playlist(_ id: String, _ name: String, _ songs: [PersistentID]) -> Playlist {
+        Playlist(id: id, name: name, kind: .regular, parentID: nil, trackIDs: songs)
+    }
+
+    @Test("Only new or changed playlists stay in the import folder")
+    func cycle() async throws {
+        let f = try makeFixture(); defer { f.cleanUp() }
+        let one = playlist("P1", "One", ["A"]), two = playlist("P2", "Two", ["B"])
+
+        // First sync: both are new, both up for import.
+        var (plan, report) = try await f.sync([one, two])
+        #expect(report.succeeded && report.playlistsToImport == 2)
+        #expect(f.inImportFolder() == ["One.m3u", "Two.m3u"])
+
+        // Next sync, nothing changed: both were imported, so they're taken out.
+        (plan, report) = try await f.sync([one, two])
+        #expect(plan.playlistPlan.leavingImport.count == 2 && plan.playlistPlan.writes.isEmpty)
+        #expect(report.playlistsTakenOut == 2 && report.playlistsToImport == 0)
+        #expect(f.inImportFolder().isEmpty)
+
+        // And then there's nothing to do.
+        (plan, _) = try await f.sync([one, two])
+        #expect(plan.isEmpty)
+
+        // One playlist changes: only it goes up.
+        let changed = playlist("P1", "One", ["A", "B"])
+        (plan, report) = try await f.sync([changed, two])
+        #expect(plan.playlistPlan.writes.map(\.playlist.id) == ["P1"])
+        #expect(report.playlistsToImport == 1 && f.inImportFolder() == ["One.m3u"])
+
+        // A full re-import puts everything up.
+        (_, report) = try await f.sync([changed, two], reimportAll: true)
+        #expect(f.inImportFolder() == ["One.m3u", "Two.m3u"] && report.playlistsToImport == 2)
+
+        // Turned off: every playlist is kept in the folder.
+        (_, _) = try await f.sync([changed, two])
+        #expect(f.inImportFolder().isEmpty)
+        (_, report) = try await f.sync([changed, two], onlyChanged: false)
+        #expect(f.inImportFolder() == ["One.m3u", "Two.m3u"])
+    }
+
+    @Test("Upgrading: identical files already on the card count as imported")
+    func upgrade() async throws {
+        let f = try makeFixture(); defer { f.cleanUp() }
+        let one = playlist("P1", "One", ["A"])
+        // A sync from before this existed: files written, no fingerprints.
+        _ = try await f.sync([one], onlyChanged: false)
+        var manifest = try SyncManifest.load(from: f.card.fileSystem)
+        manifest.playlistDigests = nil
+        try manifest.save(to: f.card.fileSystem)
+
+        let (plan, report) = try await f.sync([one])
+        #expect(plan.playlistPlan.leavingImport.count == 1)
+        #expect(report.playlistsTakenOut == 1 && f.inImportFolder().isEmpty)
+    }
+
+    @Test("The rule itself")
+    func rule() {
+        let data = Data("#EXTM3U\r\n".utf8)
+        let digest = PlaylistImportRule.digest(data)
+        #expect(!PlaylistImportRule.needsImport(data, previousDigest: digest, fileOnCard: nil, reimportAll: false))
+        #expect(PlaylistImportRule.needsImport(data, previousDigest: "other", fileOnCard: data, reimportAll: false))
+        #expect(PlaylistImportRule.needsImport(data, previousDigest: digest, fileOnCard: nil, reimportAll: true))
+        #expect(!PlaylistImportRule.needsImport(data, previousDigest: nil, fileOnCard: data, reimportAll: false))
+        #expect(PlaylistImportRule.needsImport(data, previousDigest: nil, fileOnCard: nil, reimportAll: false))
+    }
+}

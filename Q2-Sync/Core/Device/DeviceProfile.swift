@@ -96,6 +96,15 @@ struct PlaylistFormat: Hashable, Sendable {
         includesByteOrderMark: false,
         isVerifiedOnDevice: false
     )
+
+    /// The same format, confirmed on a Q2 running Q2 Pod 1.8.9 (2026-11-21):
+    /// 32 playlists, including ones with thousands of songs, imported with
+    /// every song in place.
+    static let verifiedQ2PodFormat: PlaylistFormat = {
+        var format = documentedQ2Format
+        format.isVerifiedOnDevice = true
+        return format
+    }()
 }
 
 /// Firmware-specific rules and text for one kind of Q2.
@@ -187,7 +196,7 @@ extension DeviceProfile {
         musicFolderName: "Music",
         appStateFolderName: ".q2sync",
         playlistFolderName: "_explaylist_data",
-        playlistFormat: .documentedQ2Format,
+        playlistFormat: .verifiedQ2PodFormat,
         maximumPlaylists: 100,
         maximumPlaylistNameBytes: 63,
         reservedItems: ReservedItemRules(

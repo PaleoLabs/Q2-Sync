@@ -197,6 +197,15 @@ its file from the card doesn't remove a playlist you already imported.
 shows no progress while it does, so big playlists can look frozen for
 several minutes. Leave it until it finishes.
 
+**Only changed playlists (on by default):** so you don't wait for every
+playlist each time, each sync leaves in the card's playlist folder only the
+playlists that are new or changed, and takes out the ones you imported after
+the previous sync. Playlists already on the Q2 stay there. The sync result
+tells you how many are ready to import. If you skipped an import, reset the
+Q2 or use a new card, click **Put All Up for Import** on your Q2's
+**Settings** tab (under **Playlists**) before syncing. Turn the setting off
+to keep every playlist in the folder.
+
 **Which playlists go on the card:** your own regular, smart and Genius
 playlists, and Apple's music smart playlists (My Top Rated, Recently Played,
 Recently Added, Top 25 Most Played…). Built-in lists that aren't songs

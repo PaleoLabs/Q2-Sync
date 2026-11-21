@@ -33,24 +33,18 @@ The current guess (`PlaylistFormat.documentedQ2Format`):
 | Header lines | `#EXTM3U`, and `#EXTINF:<seconds>,<Artist> - <Title>` per song |
 | Paths | `/mnt/mmc/Music/<Artist>/<Album>/<file>` |
 
-Q2 Pod's Playlists page offers no Export in practice (checked 2026-11-21),
-so the format is checked by importing Q2 Sync's playlists directly. A first
-import on 2026-11-21 started creating them (it was interrupted).
+**Confirmed on Q2 Pod 1.8.9 (2026-11-21):** all 32 of Q2 Sync's playlists,
+some with thousands of songs, imported with no problems.
 
-Steps:
+What the Q2 itself writes when it exports a playlist (for comparison): UTF-8,
+CRLF, no `#EXTM3U` or `#EXTINF` lines, and Windows-style paths such as
+`A:\Music\Artist\Album\01 Song.mp3`. Both styles import. Q2 Sync keeps
+its own style (with song info), by choice. A playlist exported on the Q2
+landed at the card root (`/test.m3u`); during the same session some of Q2
+Sync's files in `_explaylist_data` were also rewritten in the Q2's style
+(the next sync rewrites them).
 
-1. Sync, eject, and on the Q2 choose **Library → Playlists → Import**. Wait:
-   it shows no progress and large playlists take minutes.
-2. Check:
-   - [ ] Every playlist imports.
-   - [ ] A few playlists have the same number of songs as in Music
-         (cloud-only songs are left out, so compare with downloaded songs).
-   - [ ] Songs play, and the order matches Music.
-   - [ ] Songs with accented or non-English names are there and play.
-   - [ ] Re-importing replaces a playlist instead of duplicating it.
-3. If all pass, set `isVerifiedOnDevice: true` in `PlaylistFormat`. If songs
-   are missing, keep a copy of one `.m3u` and the matching song paths, and
-   compare encoding, line endings and path style with the table above.
+- [ ] Stock firmware: Q2 Sync's playlists import the same way.
 
 ## 3. Menu wording
 

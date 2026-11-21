@@ -134,7 +134,8 @@ struct SyncPlan: Sendable {
     /// `true` if there's nothing at all to do.
     var isEmpty: Bool {
         copies.isEmpty && moves.isEmpty && removals.isEmpty && adoptions.isEmpty && forgottenEntries.isEmpty
-            && playlistPlan.writes.isEmpty && playlistPlan.removals.isEmpty && coverWrites.isEmpty
+            && playlistPlan.writes.isEmpty && playlistPlan.removals.isEmpty && playlistPlan.leavingImport.isEmpty
+            && coverWrites.isEmpty
             && coverRemovals.isEmpty
     }
 }

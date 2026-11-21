@@ -32,6 +32,7 @@
 //  ours a " (2)" name instead.
 //
 
+import CryptoKit
 import Foundation
 
 /// A playlist file to write.
@@ -62,6 +63,46 @@ struct PlaylistPlan: Sendable {
     var overLimit: [Playlist] = []
     /// `.m3u` files in the playlist folder that Q2 Sync didn't write.
     var otherPlaylistFiles = 0
+    /// Keep only new or changed playlists in the import folder; take out
+    /// ones already imported (see `PlaylistImportRule`).
+    var onlyChangedForImport = false
+    /// Put every playlist up for import this time (a full re-import).
+    var reimportAll = false
+    /// Unchanged playlists whose file is still in the import folder from an
+    /// earlier sync, to be taken out (only with `onlyChangedForImport`).
+    var leavingImport: [PlannedPlaylist] = []
+}
+
+/// Which playlists go in the import folder.
+///
+/// The Q2's Import reads EVERY `.m3u` in `_explaylist_data` and looks up
+/// every song in each, which takes minutes for a large library. Removing a
+/// file there doesn't remove a playlist the Q2 already imported. So, with
+/// "only changed playlists" on, a sync leaves in the folder only playlists
+/// whose contents changed since they were last put up for import (by
+/// SHA-256, `SyncManifest.playlistDigests`), and takes out unchanged ones
+/// left from the sync before, assuming they were imported after it.
+enum PlaylistImportRule {
+
+    /// The playlist file's fingerprint.
+    static func digest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// `true` if a playlist should be (re)put up for import.
+    ///
+    /// - Parameters:
+    ///   - data: The playlist's file contents now.
+    ///   - previousDigest: Its fingerprint when last put up, if recorded.
+    ///   - fileOnCard: The file in the import folder now, if any.
+    ///   - reimportAll: Put everything up regardless.
+    static func needsImport(_ data: Data, previousDigest: String?, fileOnCard: Data?, reimportAll: Bool) -> Bool {
+        if reimportAll { return true }
+        if let previousDigest { return previousDigest != digest(data) }
+        // Never recorded (synced before this existed): an identical file
+        // already on the card was imported with it.
+        return fileOnCard != data
+    }
 }
 
 /// The result of rendering one playlist.
@@ -199,11 +240,21 @@ enum PlaylistWriter {
         let songsChange = !(plan.copies.isEmpty && plan.moves.isEmpty && plan.removals.isEmpty
             && plan.adoptions.isEmpty && plan.forgottenEntries.isEmpty)
         guard !songsChange else { return }
+        let playlistPlan = plan.playlistPlan
+        var leaving: [PlannedPlaylist] = []
         plan.playlistPlan.writes.removeAll { planned in
             guard manifest.playlistFiles[planned.playlist.id] == planned.path else { return false }
             let rendered = render(planned.playlist, entries: manifest.entries, tracks: plan.tracksByID, profile: profile)
-            return read(planned.path) == rendered.data
+            let onCard = read(planned.path)
+            guard playlistPlan.onlyChangedForImport else { return onCard == rendered.data }
+            if PlaylistImportRule.needsImport(rendered.data, previousDigest: manifest.playlistDigests?[planned.playlist.id],
+                                              fileOnCard: onCard, reimportAll: playlistPlan.reimportAll) {
+                return false // keep: it goes up for import
+            }
+            if onCard != nil { leaving.append(planned) }
+            return true
         }
+        plan.playlistPlan.leavingImport = leaving
     }
 
     // MARK: - Rendering

@@ -205,6 +205,12 @@ struct SyncPreviewView: View {
                         countCell("On card only", plan.cardOnly.count, "sdcard", .teal)
                     }
                 }
+                if !plan.playlistPlan.leavingImport.isEmpty {
+                    GridRow {
+                        countCell("Playlists already imported", plan.playlistPlan.leavingImport.count,
+                                  "tray.and.arrow.up", .secondary)
+                    }
+                }
                 if !plan.coverWrites.isEmpty || !plan.coverRemovals.isEmpty {
                     GridRow {
                         countCell("Album covers", plan.coverWrites.count, "photo", .indigo)
@@ -727,6 +733,11 @@ struct SyncResultView: View {
         }
         if report.playlistsWritten > 0 { parts.append("\(report.playlistsWritten) playlists written") }
         if report.playlistsRemoved > 0 { parts.append("\(report.playlistsRemoved) playlists removed") }
+        if report.playlistsToImport > 0 {
+            parts.append("\(report.playlistsToImport) playlists ready to import on the Q2")
+        } else if report.playlistsTakenOut > 0 {
+            parts.append("no playlists need importing")
+        }
         if report.coversWritten > 0 { parts.append("\(report.coversWritten) album covers added") }
         let copied = report.bytesCopied == 0
             ? "nothing copied"

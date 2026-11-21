@@ -409,6 +409,16 @@ final class DeviceMonitor {
         updateConnectedDevice { $0.albumCovers = on }
     }
 
+    /// Turns "only changed playlists up for import" on or off.
+    func setImportOnlyChangedPlaylists(_ on: Bool) {
+        updateConnectedDevice { $0.importOnlyChangedPlaylists = on }
+    }
+
+    /// Asks for (or clears) a full playlist re-import at the next sync.
+    func setReimportAllPlaylists(_ on: Bool) {
+        updateConnectedDevice { $0.reimportAllPlaylists = on ? true : nil }
+    }
+
     /// Changes what happens when this Q2 connects.
     func setAutoSync(_ mode: AutoSyncMode) {
         updateConnectedDevice { $0.autoSync = mode }

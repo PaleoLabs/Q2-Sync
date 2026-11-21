@@ -165,7 +165,9 @@ final class SyncCoordinator {
             let (manifest, plan) = try await Self.buildPlan(selection: selection, allSelectedIDs: allSelectedIDs,
                                                             snapshot: snapshot, fileSystem: fileSystem,
                                                             profile: connected.device.profile,
-                                                            albumCovers: connected.device.effectiveAlbumCovers)
+                                                            albumCovers: connected.device.effectiveAlbumCovers,
+                                                            onlyChangedPlaylists: connected.device.effectiveImportOnlyChangedPlaylists,
+                                                            reimportAllPlaylists: connected.device.reimportAllPlaylists == true)
 
             let isFirstSync = connected.device.hasCompletedDryRun != true
             var dryRunLog: URL?
@@ -228,7 +230,8 @@ final class SyncCoordinator {
     private static func buildPlan(selection: ResolvedSelection, allSelectedIDs: Set<PersistentID>,
                                   snapshot: LibrarySnapshot,
                                   fileSystem: CardFileSystem, profile: DeviceProfile,
-                                  albumCovers: Bool) async throws
+                                  albumCovers: Bool, onlyChangedPlaylists: Bool,
+                                  reimportAllPlaylists: Bool) async throws
         -> (SyncManifest, SyncPlan) {
         let manifest = try SyncManifest.load(from: fileSystem)
         let cardFiles = CardScanner.scan(folder: profile.musicFolderName, on: fileSystem)
@@ -247,6 +250,8 @@ final class SyncCoordinator {
         CardOnlyFinder.markLibraryMatches(&cardOnly, snapshot: snapshot)
         adjusted.cardOnly = cardOnly
 
+        adjusted.playlistPlan.onlyChangedForImport = onlyChangedPlaylists
+        adjusted.playlistPlan.reimportAll = reimportAllPlaylists
         PlaylistWriter.dropUnchangedWrites(in: &adjusted, manifest: manifest, profile: profile) { path in
             try? Data(contentsOf: fileSystem.urlForReading(path))
         }
@@ -300,6 +305,8 @@ final class SyncCoordinator {
         task = nil
         if result.succeeded {
             devices.markSyncCompleted()
+            // A requested full re-import has now been put up.
+            if preview?.plan.playlistPlan.reimportAll == true { devices.setReimportAllPlaylists(false) }
         }
         // The card changed: update the capacity bar's numbers.
         devices.reloadCardInfo()
