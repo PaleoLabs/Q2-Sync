@@ -102,6 +102,10 @@ struct SyncPlan: Sendable {
     /// Card-only music (unmanaged files and orphaned songs), filled in by
     /// the coordinator after planning, with tags read from the files.
     var cardOnly: [CardOnlyItem] = []
+    /// Album covers to write (see `AlbumCovers`).
+    var coverWrites: [CoverWrite] = []
+    /// Q2 Sync's own covers to remove, because album covers were turned off.
+    var coverRemovals: [CardPath] = []
 
     /// Bytes that will be copied.
     var bytesToCopy: UInt64 { copies.reduce(0) { $0 + $1.track.fileSize } }
@@ -130,7 +134,8 @@ struct SyncPlan: Sendable {
     /// `true` if there's nothing at all to do.
     var isEmpty: Bool {
         copies.isEmpty && moves.isEmpty && removals.isEmpty && adoptions.isEmpty && forgottenEntries.isEmpty
-            && playlistPlan.writes.isEmpty && playlistPlan.removals.isEmpty
+            && playlistPlan.writes.isEmpty && playlistPlan.removals.isEmpty && coverWrites.isEmpty
+            && coverRemovals.isEmpty
     }
 }
 
@@ -150,6 +155,8 @@ enum SyncPlanner {
     ///     in it become `orphanedEntries` instead of removals. `nil` treats
     ///     every deselected song as a normal removal.
     ///   - layout: Card layout rules.
+    ///   - albumCovers: `true` plans `cover.jpg` files for album folders;
+    ///     `false` plans removing the covers Q2 Sync wrote earlier.
     /// - Returns: The plan.
     static func plan(selection: ResolvedSelection,
                      allSelectedIDs: Set<PersistentID>,
@@ -157,7 +164,8 @@ enum SyncPlanner {
                      cardFiles: [String: CardFile],
                      playlistFolderFiles: [String: CardFile] = [:],
                      libraryIDs: Set<PersistentID>? = nil,
-                     layout: CardLayout) -> SyncPlan {
+                     layout: CardLayout,
+                     albumCovers: Bool = false) -> SyncPlan {
         var plan = SyncPlan()
         plan.skipped = selection.skippedTracks
         plan.playlistPlan = PlaylistWriter.plan(playlists: selection.playlists, manifest: manifest,
@@ -249,6 +257,23 @@ enum SyncPlanner {
         }
         plan.removals.sort { SortKey.compare($0.entry.path, $1.entry.path) }
         plan.orphanedEntries.sort { SortKey.compare($0.entry.path, $1.entry.path) }
+
+        // ALBUM COVERS, for where each selected song will be after the sync.
+        if albumCovers {
+            var finalPaths: [PersistentID: CardPath] = [:]
+            for track in selection.tracksToSync {
+                if let path = manifest.entries[track.id]?.path { finalPaths[track.id] = path }
+            }
+            for copy in plan.copies { finalPaths[copy.track.id] = copy.destination }
+            for move in plan.moves { finalPaths[move.track.id] = move.to }
+            for adoption in plan.adoptions { finalPaths[adoption.track.id] = adoption.path }
+            plan.coverWrites = AlbumCovers.plan(tracks: selection.tracksToSync, finalPaths: finalPaths,
+                                                manifest: manifest, cardFiles: cardFiles)
+        } else {
+            // Turned off: take away every cover Q2 Sync wrote (only those
+            // recorded in the manifest; your own cover files are never touched).
+            plan.coverRemovals = (manifest.albumCovers ?? [:]).keys.sorted { SortKey.compare($0, $1) }
+        }
         return plan
     }
 

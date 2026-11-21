@@ -27,6 +27,43 @@
 import Foundation
 import iTunesLibrary
 
+/// Reads album artwork from the Apple Music library, for album covers.
+///
+/// READ-ONLY: it opens its own `ITLibrary` (a read-only API) the first time
+/// artwork is asked for, from the sync's background thread, and only ever
+/// reads `artwork.imageData`. Marked `@unchecked Sendable` because its
+/// state is guarded by `lock`.
+final class LibraryArtworkReader: AlbumArtworkProviding, @unchecked Sendable {
+
+    private let trackIDs: Set<PersistentID>
+    private let apiVersion: String
+    private let lock = NSLock()
+    private var library: ITLibrary?
+    private var items: [PersistentID: ITLibMediaItem]?
+
+    init(trackIDs: Set<PersistentID>, apiVersion: String) {
+        self.trackIDs = trackIDs
+        self.apiVersion = apiVersion
+    }
+
+    func artworkData(for trackID: PersistentID) -> Data? {
+        lock.withLock {
+            if items == nil {
+                // Opened once, on first use. If it can't be opened, there's
+                // simply no artwork (the sync carries on without covers).
+                library = try? ITLibrary(apiVersion: apiVersion)
+                var found: [PersistentID: ITLibMediaItem] = [:]
+                for item in library?.allMediaItems ?? [] {
+                    let id = ITunesLibrarySource.hexID(item.persistentID)
+                    if trackIDs.contains(id) { found[id] = item }
+                }
+                items = found
+            }
+            return items?[trackID]?.artwork?.imageData
+        }
+    }
+}
+
 /// The real Apple Music library, read through `ITLibrary`.
 struct ITunesLibrarySource: LibrarySource {
 
@@ -137,7 +174,8 @@ struct ITunesLibrarySource: LibrarySource {
             fileURL: fileURL,
             fileKind: item.kind,
             modifiedDate: item.modifiedDate,
-            availability: availability(of: item, fileURL: fileURL)
+            availability: availability(of: item, fileURL: fileURL),
+            hasArtwork: item.hasArtworkAvailable
         )
     }
 
@@ -193,6 +231,11 @@ struct ITunesLibrarySource: LibrarySource {
             parentID: playlist.parentID.map(hexID),
             trackIDs: trackIDs
         )
+    }
+
+    /// A reader for these tracks' artwork (opened when first used).
+    func artworkReader(for trackIDs: Set<PersistentID>) -> (any AlbumArtworkProviding)? {
+        trackIDs.isEmpty ? nil : LibraryArtworkReader(trackIDs: trackIDs, apiVersion: apiVersion)
     }
 
     /// Formats Apple's 64-bit persistent ID as 16 uppercase hex digits.

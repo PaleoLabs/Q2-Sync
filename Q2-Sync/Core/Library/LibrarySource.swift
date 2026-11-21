@@ -38,6 +38,15 @@ protocol LibrarySource: Sendable {
     /// - Throws: `LibraryError` if the library can't be read.
     /// - Side effects: None. Reading only.
     func loadSnapshot() async throws -> LibrarySnapshot
+
+    /// Something that reads album artwork for these tracks, or `nil` if
+    /// this source has no artwork. Reading only.
+    func artworkReader(for trackIDs: Set<PersistentID>) -> (any AlbumArtworkProviding)?
+}
+
+extension LibrarySource {
+    /// By default, no artwork (fixtures, tests).
+    func artworkReader(for trackIDs: Set<PersistentID>) -> (any AlbumArtworkProviding)? { nil }
 }
 
 /// Problems that can happen while reading the library.

@@ -113,7 +113,9 @@ Your choices are saved for this Q2 automatically.
    sync**. By default they go to a trash folder on the card rather than being
    deleted. If that's more than 20% of the songs on the card, you'll be asked
    to confirm.
-5. Click **Sync**. A progress bar shows what's being copied. You can click
+5. Click **Sync**. A progress bar shows what's being copied, with an
+   estimate such as "About 12 minutes remaining" once it has measured the
+   copying speed (after about 10 seconds). You can click
    **Cancel** at any time; songs already copied stay, and the next sync carries
    on where it stopped.
 6. When it's done, you'll see **Sync Complete** and the option to **Eject** the
@@ -125,6 +127,19 @@ your Q2's **Settings** tab → **Show Sync Logs**.
 **Where things go on the card:** music goes in `Music/Artist/Album/`,
 playlists in `_explaylist_data/`, and Q2 Sync's own records in a hidden
 `.q2sync` folder. Q2 Sync never touches the Q2's own files and folders.
+
+**Album covers (optional, off by default):** Apple Music often keeps artwork
+in its own library rather than inside the song files, so the Q2 would show no
+cover. Turn on **Add album covers** on your Q2's **Settings** tab and Q2 Sync puts a
+`cover.jpg` in each album folder, made from the album's artwork in Apple
+Music (resized to at most 1000 pixels, in a format the Q2 reads quickly).
+The preview lists them under **Album Covers**.
+- Your library is only read, never changed.
+- A `cover.jpg` or `folder.jpg` you put there yourself is never replaced.
+- When an album leaves the card, its cover goes too.
+- Turn it on any time: the next sync adds covers for everything already on
+  the card. Turn it off and the next sync removes the covers Q2 Sync added
+  (listed under **Remove Album Covers** in the preview).
 
 ---
 

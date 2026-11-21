@@ -40,6 +40,8 @@ struct SyncPreview {
     let dryRunLogURL: URL?
     /// Mac folders copy-back must never write to (~/Music, media folder).
     let protectedFolders: [URL]
+    /// Reads album artwork for the planned covers (read-only), if any.
+    var artwork: (any AlbumArtworkProviding)? = nil
 
     /// Safety assessment for the user's current choices.
     func assessment(for options: SyncOptions) -> SafetyAssessment {
@@ -74,6 +76,12 @@ final class SyncCoordinator {
 
     /// Live progress while running.
     private(set) var progress = SyncProgress()
+
+    /// Seconds of copying left, once there's enough to estimate.
+    private(set) var secondsRemaining: TimeInterval?
+
+    /// Measures copying speed for `secondsRemaining`.
+    @ObservationIgnored private var estimator = TimeRemainingEstimator()
 
     /// The result once finished.
     private(set) var report: SyncReport?
@@ -156,7 +164,8 @@ final class SyncCoordinator {
             // Scanning thousands of card files happens off the main thread.
             let (manifest, plan) = try await Self.buildPlan(selection: selection, allSelectedIDs: allSelectedIDs,
                                                             snapshot: snapshot, fileSystem: fileSystem,
-                                                            profile: connected.device.profile)
+                                                            profile: connected.device.profile,
+                                                            albumCovers: connected.device.effectiveAlbumCovers)
 
             let isFirstSync = connected.device.hasCompletedDryRun != true
             var dryRunLog: URL?
@@ -179,7 +188,8 @@ final class SyncCoordinator {
                                   deviceName: connected.device.name, profile: connected.device.profile,
                                   dryRunLogURL: dryRunLog,
                                   protectedFolders: [PathGuard.defaultHomeMusicFolder]
-                                      + [snapshot.mediaFolderURL].compactMap { $0 })
+                                      + [snapshot.mediaFolderURL].compactMap { $0 },
+                                  artwork: library.artworkReader(for: Set(plan.coverWrites.map(\.trackID))))
             phase = .preview
             if automatic, let preview { decideAutomatically(preview, devices: devices) }
         } catch {
@@ -217,7 +227,8 @@ final class SyncCoordinator {
     @concurrent
     private static func buildPlan(selection: ResolvedSelection, allSelectedIDs: Set<PersistentID>,
                                   snapshot: LibrarySnapshot,
-                                  fileSystem: CardFileSystem, profile: DeviceProfile) async throws
+                                  fileSystem: CardFileSystem, profile: DeviceProfile,
+                                  albumCovers: Bool) async throws
         -> (SyncManifest, SyncPlan) {
         let manifest = try SyncManifest.load(from: fileSystem)
         let cardFiles = CardScanner.scan(folder: profile.musicFolderName, on: fileSystem)
@@ -225,7 +236,7 @@ final class SyncCoordinator {
         let plan = SyncPlanner.plan(selection: selection, allSelectedIDs: allSelectedIDs, manifest: manifest,
                                     cardFiles: cardFiles, playlistFolderFiles: playlistFiles,
                                     libraryIDs: Set(snapshot.tracks.map(\.id)),
-                                    layout: CardLayout(profile: profile))
+                                    layout: CardLayout(profile: profile), albumCovers: albumCovers)
         var adjusted = plan
 
         // Card-only music anywhere on the card (reserved items excluded).
@@ -252,7 +263,10 @@ final class SyncCoordinator {
         guard phase == .preview, let preview, preview.assessment(for: options).canApply else { return }
         phase = .running
         progress = SyncProgress(totalOperations: 0, totalBytes: preview.plan.bytesToCopy)
+        secondsRemaining = nil
+        estimator = TimeRemainingEstimator()
         var executor = SyncExecutor(fileSystem: preview.fileSystem, deviceName: preview.deviceName)
+        executor.artwork = preview.artwork
         executor.recoveryCopier = RecoveryCopier(stagingFolder: RecoveryCopier.defaultStagingFolder,
                                                  protectedFolders: preview.protectedFolders)
         let options = options
@@ -263,7 +277,12 @@ final class SyncCoordinator {
         // the task below keeps the coordinator alive on its own.
         let reportProgress: @Sendable (SyncProgress) -> Void = { [weak self] update in
             guard let self else { return }
-            Task { @MainActor in self.progress = update }
+            Task { @MainActor in
+                self.progress = update
+                self.secondsRemaining = self.estimator.update(bytesCopied: update.bytesCopied,
+                                                              totalBytes: update.totalBytes,
+                                                              at: ProcessInfo.processInfo.systemUptime)
+            }
         }
 
         task = Task { [weak self] in

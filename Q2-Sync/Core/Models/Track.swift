@@ -127,6 +127,11 @@ struct Track: Codable, Hashable, Identifiable, Sendable {
     /// Whether this track can be copied, and if not, why not.
     let availability: TrackAvailability
 
+    /// `true` if Apple Music has artwork for this track (embedded or in its
+    /// own database). Used for album covers. Optional so older fixture
+    /// files still decode.
+    var hasArtwork: Bool? = nil
+
     // MARK: Convenience
 
     /// The name we group this track's album under.

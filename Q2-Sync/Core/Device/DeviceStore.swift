@@ -67,6 +67,14 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     /// whether the update finished (the card can't tell us).
     var pendingFirmwareInstall: PendingFirmwareInstall?
 
+    /// Whether to put a `cover.jpg` in each album folder. Optional so
+    /// older files load; `nil` means off.
+    var albumCovers: Bool?
+
+    /// The album-covers setting, with its default (off). Turning it on adds
+    /// covers at the next sync; turning it off removes Q2 Sync's covers then.
+    var effectiveAlbumCovers: Bool { albumCovers ?? false }
+
     /// The auto-sync setting, with its default.
     var effectiveAutoSync: AutoSyncMode { autoSync ?? .ask }
 

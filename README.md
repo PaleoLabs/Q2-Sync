@@ -47,6 +47,11 @@ date, and writes your playlists in a format the Q2 can import.
   walks you through **TF card update** on the Q2. Next time you connect, it
   asks whether the update finished and switches its settings to match.
 - **Firmware update notices** for Q2 Pod (optional, from GitHub).
+- **Album covers (optional):** a `cover.jpg` in each album folder, made from
+  Apple Music's artwork, so the Q2 shows covers even for songs without
+  embedded art. Off by default; turning it off later removes them again.
+  Your own cover files are never touched.
+- **Time remaining** while syncing.
 - **Clean cards:** FAT/exFAT-safe file names, no stray macOS `._` files next to
   synced songs, and firmware folders are never touched.
 - **A first-class Mac app:** SwiftUI, sidebar and detail layout, SF Symbols,

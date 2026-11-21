@@ -165,6 +165,16 @@ struct DeviceSettingsView: View {
                 Text("Automatic syncs follow every safety rule. They never remove songs and never eject; if anything needs your review (the first sync, removals, songs gone from your library, a failed check), they stop, open the preview here, and notify you. Q2 Sync must be running, so turn on “Open at login” in Settings.")
             }
 
+            Section {
+                Toggle("Add album covers", isOn: Binding(
+                    get: { connected.device.effectiveAlbumCovers },
+                    set: { devices.setAlbumCovers($0) }))
+            } header: {
+                Text("Album Covers")
+            } footer: {
+                Text("Puts a cover.jpg in each album folder, made from the album's artwork in Apple Music, so the Q2 shows covers even for songs without embedded artwork. Turning it on adds covers at your next sync; turning it off removes the covers Q2 Sync added. Artwork is only read from your library, never changed, and your own cover.jpg or folder.jpg files are never touched.")
+            }
+
             Section("After Each Sync") {
                 ForEach(Array(connected.device.profile.libraryUpdateSteps.enumerated()), id: \.offset) { index, step in
                     Label(step, systemImage: "\(index + 1).circle")

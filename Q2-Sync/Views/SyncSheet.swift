@@ -205,6 +205,12 @@ struct SyncPreviewView: View {
                         countCell("On card only", plan.cardOnly.count, "sdcard", .teal)
                     }
                 }
+                if !plan.coverWrites.isEmpty || !plan.coverRemovals.isEmpty {
+                    GridRow {
+                        countCell("Album covers", plan.coverWrites.count, "photo", .indigo)
+                        countCell("Remove covers", plan.coverRemovals.count, "minus.circle", .red)
+                    }
+                }
             }
 
             Text(spaceSummary)
@@ -282,10 +288,13 @@ struct SyncPreviewView: View {
         var updates: [CopyOperation]
         var moves: [MoveOperation]
         var adoptions: [AdoptOperation]
+        var covers: [CoverWrite]
+        var coverRemovals: [CardPath]
 
         var isEmpty: Bool {
             removals.isEmpty && cardOnly.isEmpty && playlistWrites.isEmpty && playlistRemovals.isEmpty
                 && skipped.isEmpty && adds.isEmpty && updates.isEmpty && moves.isEmpty && adoptions.isEmpty
+                && covers.isEmpty && coverRemovals.isEmpty
         }
     }
 
@@ -300,7 +309,9 @@ struct SyncPreviewView: View {
             adds: plan.copies.filter { $0.kind == .add && matches($0.track, $0.destination) },
             updates: plan.copies.filter { $0.kind == .update && matches($0.track, $0.destination) },
             moves: plan.moves.filter { matches($0.track, $0.from) || matches($0.to) },
-            adoptions: plan.adoptions.filter { matches($0.track, $0.path) })
+            adoptions: plan.adoptions.filter { matches($0.track, $0.path) },
+            covers: plan.coverWrites.filter { matches($0.albumName, $0.path) },
+            coverRemovals: plan.coverRemovals.filter { matches($0) })
     }
 
     /// Every planned change, grouped, in a scrollable list. Sections that
@@ -328,6 +339,14 @@ struct SyncPreviewView: View {
             }
             collapsibleSection("adopt", "Already on the Card (Recorded, Not Copied)", lists.adoptions) { adoption in
                 row(adoption.track.title, detail: adoption.path, symbol: "checkmark.circle", color: .secondary)
+            }
+            collapsibleSection("covers", "Album Covers (from Apple Music's artwork)", lists.covers) { cover in
+                row(cover.albumName, detail: cover.path, symbol: "photo", color: .indigo)
+            }
+            collapsibleSection("coverRemovals", "Remove Album Covers (turned off in Settings)",
+                               lists.coverRemovals.map(CoverRemovalRow.init)) { removal in
+                row((removal.path as NSString).deletingLastPathComponent, detail: removal.path,
+                    symbol: "minus.circle", color: .red)
             }
             if isSearching && lists.isEmpty {
                 ContentUnavailableView.search(text: trimmedSearch)
@@ -551,6 +570,12 @@ struct SyncPreviewView: View {
     }
 }
 
+/// A cover removal, made `Identifiable` for the preview list.
+private struct CoverRemovalRow: Identifiable {
+    let path: CardPath
+    var id: CardPath { path }
+}
+
 // MARK: - Progress
 
 /// Progress bar, current item and Cancel.
@@ -563,6 +588,10 @@ struct SyncProgressView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Syncing…").font(.title2.bold())
             ProgressView(value: progress.fractionComplete)
+            Text(sync.secondsRemaining.map(TimeRemainingEstimator.describe)
+                 ?? (progress.totalBytes > 0 ? "Estimating time remaining…" : " "))
+                .font(.callout)
+                .foregroundStyle(.secondary)
             Text(progress.currentItem.isEmpty ? "Starting…" : progress.currentItem)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -698,6 +727,7 @@ struct SyncResultView: View {
         }
         if report.playlistsWritten > 0 { parts.append("\(report.playlistsWritten) playlists written") }
         if report.playlistsRemoved > 0 { parts.append("\(report.playlistsRemoved) playlists removed") }
+        if report.coversWritten > 0 { parts.append("\(report.coversWritten) album covers added") }
         let copied = report.bytesCopied == 0
             ? "nothing copied"
             : "\(Int64(report.bytesCopied).formatted(ByteCountFormatStyle(style: .file))) copied"

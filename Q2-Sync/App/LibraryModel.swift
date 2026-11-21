@@ -54,6 +54,12 @@ final class LibraryModel {
     ///
     /// - Parameter source: Where to read the library from. Defaults to the
     ///   real Apple Music library (read-only).
+    /// A read-only reader for these tracks' artwork (for album covers),
+    /// or `nil` if the source has none.
+    func artworkReader(for trackIDs: Set<PersistentID>) -> (any AlbumArtworkProviding)? {
+        source.artworkReader(for: trackIDs)
+    }
+
     init(source: any LibrarySource = ITunesLibrarySource()) {
         self.source = source
     }

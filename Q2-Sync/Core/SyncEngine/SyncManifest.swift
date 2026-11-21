@@ -53,6 +53,18 @@ struct SyncManifest: Codable, Sendable, Equatable {
     /// or removes its own playlists.
     var playlistFiles: [PersistentID: CardPath] = [:]
 
+    /// Album covers Q2 Sync wrote, by card path (`…/cover.jpg`). Optional
+    /// so manifests from before covers existed still load.
+    var albumCovers: [CardPath: CoverEntry]?
+
+    /// One cover Q2 Sync wrote.
+    struct CoverEntry: Codable, Sendable, Hashable {
+        /// Which artwork it was made from (see `AlbumCovers.sourceKey`).
+        var sourceKey: String
+        /// When it was written.
+        var writtenAt: Date
+    }
+
     /// When the manifest was last saved.
     var updatedAt: Date?
 

@@ -404,6 +404,11 @@ final class DeviceMonitor {
         }
     }
 
+    /// Turns album covers on or off for the connected Q2.
+    func setAlbumCovers(_ on: Bool) {
+        updateConnectedDevice { $0.albumCovers = on }
+    }
+
     /// Changes what happens when this Q2 connects.
     func setAutoSync(_ mode: AutoSyncMode) {
         updateConnectedDevice { $0.autoSync = mode }

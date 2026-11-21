@@ -18,6 +18,10 @@
 //  3. Adoptions (record identical files already on the card).
 //  4. Moves (renames for retagged songs).
 //  5. Copies (new and changed songs).
+//  6. Album covers: Q2 Sync's covers are removed if covers were turned
+//     off, or if their folder has no songs left (so the folder can go);
+//     then new covers are written.
+//  7. Playlists.
 //  The manifest is saved every 25 operations and at the end, so stopping
 //  at any point leaves an accurate record.
 //
@@ -60,6 +64,8 @@ struct SyncReport: Sendable, Equatable {
     var playlistsWritten = 0
     var playlistsUnchanged = 0
     var playlistsRemoved = 0
+    var coversWritten = 0
+    var coversRemoved = 0
     /// Songs left out of playlists because they aren't on the card.
     var playlistSongsMissing = 0
     var skipped: [Track] = []
@@ -95,6 +101,8 @@ struct SyncExecutor: Sendable {
     let deviceName: String
     /// Copies card-only files to the Mac. `nil` refuses copy-backs.
     var recoveryCopier: RecoveryCopier?
+    /// Reads album artwork from the library. `nil` writes no covers.
+    var artwork: (any AlbumArtworkProviding)?
     /// Where logs go (tests pass a temp folder).
     var logsDirectory: URL = SyncLog.logsDirectory
 
@@ -141,7 +149,8 @@ struct SyncExecutor: Sendable {
         let playlistPlan = plan.playlistPlan
         var progress = SyncProgress(
             totalOperations: cardOnlyCopies.count + cardOnlyRemovals.count + removals.count + plan.adoptions.count + plan.moves.count + plan.copies.count
-                + playlistPlan.writes.count + playlistPlan.removals.count,
+                + playlistPlan.writes.count + playlistPlan.removals.count + plan.coverWrites.count
+                + plan.coverRemovals.count,
             totalBytes: plan.bytesToCopy)
         var lastReport = clock.now
         /// Sends progress, throttled so the UI isn't flooded.
@@ -291,7 +300,54 @@ struct SyncExecutor: Sendable {
                 }
                 try finishOperation()
             }
-            // 6. Playlists, last, so they list exactly the songs now on the card.
+            // 6. Album covers. First remove Q2 Sync's covers from folders
+            //    with no managed song left (so the empty folder can go),
+            //    then write the planned covers into folders that still
+            //    hold a song.
+            let songFolders = Set(manifest.entries.values.map { Self.folderKey($0.path) })
+            let turnedOff = Set(plan.coverRemovals)
+            for (path, _) in manifest.albumCovers ?? [:]
+            where turnedOff.contains(path) || !songFolders.contains(Self.folderKey(path)) {
+                try Task.checkCancellation()
+                progress.currentItem = "Removing album cover"
+                publish()
+                defer { if turnedOff.contains(path) { try? finishOperation() } }
+                do {
+                    try fileSystem.removeFile(path)
+                    fileSystem.removeAppleDoubleCompanion(of: path)
+                    manifest.albumCovers?[path] = nil
+                    fileSystem.removeEmptyFolders(above: path)
+                    report.coversRemoved += 1
+                    log.write("REMOVE COVER  \(path)")
+                } catch let error where Self.isPerSongError(error) {
+                    record(error, path: path, in: &report, log: log)
+                }
+            }
+            for cover in plan.coverWrites {
+                try Task.checkCancellation()
+                if songFolders.contains(Self.folderKey(cover.path)), let artwork {
+                    progress.currentItem = "Adding cover for “\(cover.albumName)”"
+                    publish()
+                    if let image = artwork.artworkData(for: cover.trackID), let jpeg = CoverImage.makeJPEG(from: image) {
+                        do {
+                            try fileSystem.writeAtomically(jpeg, to: cover.path)
+                            fileSystem.removeAppleDoubleCompanion(of: cover.path)
+                            if manifest.albumCovers == nil { manifest.albumCovers = [:] }
+                            manifest.albumCovers?[cover.path] = SyncManifest.CoverEntry(sourceKey: cover.sourceKey,
+                                                                                         writtenAt: .now)
+                            report.coversWritten += 1
+                            log.write("COVER  \(cover.path)  (\(SyncLog.size(UInt64(jpeg.count))))")
+                        } catch let error where Self.isPerSongError(error) {
+                            record(error, path: cover.path, in: &report, log: log)
+                        }
+                    } else {
+                        log.write("NOTE  No usable artwork for \(cover.albumName)")
+                    }
+                }
+                try finishOperation()
+            }
+
+            // 7. Playlists, last, so they list exactly the songs now on the card.
             for removal in playlistPlan.removals {
                 try Task.checkCancellation()
                 do {
@@ -367,6 +423,7 @@ struct SyncExecutor: Sendable {
             + "removed \(report.removed), trashed \(report.trashed), adopted \(report.adopted), "
             + "copied to Mac \(report.copiedBack), card-only trashed \(report.cardOnlyTrashed) / deleted \(report.cardOnlyRemoved), "
             + "playlists written \(report.playlistsWritten) / unchanged \(report.playlistsUnchanged) / removed \(report.playlistsRemoved), "
+            + "covers written \(report.coversWritten) / removed \(report.coversRemoved), "
             + "skipped \(report.skipped.count), errors \(report.errors.count). "
             + "Copied \(SyncLog.size(report.bytesCopied)) in \(report.duration.formatted(.units(allowed: [.minutes, .seconds])))")
         onProgress(progress)
@@ -374,6 +431,11 @@ struct SyncExecutor: Sendable {
     }
 
     // MARK: - Helpers
+
+    /// The album folder of a card path, as a case-insensitive key.
+    static func folderKey(_ path: CardPath) -> String {
+        CardLayout.caseKey((path as NSString).deletingLastPathComponent)
+    }
 
     /// A new manifest entry for a copied or adopted track.
     static func entry(for track: Track, path: CardPath, cardSize: UInt64) -> SyncManifest.Entry {
