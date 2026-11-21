@@ -39,10 +39,9 @@ some with thousands of songs, imported with no problems.
 What the Q2 itself writes when it exports a playlist (for comparison): UTF-8,
 CRLF, no `#EXTM3U` or `#EXTINF` lines, and Windows-style paths such as
 `A:\Music\Artist\Album\01 Song.mp3`. Both styles import. Q2 Sync keeps
-its own style (with song info), by choice. A playlist exported on the Q2
-landed at the card root (`/test.m3u`); during the same session some of Q2
-Sync's files in `_explaylist_data` were also rewritten in the Q2's style
-(the next sync rewrites them).
+its own style (with song info), by choice. Export writes
+`_explaylist_data/<playlist name>.m3u`, replacing a file with that name,
+including one of Q2 Sync's (the next sync rewrites it).
 
 - [ ] Stock firmware: Q2 Sync's playlists import the same way.
 
