@@ -332,6 +332,51 @@ struct CardFileSystem: Sendable {
         try FileManager.default.removeItem(at: url)
     }
 
+    // MARK: - Q2 Pod data
+
+    /// Puts files from a Q2 Pod data backup back on the card.
+    ///
+    /// Each file is copied into `.q2sync/tmp/` with the usual safe copy,
+    /// then renamed onto its place, approved by `PathGuard.checkPodDataPath`
+    /// (so only Q2 Pod's data paths can be written). Existing files there
+    /// are replaced.
+    ///
+    /// - Parameters:
+    ///   - backupFolder: The backup on the Mac (only read).
+    ///   - files: The backed-up card paths to restore.
+    /// - Returns: How many files were restored.
+    /// - Throws: Guard violations or file errors (stops at the first).
+    @discardableResult
+    func restorePodData(from backupFolder: URL, files: [CardPath]) throws -> Int {
+        var restored = 0
+        for path in files {
+            try Task.checkCancellation()
+            let target = try pathGuard.checkPodDataPath(path, for: .write)
+            // Parent folders, each approved (e.g. ".q2", "EQ/Presets").
+            var built: [String] = []
+            for component in path.split(separator: "/").dropLast().map(String.init) {
+                built.append(component)
+                let folder = try pathGuard.checkPodDataPath(built.joined(separator: "/"), for: .createDirectory)
+                if !FileManager.default.fileExists(atPath: folder.path) {
+                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
+                }
+            }
+            let staged = "\(tempFolder)/restore-\(UUID().uuidString).part"
+            try copyFromMac(source: backupFolder.appending(path: path), to: staged)
+            let stagedURL = try pathGuard.check(staged, for: .delete)
+            do {
+                Self.removeExtendedAttributes(at: stagedURL)
+                _ = try pathGuard.checkPodDataPath(path, for: .write) // still the card, still a plain file
+                try Self.rename(stagedURL, to: target)
+            } catch {
+                try? FileManager.default.removeItem(at: stagedURL)
+                throw error
+            }
+            restored += 1
+        }
+        return restored
+    }
+
     // MARK: - AppleDouble companions
 
     /// What happened when tidying a `._` companion.

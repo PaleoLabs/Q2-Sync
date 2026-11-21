@@ -275,6 +275,36 @@ Setting → System Update → Network update**.
 
 ---
 
+### Verify the card
+
+microSD cards can damage files without warning. On your Q2's **Settings**
+tab, under **Card**, click **Verify Card…** (or **Device → Verify Card…**).
+Q2 Sync reads every song it put on the card and compares it, byte for byte,
+with the song on your Mac. Nothing changes while it checks.
+
+- Damaged or missing songs are listed. Click **Copy Songs Again** to fix
+  them (this goes through the same checks as a sync).
+- Songs changed on your Mac since copying aren't checked: your next sync
+  updates them.
+- Read your library first (the arrow at the top right).
+- Checking a full card over USB takes a while; a card reader is faster.
+
+### Back up Q2 Pod's data
+
+Q2 Pod keeps some of your data on the card: song ratings, listens waiting to
+be scrobbled, scrobbling and radio settings, EQ presets, custom App Store
+sources and Rockbox settings. On your Q2's **Settings** tab, under **Q2 Pod
+Data**, click **Back Up Now** to copy them to **Downloads › Q2 Sync
+Backups**. To put them on a card (for example a new one), click
+**Restore…**, choose a backup and tick what to restore, then restart the Q2.
+
+- Restoring **Listens not yet scrobbled** is off by default: those listens
+  may already have been sent, and would be sent twice.
+- The Q2's own settings are stored inside the Q2, not on the card, so a
+  Mac can't back them up. A firmware update doesn't touch the card.
+
+---
+
 ## 9. Eject safely
 
 Always eject before unplugging:

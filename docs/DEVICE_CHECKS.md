@@ -93,7 +93,15 @@ and `ioreg`:
 - [ ] Q2 Sync's device header says **Connected by USB** for the Q2 on a
       cable and **In a card reader** for the card in a reader.
 
-## 6. Installing firmware
+## 6. Q2 Pod data on the card
+
+- [ ] After rating a song, scrobbling and saving a radio favourite on the
+      Q2, `.ratings.tsv`, `.scrobbler.log`, `.scrobble.ini` and
+      `Radio/favourites.m3u` appear on the card (paths from Q2 Pod's docs).
+- [ ] After **Restore…** onto a fresh card and a restart, Q2 Pod shows the
+      restored ratings, favourites and EQ presets.
+
+## 7. Installing firmware
 
 - [ ] Stock firmware: the menu is **System Setting → System Update → TF card
       update** (the wording is assumed from Q2 Pod's docs, which reuse stock's

@@ -29,12 +29,14 @@
 //  directly inside are allowed). Deleting elsewhere
 //  needs the explicit `.deleteConfirmedByUser` operation, used only for
 //  card-only files the user chose to delete.
-//  Two narrow exceptions to (d):
+//  Three narrow exceptions to (d):
 //  • `checkAppleDoubleCompanion` lets the app delete the macOS `._`
 //    companion of a song it manages (see that method).
 //  • `checkFirmwareUpdateFile` lets the firmware installer write or delete
 //    exactly one file, `update.tar` at the card root, which is where the
 //    Q2's updater looks for firmware (see that method).
+//  • `checkPodDataPath` lets a restore write back Q2 Pod's own data files
+//    (ratings, EQ presets…), and only the paths in `PodDataBackup.items`.
 //
 
 import Foundation
@@ -295,6 +297,61 @@ struct PathGuard: Sendable {
             throw Violation.reservedItem(companion.lastPathComponent)
         }
         return companion
+    }
+
+    /// Approves restoring one of Q2 Pod's data files from a backup, or
+    /// creating the folders they go in.
+    ///
+    /// WHY THIS NARROW EXCEPTION EXISTS
+    /// Q2 Pod's data (`.ratings.tsv`, `EQ/`, …) sits in reserved places
+    /// that syncing never touches. Restoring a backup the user chose must
+    /// write exactly there. Conditions, all required:
+    ///  • the path is one of `PodDataBackup.items`, inside one of its
+    ///    folders, or (to create folders only) a parent folder of one;
+    ///  • it has no `..`, `.` or empty parts, and resolves to itself (no
+    ///    symlink leads elsewhere);
+    ///  • what's there now is a plain file (to write) or a folder (to
+    ///    create), or nothing;
+    ///  • the card is still the confirmed, eligible card.
+    ///
+    /// - Parameters:
+    ///   - relativePath: e.g. `".ratings.tsv"` or `"EQ/Bass.txt"`.
+    ///   - operation: `.write` or `.createDirectory`.
+    /// - Returns: The approved URL.
+    /// - Throws: `Violation` if any condition fails.
+    func checkPodDataPath(_ relativePath: CardPath, for operation: Operation) throws -> URL {
+        guard operation == .write || operation == .createDirectory else { throw Violation.reservedItem(relativePath) }
+        let components = relativePath.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        guard !relativePath.isEmpty, !relativePath.hasPrefix("/"), !relativePath.contains("\\"),
+              !components.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }) else {
+            throw Violation.invalidPath(relativePath)
+        }
+        let lower = relativePath.lowercased()
+        let allowed = PodDataBackup.items.contains { item in
+            let itemPath = item.path.lowercased()
+            if PodDataBackup.belongs(relativePath, to: item) {
+                // Files go at the item or inside its folder; folders only
+                // for a folder item (itself or below).
+                return operation == .write ? !(item.isFolder && lower == itemPath) : item.isFolder
+            }
+            return operation == .createDirectory && itemPath.hasPrefix(lower + "/")
+        }
+        guard allowed else { throw Violation.reservedItem(relativePath) }
+
+        let target = cardRoot.appending(path: relativePath).path
+        guard let resolved = Self.resolve(target), resolved.lowercased() == target.lowercased() else {
+            throw Violation.reservedItem(relativePath)
+        }
+        if protectedFolders.contains(where: { Self.isInside(resolved, folder: $0) }) {
+            throw Violation.protectedFolder(resolved)
+        }
+        var info = stat()
+        if lstat(resolved, &info) == 0 {
+            let type = info.st_mode & S_IFMT
+            if type != (operation == .write ? S_IFREG : S_IFDIR) { throw Violation.reservedItem(relativePath) }
+        }
+        try checkVolume(at: cardRoot)
+        return URL(filePath: resolved)
     }
 
     /// Confirms the volume at `url` is the expected, eligible card.

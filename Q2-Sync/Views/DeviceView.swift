@@ -175,6 +175,9 @@ struct DeviceSettingsView: View {
                 Text("Puts a cover.jpg in each album folder, made from the album's artwork in Apple Music, so the Q2 shows covers even for songs without embedded artwork. Turning it on adds covers at your next sync; turning it off removes the covers Q2 Sync added. Artwork is only read from your library, never changed, and your own cover.jpg or folder.jpg files are never touched.")
             }
 
+            PodDataSection(model: autoSync.podData, connected: connected,
+                           isBlocked: autoSync.sync.phase != .idle || autoSync.verifier.isBusy)
+
             Section("After Each Sync") {
                 ForEach(Array(connected.device.profile.libraryUpdateSteps.enumerated()), id: \.offset) { index, step in
                     Label(step, systemImage: "\(index + 1).circle")
@@ -187,6 +190,10 @@ struct DeviceSettingsView: View {
                     .textSelection(.enabled)
                 LabeledContent("Remembered Since",
                                value: connected.device.addedDate.formatted(date: .abbreviated, time: .omitted))
+                Button("Verify Card…") { autoSync.verifier.present() }
+                    .disabled(connected.accessURL == nil || autoSync.sync.phase != .idle
+                              || autoSync.installer.isBusy || autoSync.podData.isBusy)
+                    .help("Compare every song on the card with your Mac's copy and fix damaged ones")
                 Button("Show Sync Logs") {
                     let folder = SyncLog.logsDirectory
                     try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

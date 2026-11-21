@@ -68,6 +68,21 @@ struct RootView: View {
                 }
                 .background {
                     Color.clear.sheet(isPresented: Binding(
+                        get: { autoSync.verifier.isPresentingSheet && !sync.isPresentingSheet },
+                        set: { if !$0 { autoSync.verifier.close() } })) {
+                        VerifyCardSheet(model: autoSync.verifier, devices: devices)
+                    }
+                }
+                .background {
+                    Color.clear.sheet(item: Binding(
+                        get: { autoSync.podData.restoring.map(RestoreRequest.init) },
+                        set: { if $0 == nil { autoSync.podData.restoring = nil } })) { request in
+                        RestorePodDataSheet(model: autoSync.podData, backup: request.backup,
+                                            deviceName: devices.connected?.device.name ?? "your Q2")
+                    }
+                }
+                .background {
+                    Color.clear.sheet(isPresented: Binding(
                         get: { noticeAcknowledged && autoSync.installer.isAskingAboutPending
                                && !autoSync.installer.isPresentingSheet && !sync.isPresentingSheet },
                         set: { _ in })) {
@@ -164,6 +179,12 @@ struct RootView: View {
             ContentUnavailableView("Nothing Selected", systemImage: "sidebar.left")
         }
     }
+}
+
+/// A backup to restore, made `Identifiable` for `.sheet(item:)`.
+private struct RestoreRequest: Identifiable {
+    let backup: PodDataBackupInfo
+    var id: String { backup.folder?.path ?? backup.created.description }
 }
 
 /// The Q2's row in the sidebar, with an Eject button like Finder's.

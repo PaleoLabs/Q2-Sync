@@ -97,11 +97,17 @@ struct DeviceCommands: Commands {
                 controller.installer.present()
             }
             .disabled(connected?.accessURL == nil || controller.sync.phase != .idle)
+            Button("Verify Card…") {
+                controller.showMainWindow()
+                controller.verifier.present()
+            }
+            .disabled(connected?.accessURL == nil || controller.sync.phase != .idle || controller.installer.isBusy)
             Divider()
             Button("Eject") { Task { await controller.devices.eject() } }
                 .keyboardShortcut("e", modifiers: .command)
                 .disabled(connected == nil || controller.devices.isEjecting
-                          || controller.sync.phase == .running || controller.installer.isBusy)
+                          || controller.sync.phase == .running || controller.installer.isBusy
+                          || controller.verifier.isBusy || controller.podData.isBusy)
         }
     }
 }

@@ -52,6 +52,11 @@ date, and writes your playlists in a format the Q2 can import.
   embedded art. Off by default; turning it off later removes them again.
   Your own cover files are never touched.
 - **Time remaining** while syncing.
+- **Verify Card:** compares every song on the card with your Mac's copy,
+  byte for byte, and copies damaged or missing ones again.
+- **Back up Q2 Pod's data** on the card (ratings, unsent scrobbles, EQ
+  presets, radio favourites, scrobbling and Rockbox settings) to
+  `~/Downloads/Q2 Sync Backups`, and restore it to a new card.
 - **Clean cards:** FAT/exFAT-safe file names, no stray macOS `._` files next to
   synced songs, and firmware folders are never touched.
 - **A first-class Mac app:** SwiftUI, sidebar and detail layout, SF Symbols,

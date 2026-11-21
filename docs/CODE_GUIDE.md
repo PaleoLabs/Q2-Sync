@@ -236,6 +236,10 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   = stock, "V1890" = Q2 Pod 1.8.9). Also `sha256(of:)`.
 - **`ZipExtractor.extract(fileNamed:from:to:)`** · takes one file out of a
   zip (stored or deflate), checking size and CRC-32.
+- **`PodDataBackup`** · backs up Q2 Pod's data on the card (`items`: ratings,
+  scrobbler log, EQ/, …) to `~/Downloads/Q2 Sync Backups`, reads backups,
+  and lists them. Restore goes through `CardFileSystem.restorePodData`,
+  approved by `PathGuard.checkPodDataPath` (only those paths).
 
 ### Sync engine (`Core/SyncEngine`)
 
@@ -252,6 +256,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `AlbumCovers.plan(tracks:finalPaths:manifest:cardFiles:)` | songs' final paths → `[CoverWrite]` (one `cover.jpg` per album folder; skips folders with the user's own cover/folder image; manifest `albumCovers` records Q2 Sync's) | none |
 | `CoverImage.makeJPEG(from:maxPixels:)` | artwork bytes → baseline RGB JPEG ≤ 1000 px (what the Q2 decodes cheaply) | none |
 | `TimeRemainingEstimator.update(bytesCopied:totalBytes:at:)` / `describe` | progress samples → seconds left, "About 12 minutes remaining" | none |
+| `CardVerifier.verify(manifest:tracks:fileSystem:onProgress:)` / `repairPlan` | managed songs → byte-for-byte comparison with the Mac → `VerifyResult`; failed songs → a copies-only `SyncPlan` | none (reads only) |
 | `CardScanner.scan(folder:on:)` | card folder → files keyed by case-insensitive path (reserved items skipped) | none |
 | `SyncPlanner.plan(...)` | selection + manifest + card listing → `SyncPlan` | none |
 | `PlaylistWriter.plan` / `render` / `dropUnchangedWrites` | playlists → file paths and M3U bytes | none |
@@ -279,6 +284,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `NotificationManager` | Posts notifications; handles Sync Now / Eject / Open buttons. |
 | `FirmwareModel` | Firmware check state (opt-in, at most daily, cached). |
 | `FirmwareInstaller` | Install sheet state and pipeline: find offers, download (`FileDownloader`), unzip, inspect, verify checksum, check free space, `CardFileSystem.placeFirmwareUpdate`, then remember `pendingFirmwareInstall` and ask on the next connection whether the Q2 installed it. |
+| `CardVerifyModel` | Verify Card sheet state: check in the background, re-copy failures with `SyncExecutor`. |
+| `PodDataModel` | Back Up Now, backups list, restore. |
 | `DriveIdentityReader` | Reads a volume's USB/disk identity for `CardConnection`. |
 
 ### Views (`Q2-Sync/Views`)

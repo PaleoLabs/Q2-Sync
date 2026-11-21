@@ -40,6 +40,12 @@ final class AutoSyncController {
     /// the Q2 installed it.
     let installer: FirmwareInstaller
 
+    /// "Verify Card": compares the card's songs with the Mac's.
+    let verifier: CardVerifyModel
+
+    /// Backs up and restores Q2 Pod's own data on the card.
+    let podData: PodDataModel
+
     /// Opens (or brings forward) the main window. Set by a view that has
     /// SwiftUI's `openWindow` action, since only views can get it.
     @ObservationIgnored var openMainWindow: (() -> Void)?
@@ -50,6 +56,8 @@ final class AutoSyncController {
         self.devices = devices
         self.sync = sync
         self.installer = FirmwareInstaller(devices: devices)
+        self.verifier = CardVerifyModel(library: library, devices: devices)
+        self.podData = PodDataModel(devices: devices)
 
         notifications.configure()
         // `[weak self]` avoids a retain cycle: these closures are stored by
@@ -102,7 +110,8 @@ final class AutoSyncController {
     /// - Parameter automatic: `true` applies it without the preview when
     ///   `AutoSyncPolicy` allows; `false` shows the preview as usual.
     func startSync(automatic: Bool) async {
-        guard let connected = devices.connected, sync.phase == .idle, !installer.isBusy else { return }
+        guard let connected = devices.connected, sync.phase == .idle, !installer.isBusy,
+              !verifier.isBusy, !podData.isBusy else { return }
         if !automatic { showMainWindow() }
         await sync.prepare(connected: connected, library: library, devices: devices, automatic: automatic)
     }
