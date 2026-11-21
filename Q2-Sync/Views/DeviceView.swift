@@ -172,7 +172,12 @@ struct DeviceSettingsView: View {
             } header: {
                 Text("Album Covers")
             } footer: {
-                Text("Puts a cover.jpg in each album folder, made from the album's artwork in Apple Music, so the Q2 shows covers even for songs without embedded artwork. Turning it on adds covers at your next sync; turning it off removes the covers Q2 Sync added. Artwork is only read from your library, never changed, and your own cover.jpg or folder.jpg files are never touched.")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Puts a cover.jpg in each album folder, made from the album's artwork in Apple Music, so the Q2 shows covers even for songs without embedded artwork. Turning it on adds covers at your next sync; turning it off removes the covers Q2 Sync added. Artwork is only read from your library, never changed, and your own cover.jpg or folder.jpg files are never touched.")
+                    if connected.device.firmware == .q2Pod {
+                        Text("After changing this and syncing, refresh Cover Flow on the Q2: System settings → Display → Coverflow → Refresh Coverflow, then open Cover Flow. The rebuild needs at least 16 MB free on the card.")
+                    }
+                }
             }
 
             Section {

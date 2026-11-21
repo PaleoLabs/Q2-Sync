@@ -90,6 +90,10 @@ and `ioreg`:
 - [ ] After **Restore…** onto a fresh card and a restart, Q2 Pod shows the
       restored ratings, favourites and EQ presets.
 
+- [ ] Stock firmware: whether its album grid (Album Wall) needs anything
+      to show new `cover.jpg` files beyond the library scan. If so, add the
+      steps to the stock profile's `coverRefreshSteps`.
+
 ## 7. Installing firmware
 
 - [ ] Stock firmware: the menu is **System Setting → System Update → TF card

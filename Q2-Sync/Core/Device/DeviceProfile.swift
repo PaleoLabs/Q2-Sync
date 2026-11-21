@@ -158,6 +158,12 @@ struct DeviceProfile: Hashable, Sendable {
     /// Where the user finds the installed firmware version on the Q2.
     let versionLocationHint: String
 
+    /// Steps that make the Q2 show album covers that changed on the card
+    /// (Q2 Sync's `cover.jpg` files added or removed). Shown after the
+    /// library steps, as a cover refresh doesn't rescan the music. Empty
+    /// when the firmware needs nothing extra.
+    let coverRefreshSteps: [String]
+
     /// The menu that installs `update.tar` from the card, on THIS firmware
     /// (the one running now, before the update).
     let tfCardUpdateMenuPath: String
@@ -211,6 +217,13 @@ extension DeviceProfile {
             "To bring in playlists, choose Library → Playlists → Import.",
         ],
         versionLocationHint: "On the Q2, open System settings → About and look for “CFW. Version”.",
+        // Q2 Pod 1.4.3 and later (DiamondBond's): the Refresh tile at the end
+        // of Cover Flow was removed; the Display setting does the same,
+        // applied the next time Cover Flow opens.
+        coverRefreshSteps: [
+            "To show the new album covers, choose System settings → Display → Coverflow → Refresh Coverflow (it also redoes the album covers in Library).",
+            "Open Cover Flow: the covers rebuild then.",
+        ],
         tfCardUpdateMenuPath: "System settings → System Update → TF card update",
         deviceMountPoint: "/mnt/mmc"
     )
@@ -237,6 +250,7 @@ extension DeviceProfile {
             "To bring in playlists, open Playlists and choose Import.", // UNVERIFIED wording on stock
         ],
         versionLocationHint: "On the Q2, open System Setting → About.",
+        coverRefreshSteps: [], // UNVERIFIED: whether stock's album grid needs a refresh
         // UNVERIFIED wording on stock. Q2 Pod's docs say it reuses stock's
         // System Update page, whose first button is the TF card update.
         tfCardUpdateMenuPath: "System Setting → System Update → TF card update",

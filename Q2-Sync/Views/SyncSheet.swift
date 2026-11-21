@@ -686,14 +686,24 @@ struct SyncResultView: View {
                 .frame(maxHeight: 120)
             }
 
+            if coversChanged && !profile.coverRefreshSteps.isEmpty && !sync.didEject {
+                Label("Album covers changed. After ejecting, refresh Cover Flow on the Q2 (the steps show once the card is ejected).",
+                      systemImage: "photo.on.rectangle")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             if report.succeeded && !sync.didEject {
                 Text("Eject the card now? You can also keep it connected to sync again.")
                     .fontWeight(.medium)
             } else if report.succeeded {
                 Text("The card has been ejected. Next, on your Q2:")
                     .fontWeight(.medium)
-                ForEach(Array(profile.libraryUpdateSteps.enumerated()), id: \.offset) { index, step in
+                let steps = profile.libraryUpdateSteps + (coversChanged ? profile.coverRefreshSteps : [])
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     Label(step, systemImage: "\(index + 1).circle")
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
                 Text("The card is still connected. Fix the problems above and sync again; songs already copied won't be copied twice.")
@@ -720,6 +730,10 @@ struct SyncResultView: View {
         .padding(24)
         .frame(width: 480)
     }
+
+    /// `true` if this sync added or removed album covers, so Cover Flow
+    /// needs refreshing on the Q2.
+    private var coversChanged: Bool { report.coversWritten + report.coversRemoved > 0 }
 
     /// e.g. "Added 12, updated 1, removed 0 · 84.3 MB in 0:42".
     private var summary: String {

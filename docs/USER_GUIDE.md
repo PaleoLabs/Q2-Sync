@@ -141,6 +141,27 @@ The preview lists them under **Album Covers**.
   the card. Turn it off and the next sync removes the covers Q2 Sync added
   (listed under **Remove Album Covers** in the preview).
 
+**Refresh Cover Flow after covers change (Q2 Pod).** Cover Flow keeps its
+own cache of covers, so after a sync that adds or removes covers (for
+example after turning the setting on or off), Q2 Sync reminds you to:
+
+1. Update the library as usual (Library → Update Library → Scan music now).
+   Refreshing Cover Flow doesn't rescan your music.
+2. Choose **System settings → Display → Coverflow → Refresh Coverflow**. It
+   also redoes the album covers in Library. (Since Q2 Pod 1.4.3 there's no
+   Refresh tile at the end of Cover Flow; this setting replaces it.)
+3. Open **Cover Flow**: the covers rebuild then.
+
+If covers don't rebuild:
+- The card needs at least **16 MB free**; below that, nothing is built.
+- An album showing a **grey disc** had artwork that restarted the Q2 while
+  Cover Flow was preparing it. Refresh Coverflow tries it again; if it keeps
+  happening, check that album's cover file.
+- As a last resort you can delete the hidden `.coverflow` folder at the root
+  of the card from your Mac (press ⌘⇧. in Finder to see it). Q2 Pod's docs
+  call it the cover cache but don't say deleting it equals a refresh, so
+  use the menu option first.
+
 ---
 
 ## 5. Music that's only on the card
