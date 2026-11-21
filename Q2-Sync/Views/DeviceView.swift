@@ -80,7 +80,7 @@ struct DeviceHeaderView: View {
                 .frame(width: 56)
             VStack(alignment: .leading, spacing: 3) {
                 Text(connected.device.name).font(.title2.bold())
-                Text("Shanling Q2 · \(connected.device.firmware.displayName)")
+                Text("Shanling Q2 · \(connected.device.firmware.displayName) · \(connected.connection.label)")
                     .foregroundStyle(.secondary)
                 Text(capacityText).font(.callout).foregroundStyle(.secondary)
                 if let latest = autoSync.firmware.latest,
@@ -146,7 +146,8 @@ struct DeviceSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            FirmwareUpdateSection(connected: connected, devices: devices, firmware: autoSync.firmware)
+            FirmwareUpdateSection(connected: connected, devices: devices, firmware: autoSync.firmware,
+                                  installer: autoSync.installer)
 
             Section {
                 Picker("When this Q2 connects", selection: Binding(

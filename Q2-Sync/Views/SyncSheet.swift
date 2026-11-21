@@ -110,16 +110,29 @@ struct SyncPreviewView: View {
         plan.cardOnly.contains { (sync.options.cardOnlyActions[$0.path] ?? .leave) != .leave }
     }
 
+    /// Nothing to copy, rename, remove or decide.
+    private var isUpToDate: Bool { plan.isEmpty && !hasCardOnlyWork }
+
+    /// Up to date with no lists worth showing (nothing skipped, nothing
+    /// only on the card), so the list area shows a centred message.
+    private var hasNothingToList: Bool { plan.isEmpty && plan.cardOnly.isEmpty && plan.skipped.isEmpty }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
                 .padding(20)
             Divider()
-            searchField
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-            Divider()
-            details
+            if hasNothingToList {
+                ContentUnavailableView("Already Up to Date", systemImage: "checkmark.circle",
+                                       description: Text("Everything you selected is already on the card."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                searchField
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                Divider()
+                details
+            }
             Divider()
             footer
                 .padding(16)
@@ -163,7 +176,7 @@ struct SyncPreviewView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(preview.isFirstSync ? "Preview of Your First Sync" : "Ready to Sync")
+            Text(preview.isFirstSync ? "Preview of Your First Sync" : isUpToDate ? "Already Up to Date" : "Ready to Sync")
                 .font(.title2.bold())
 
             if preview.isFirstSync {
@@ -318,9 +331,6 @@ struct SyncPreviewView: View {
             }
             if isSearching && lists.isEmpty {
                 ContentUnavailableView.search(text: trimmedSearch)
-            } else if plan.isEmpty {
-                ContentUnavailableView("Already Up to Date", systemImage: "checkmark.circle",
-                                       description: Text("Everything you selected is already on the card."))
             }
         }
         .listStyle(.inset)
@@ -524,9 +534,15 @@ struct SyncPreviewView: View {
                 Button("Show Preview Log") { NSWorkspace.shared.activateFileViewerSelecting([log]) }
             }
             Spacer()
-            Button(preview.isFirstSync ? "Close" : "Cancel") { sync.close() }
-                .keyboardShortcut(.cancelAction)
-            if !preview.isFirstSync {
+            if isUpToDate && !preview.isFirstSync {
+                // Nothing to apply: one button that just closes.
+                Button("Done") { sync.close() }
+                    .keyboardShortcut(.defaultAction)
+            } else {
+                Button(preview.isFirstSync ? "Close" : "Cancel") { sync.close() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            if !preview.isFirstSync && !isUpToDate {
                 Button("Sync") { continueApplying() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!assessment.canApply || (plan.isEmpty && !hasCardOnlyWork))

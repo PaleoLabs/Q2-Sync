@@ -66,6 +66,9 @@ struct Q2SyncApp: App {
                 .background(WindowOpenerBridge(controller: autoSync))
         }
         .windowToolbarStyle(.unified)
+        .commands {
+            DeviceCommands(controller: autoSync)
+        }
 
         MenuBarExtra(isInserted: $showMenuBarItem) {
             MenuBarContent(controller: autoSync)
@@ -75,6 +78,30 @@ struct Q2SyncApp: App {
 
         Settings {
             AppSettingsView(devices: devices)
+        }
+    }
+}
+
+/// The Device menu in the menu bar.
+struct DeviceCommands: Commands {
+    let controller: AutoSyncController
+
+    var body: some Commands {
+        CommandMenu("Device") {
+            let connected = controller.devices.connected
+            Button("Sync Now") { Task { await controller.startSync(automatic: false) } }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .disabled(connected?.accessURL == nil || controller.sync.phase != .idle || controller.installer.isBusy)
+            Button("Install Firmware…") {
+                controller.showMainWindow()
+                controller.installer.present()
+            }
+            .disabled(connected?.accessURL == nil || controller.sync.phase != .idle)
+            Divider()
+            Button("Eject") { Task { await controller.devices.eject() } }
+                .keyboardShortcut("e", modifiers: .command)
+                .disabled(connected == nil || controller.devices.isEjecting
+                          || controller.sync.phase == .running || controller.installer.isBusy)
         }
     }
 }

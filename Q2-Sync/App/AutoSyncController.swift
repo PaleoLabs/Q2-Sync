@@ -36,6 +36,10 @@ final class AutoSyncController {
     /// Optional Q2 Pod firmware update checks.
     let firmware = FirmwareModel()
 
+    /// Puts firmware on the card when you ask, and asks afterwards whether
+    /// the Q2 installed it.
+    let installer: FirmwareInstaller
+
     /// Opens (or brings forward) the main window. Set by a view that has
     /// SwiftUI's `openWindow` action, since only views can get it.
     @ObservationIgnored var openMainWindow: (() -> Void)?
@@ -45,6 +49,7 @@ final class AutoSyncController {
         self.library = library
         self.devices = devices
         self.sync = sync
+        self.installer = FirmwareInstaller(devices: devices)
 
         notifications.configure()
         // `[weak self]` avoids a retain cycle: these closures are stored by
@@ -52,13 +57,33 @@ final class AutoSyncController {
         devices.onDeviceConnected = { [weak self] connected in self?.deviceConnected(connected) }
         sync.onAutomaticEvent = { [weak self] event in self?.handle(event) }
         notifications.onAction = { [weak self] action in self?.handle(action) }
+        installer.onPendingQuestionAnswered = { [weak self] in
+            guard let self, let connected = self.devices.connected else { return }
+            self.runConnectBehaviour(connected)
+        }
         devices.start()
     }
 
     // MARK: - Connecting
 
-    /// The Q2 connected: do what its setting says.
+    /// The Q2 connected: first ask about firmware put on the card last
+    /// time, if any; then do what its setting says.
     private func deviceConnected(_ connected: ConnectedDevice) {
+        if installer.askAboutPendingIfNeeded(for: connected) {
+            // Auto-sync waits for the answer (it may change the firmware).
+            Task {
+                await notifications.requestPermission()
+                notifications.postFirmware(title: "Did the Firmware Update Finish?",
+                                           body: "Open Q2 Sync to tell it which firmware your Q2 runs now.")
+            }
+            showMainWindow()
+            return
+        }
+        runConnectBehaviour(connected)
+    }
+
+    /// Firmware check plus the "When this Q2 connects" setting.
+    private func runConnectBehaviour(_ connected: ConnectedDevice) {
         Task { await checkFirmware(for: connected.device) }
         let mode = connected.device.effectiveAutoSync
         guard mode != .off else { return }
@@ -77,7 +102,7 @@ final class AutoSyncController {
     /// - Parameter automatic: `true` applies it without the preview when
     ///   `AutoSyncPolicy` allows; `false` shows the preview as usual.
     func startSync(automatic: Bool) async {
-        guard let connected = devices.connected, sync.phase == .idle else { return }
+        guard let connected = devices.connected, sync.phase == .idle, !installer.isBusy else { return }
         if !automatic { showMainWindow() }
         await sync.prepare(connected: connected, library: library, devices: devices, automatic: automatic)
     }
@@ -91,7 +116,7 @@ final class AutoSyncController {
               firmware.shouldAnnounce(latest) else { return }
         await notifications.requestPermission()
         notifications.postFirmware(title: "Q2 Pod \(latest.tag) Is Available",
-                                   body: "See what's new in Q2 Sync › your Q2 › Settings. Q2 Sync doesn't install firmware; update on the Q2 itself.")
+                                   body: "See what's new, and put it on your Q2's card, in Q2 Sync › your Q2 › Settings.")
     }
 
     // MARK: - Outcomes

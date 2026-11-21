@@ -149,6 +149,10 @@ struct DeviceProfile: Hashable, Sendable {
     /// Where the user finds the installed firmware version on the Q2.
     let versionLocationHint: String
 
+    /// The menu that installs `update.tar` from the card, on THIS firmware
+    /// (the one running now, before the update).
+    let tfCardUpdateMenuPath: String
+
     /// Card path on the device itself (used for playlists and docs).
     let deviceMountPoint: String
 }
@@ -198,6 +202,7 @@ extension DeviceProfile {
             "To bring in playlists, choose Library → Playlists → Import.",
         ],
         versionLocationHint: "On the Q2, open System settings → About and look for “CFW. Version”.",
+        tfCardUpdateMenuPath: "System settings → System Update → TF card update",
         deviceMountPoint: "/mnt/mmc"
     )
 
@@ -223,6 +228,9 @@ extension DeviceProfile {
             "To bring in playlists, open Playlists and choose Import.", // UNVERIFIED wording on stock
         ],
         versionLocationHint: "On the Q2, open System Setting → About.",
+        // UNVERIFIED wording on stock. Q2 Pod's docs say it reuses stock's
+        // System Update page, whose first button is the TF card update.
+        tfCardUpdateMenuPath: "System Setting → System Update → TF card update",
         deviceMountPoint: "/mnt/mmc"
     )
 }

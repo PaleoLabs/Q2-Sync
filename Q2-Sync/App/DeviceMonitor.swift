@@ -41,6 +41,11 @@ struct ConnectedDevice: Equatable {
     var accessURL: URL?
     /// Why `accessURL` is `nil`, for the UI.
     var accessProblem: String?
+    /// How the card is connected: through the Q2 or a card reader.
+    var connection: CardConnection = .unknown
+    /// When this card was mounted (kept across an eject that failed), so
+    /// "since the last connection" questions can be answered.
+    var connectedAt: Date = .now
 }
 
 /// Tracks mounted volumes and the user's Q2.
@@ -57,8 +62,9 @@ final class DeviceMonitor {
     /// their Q2. Drives the "Is this your Q2?" sheet.
     var pendingVolume: VolumeInfo?
 
-    /// Eligible drives the user postponed ("Later") this session. Shown in
-    /// the sidebar with a "Set Up…" button.
+    /// Eligible drives the user postponed ("Later") this session, and new
+    /// drives that don't look like a Q2 (a card reader, a USB stick), which
+    /// don't pop up the setup sheet. Shown in the sidebar with "Set Up…".
     private(set) var postponedVolumes: [VolumeInfo] = []
 
     /// The last error to show in an alert, if any.
@@ -82,6 +88,10 @@ final class DeviceMonitor {
 
     /// UUIDs postponed this session (not saved: asked again next launch).
     private var postponedUUIDs: Set<String> = []
+
+    /// How each mounted drive is connected, by volume UUID. Read once per
+    /// mount and forgotten when the drive goes away.
+    private var connections: [String: CardConnection] = [:]
 
     /// Our notification observers, kept so they stay registered.
     private var observers: [NSObjectProtocol] = []
@@ -128,6 +138,7 @@ final class DeviceMonitor {
         let urls = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
         let eligible = urls.compactMap(VolumeInfo.read).filter(VolumeEligibility.isEligible)
+        updateConnections(for: eligible)
 
         // 1. Is the connected Q2 still mounted?
         if let current = connected, !eligible.contains(where: { $0.uuid == current.device.volumeUUID }) {
@@ -147,12 +158,36 @@ final class DeviceMonitor {
             guard let uuid = volume.uuid else { return false }
             return store.device(withUUID: uuid) == nil && !store.isIgnored(uuid: uuid)
         }
-        postponedVolumes = unknown.filter { postponedUUIDs.contains($0.uuid ?? "") }
+        // Only drives that look like a Q2 (or can't be told) pop up the
+        // sheet; card readers and USB sticks wait quietly in the sidebar.
+        let asksByItself: (VolumeInfo) -> Bool = { [self] volume in
+            !postponedUUIDs.contains(volume.uuid ?? "") && connection(for: volume).promptsForSetUp
+        }
+        postponedVolumes = unknown.filter { !asksByItself($0) && $0 != pendingVolume }
         if let pending = pendingVolume, !unknown.contains(pending) {
             pendingVolume = nil // It was unplugged while we were asking.
         }
         if pendingVolume == nil, connected == nil {
-            pendingVolume = unknown.first { !postponedUUIDs.contains($0.uuid ?? "") }
+            pendingVolume = unknown.first(where: asksByItself)
+            postponedVolumes.removeAll { $0 == pendingVolume }
+        }
+    }
+
+    /// How a mounted drive is connected (through the Q2 or otherwise).
+    func connection(for volume: VolumeInfo) -> CardConnection {
+        connections[volume.uuid ?? ""] ?? .unknown
+    }
+
+    /// Reads the connection of newly mounted drives and forgets drives
+    /// that went away.
+    private func updateConnections(for volumes: [VolumeInfo]) {
+        let mounted = Set(volumes.compactMap(\.uuid))
+        connections = connections.filter { mounted.contains($0.key) }
+        for volume in volumes {
+            guard let uuid = volume.uuid, connections[uuid] == nil else { continue }
+            let connection = CardConnection.classify(DriveIdentityReader.identity(forVolumeAt: volume.url))
+            connections[uuid] = connection
+            Self.logger.notice("Drive connection: \(connection.rawValue, privacy: .public)")
         }
     }
 
@@ -178,8 +213,11 @@ final class DeviceMonitor {
     ///   - volume: The mounted volume with the matching UUID.
     /// - Side effects: Starts security-scoped access (balanced in
     ///   `disconnect()`); may refresh a stale bookmark in the store.
-    private func connect(device: KnownDevice, volume: VolumeInfo) {
+    ///   - connectedAt: When the card was mounted; pass the old value when
+    ///     reconnecting after a failed eject.
+    private func connect(device: KnownDevice, volume: VolumeInfo, connectedAt: Date = .now) {
         var device = device
+        let connection = connection(for: volume)
         var isStale = false
         do {
             let url = try URL(resolvingBookmarkData: device.bookmarkData,
@@ -192,20 +230,23 @@ final class DeviceMonitor {
             guard VolumeInfo.read(at: url)?.uuid == device.volumeUUID else {
                 url.stopAccessingSecurityScopedResource()
                 connected = ConnectedDevice(device: device, volume: volume, accessURL: nil,
-                                            accessProblem: "The saved access points to a different drive. Grant access again.")
+                                            accessProblem: "The saved access points to a different drive. Grant access again.",
+                                            connection: connection, connectedAt: connectedAt)
                 return
             }
             if isStale, let fresh = try? url.bookmarkData(options: [.withSecurityScope]) {
                 device.bookmarkData = fresh
                 try? store.upsert(device)
             }
-            connected = ConnectedDevice(device: device, volume: volume, accessURL: url, accessProblem: nil)
+            connected = ConnectedDevice(device: device, volume: volume, accessURL: url, accessProblem: nil,
+                                        connection: connection, connectedAt: connectedAt)
             reloadManifest()
             Self.logger.notice("Connected to known Q2 card")
             if let connected { onDeviceConnected?(connected) }
         } catch {
             connected = ConnectedDevice(device: device, volume: volume, accessURL: nil,
-                                        accessProblem: "Q2 Sync no longer has permission to use this card. Grant access again.")
+                                        accessProblem: "Q2 Sync no longer has permission to use this card. Grant access again.",
+                                        connection: connection, connectedAt: connectedAt)
         }
     }
 
@@ -343,6 +384,26 @@ final class DeviceMonitor {
         updateConnectedDevice { $0.dismissedFirmwareRelease = tag }
     }
 
+    /// Records that firmware was put on the card, waiting for the Q2 to
+    /// install it (or clears that record with `nil`).
+    func setPendingFirmwareInstall(_ pending: PendingFirmwareInstall?) {
+        updateConnectedDevice { $0.pendingFirmwareInstall = pending }
+    }
+
+    /// The user confirmed the Q2 installed the pending firmware: switch
+    /// the device to it and record its version.
+    func completePendingFirmwareInstall() {
+        updateConnectedDevice { device in
+            guard let image = device.pendingFirmwareInstall?.image else { return }
+            device.firmware = image.kind
+            // The version field is Q2 Pod's "CFW. Version", used for its
+            // update checks; stock has none.
+            device.installedFirmwareVersion = image.kind == .q2Pod ? image.version : nil
+            device.dismissedFirmwareRelease = nil
+            device.pendingFirmwareInstall = nil
+        }
+    }
+
     /// Changes what happens when this Q2 connects.
     func setAutoSync(_ mode: AutoSyncMode) {
         updateConnectedDevice { $0.autoSync = mode }
@@ -405,7 +466,7 @@ final class DeviceMonitor {
             return true
         } catch {
             // Still mounted: restore access so the user can carry on.
-            connect(device: current.device, volume: current.volume)
+            connect(device: current.device, volume: current.volume, connectedAt: current.connectedAt)
             errorMessage = "The card couldn't be ejected. Close any windows or apps using it and try again. (\(error.localizedDescription))"
             return false
         }

@@ -19,7 +19,7 @@ music files. It only copies music **to** your Q2.
 5. [Music that's only on the card](#5-music-thats-only-on-the-card)
 6. [Update the library on your Q2](#6-update-the-library-on-your-q2)
 7. [Auto-sync](#7-auto-sync)
-8. [Firmware update notices](#8-firmware-update-notices)
+8. [Firmware: install, switch and update](#8-firmware-install-switch-and-update)
 9. [Eject safely](#9-eject-safely)
 10. [Frequently asked questions](#10-frequently-asked-questions)
 
@@ -54,6 +54,10 @@ The card must be formatted **exFAT** or **FAT32**. New cards usually are.
 4. When your Q2's card is connected, a window asks **"Is this your Shanling Q2?"**
    - Choose which firmware it runs: **Q2 Pod** or **Shanling (stock)**. If
      you're not sure: Q2 Pod looks like an iPod; stock is Shanling's own look.
+   - This window pops up by itself only for a Q2 connected by USB cable. A
+     card in a card reader (or any other drive) is listed in the sidebar under
+     **Devices** instead: click **Set Up…** next to it. Once set up, your card
+     is recognised either way.
    - Click **Continue…**. macOS shows the card in a window: make sure the card
      itself is selected, then click **Grant Access**. This lets Q2 Sync change
      files on this card only.
@@ -204,7 +208,38 @@ it in Settings.
 
 ---
 
-## 8. Firmware update notices
+## 8. Firmware: install, switch and update
+
+Q2 Sync can put **Q2 Pod** or **Shanling's stock firmware** on your card, so
+you can switch between them or update. Open your Q2's **Settings** tab and
+click **Install Firmware…** (or choose **Device → Install Firmware…**).
+
+1. Pick **Q2 Pod** or **Shanling (stock)**. Q2 Sync shows the latest version
+   of each: Q2 Pod's from GitHub, stock's from Shanling's download page.
+2. Click **Download and Copy to Card**. Q2 Sync downloads it, checks it's
+   genuine Shanling Q2 firmware of the kind you picked (Q2 Pod must also match
+   GitHub's checksum), makes sure the card has room (about twice the file,
+   as the Q2 unpacks it next to itself), and copies it to the card as
+   `update.tar`. Your music isn't touched.
+3. Follow the steps it shows: eject (if the card is in a card reader, put it
+   back in the Q2), make sure the Q2 is charged, then on the Q2 choose
+   **System settings → System Update → TF card update** and confirm. Leave
+   the card in until the Q2 restarts by itself.
+4. Next time you connect the Q2, Q2 Sync asks **Did the Firmware Update
+   Finish?** Click **Yes, It's Updated** to switch its settings to the new
+   firmware (and remove the leftover `update.tar`), **Not Yet** to be asked
+   again, or **Don't Install It** to remove the file. The card can't tell Q2
+   Sync which firmware is installed, which is why it asks.
+
+If the download can't be found (for example, Shanling changed its page),
+download the firmware yourself and click **Choose File…**, or drop the zip or
+`update.tar` onto the window. It's checked the same way.
+
+If the Q2 won't start up after an update, see Q2 Pod's
+[restoring stock firmware](https://github.com/DiamondBond/q2-pod#restoring-stock-firmware)
+instructions.
+
+### Update notices
 
 **Q2 Pod:** on your Q2's **Settings** tab, under **Firmware Updates**, turn on
 **Check GitHub for new Q2 Pod releases**. Q2 Sync checks at most once a day
@@ -217,11 +252,11 @@ releases, with their notes and a link.
 - If you leave it blank, Q2 Sync tells you about each new release once; click
   **Dismiss** to hide it until the next one.
 
-**Shanling stock:** there's a link to Shanling's download page. Your Q2 can
-also check by itself: **System Setting → System Update → Network update**.
+- When a new release is out, click **Update to …** to put it on the card.
 
-Q2 Sync **never downloads or installs firmware**. Follow the release's
-instructions to update on the Q2.
+**Shanling stock:** not checked automatically. **Install Firmware…** always
+finds Shanling's latest, and your Q2 can also check by itself: **System
+Setting → System Update → Network update**.
 
 ---
 

@@ -29,8 +29,12 @@
 //  directly inside are allowed). Deleting elsewhere
 //  needs the explicit `.deleteConfirmedByUser` operation, used only for
 //  card-only files the user chose to delete.
-//  One narrow exception to (d): `checkAppleDoubleCompanion` lets the app
-//  delete the macOS `._` companion of a song it manages (see that method).
+//  Two narrow exceptions to (d):
+//  • `checkAppleDoubleCompanion` lets the app delete the macOS `._`
+//    companion of a song it manages (see that method).
+//  • `checkFirmwareUpdateFile` lets the firmware installer write or delete
+//    exactly one file, `update.tar` at the card root, which is where the
+//    Q2's updater looks for firmware (see that method).
 //
 
 import Foundation
@@ -239,6 +243,56 @@ struct PathGuard: Sendable {
         guard isRegularFile, UInt64(info.st_size) <= Self.maximumAppleDoubleSize,
               Self.resolve(companion.path) == companion.path else {
             throw Violation.reservedItem(companion.path)
+        }
+        return companion
+    }
+
+    /// Approves writing or deleting the firmware file `update.tar` at the
+    /// card root, and nothing else.
+    ///
+    /// WHY THIS NARROW EXCEPTION EXISTS
+    /// `update.tar` is reserved (rule d) so syncing never touches it. But
+    /// the firmware installer's whole job is to put one there, when the user
+    /// asks, after the file was checked (`FirmwareImage`). Conditions, all
+    /// required:
+    ///  • the path is exactly `<card root>/update.tar` (any letter case,
+    ///    as FAT/exFAT ignore case);
+    ///  • whatever is there now is a plain file (not a folder or symlink),
+    ///    or nothing;
+    ///  • the card is still the confirmed, eligible card.
+    /// The `.part` file Q2 Pod's own Network update writes is NOT covered.
+    ///
+    /// - Parameter operation: `.write` or `.delete`.
+    /// - Returns: The approved URL.
+    /// - Throws: `Violation` if any condition fails.
+    func checkFirmwareUpdateFile(for operation: Operation) throws -> URL {
+        guard operation == .write || operation == .delete else { throw Violation.reservedItem(FirmwareImage.fileName) }
+        let url = cardRoot.appending(path: FirmwareImage.fileName)
+        guard let resolved = Self.resolve(url.path),
+              (resolved as NSString).deletingLastPathComponent == cardRoot.path,
+              (resolved as NSString).lastPathComponent.lowercased() == FirmwareImage.fileName else {
+            throw Violation.reservedItem(FirmwareImage.fileName)
+        }
+        if protectedFolders.contains(where: { Self.isInside(resolved, folder: $0) }) {
+            throw Violation.protectedFolder(resolved)
+        }
+        var info = stat()
+        if lstat(resolved, &info) == 0, (info.st_mode & S_IFMT) != S_IFREG {
+            throw Violation.reservedItem(FirmwareImage.fileName)
+        }
+        try checkVolume(at: cardRoot)
+        return URL(filePath: resolved)
+    }
+
+    /// Approves deleting `._update.tar`, the macOS companion of the
+    /// firmware file, under the same rules as `checkAppleDoubleCompanion`.
+    func checkFirmwareUpdateCompanion() throws -> URL {
+        let main = try checkFirmwareUpdateFile(for: .delete)
+        let companion = main.deletingLastPathComponent().appending(path: "._" + main.lastPathComponent)
+        var info = stat()
+        guard lstat(companion.path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG,
+              UInt64(info.st_size) <= Self.maximumAppleDoubleSize else {
+            throw Violation.reservedItem(companion.lastPathComponent)
         }
         return companion
     }

@@ -69,3 +69,37 @@ Steps:
       Mac and Q2 Sync recognises it as the same card as in a card reader (same
       volume ID).
 - [ ] Eject from Q2 Sync works while the Q2 is connected.
+
+## 5. Telling the firmware apart over USB
+
+Neither firmware records its version on the card, so the only other way to
+tell them apart is what the Q2 reports over USB (USB Storage mode).
+
+Stock **V1.36**, read 2026-11-21 with `system_profiler SPUSBHostDataType`
+and `ioreg`:
+
+| Field | Value |
+| --- | --- |
+| USB vendor / product ID | `0x0525` / `0xa4a5` (Linux USB storage gadget) |
+| USB manufacturer / product | `ingenic` / `composite-storage` |
+| USB serial number | `ingenic-storage` |
+| USB product version (`bcdDevice`) | `0x0100` |
+| SCSI vendor / product / revision | `Linux` / `File-Stor Gadget` / `0510` |
+
+- [ ] Read the same fields on Q2 Pod. If any differ, Q2 Sync can detect the
+      firmware on connect. Q2 Pod's docs say its kernel is byte-identical to
+      stock (both firmware files carry the same kernel checksum), so they're
+      expected to match.
+- [ ] Q2 Sync's device header says **Connected by USB** for the Q2 on a
+      cable and **In a card reader** for the card in a reader.
+
+## 6. Installing firmware
+
+- [ ] Stock firmware: the menu is **System Setting → System Update → TF card
+      update** (the wording is assumed from Q2 Pod's docs, which reuse stock's
+      System Update page).
+- [ ] After a TF card update, is `update.tar` still on the card? (Q2 Pod's
+      docs suggest it stays.) Q2 Sync offers to remove it when you confirm
+      the update finished.
+- [ ] Stock → Q2 Pod and Q2 Pod → stock both work with the file Q2 Sync
+      copied.

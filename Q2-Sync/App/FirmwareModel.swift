@@ -12,7 +12,8 @@
 //  The device's Settings tab shows the details and a "Check Now" button.
 //  The actual request and comparison live in Core (`FirmwareUpdateChecker`).
 //
-//  It never downloads or installs firmware.
+//  It only reads release information; `FirmwareInstaller` downloads
+//  firmware, and only when you ask.
 //
 
 import Foundation

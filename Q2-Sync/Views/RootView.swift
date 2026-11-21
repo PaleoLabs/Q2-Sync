@@ -32,6 +32,9 @@ struct RootView: View {
     /// The sync coordinator, provided by `Q2SyncApp` via the environment.
     @Environment(SyncCoordinator.self) private var sync
 
+    /// For the firmware sheets.
+    @Environment(AutoSyncController.self) private var autoSync
+
     /// `true` once the one-time first-launch notice has been acknowledged.
     @AppStorage(FirstLaunchNoticeView.acknowledgedKey) private var noticeAcknowledged = false
 
@@ -54,6 +57,23 @@ struct RootView: View {
                 .sheet(isPresented: Binding(get: { sync.isPresentingSheet }, set: { _ in })) {
                     SyncSheet(sync: sync, devices: devices)
                 }
+                // The firmware sheets, each on its own invisible view so
+                // every view presents only one sheet.
+                .background {
+                    Color.clear.sheet(isPresented: Binding(
+                        get: { autoSync.installer.isPresentingSheet && !sync.isPresentingSheet },
+                        set: { if !$0 { autoSync.installer.close() } })) {
+                        FirmwareInstallSheet(installer: autoSync.installer, devices: devices)
+                    }
+                }
+                .background {
+                    Color.clear.sheet(isPresented: Binding(
+                        get: { noticeAcknowledged && autoSync.installer.isAskingAboutPending
+                               && !autoSync.installer.isPresentingSheet && !sync.isPresentingSheet },
+                        set: { _ in })) {
+                        FirmwareFinishedSheet(installer: autoSync.installer, devices: devices)
+                    }
+                }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -70,7 +90,7 @@ struct RootView: View {
         // The "Is this your Q2?" sheet appears whenever a new drive is pending.
         // `Binding(get:set:)` adapts the optional volume to the sheet's
         // `item:` parameter.
-        .sheet(item: Binding(get: { noticeAcknowledged ? devices.pendingVolume : nil },
+        .sheet(item: Binding(get: { noticeAcknowledged && !autoSync.installer.isBusy ? devices.pendingVolume : nil },
                              set: { devices.pendingVolume = $0 })) { volume in
             NewDeviceSheet(volume: volume, devices: devices)
         }
@@ -176,9 +196,11 @@ struct DeviceSidebarRow: View {
 }
 
 #Preview {
-    RootView(library: LibraryModel(source: FixtureLibrarySource.preview), devices: DeviceMonitor())
-        .environment(SyncCoordinator())
+    let library = LibraryModel(source: FixtureLibrarySource.preview)
+    let devices = DeviceMonitor()
+    let sync = SyncCoordinator()
+    RootView(library: library, devices: devices)
+        .environment(sync)
+        .environment(AutoSyncController(library: library, devices: devices, sync: sync))
         .frame(width: 1000, height: 600)
-    // (The full app also provides an AutoSyncController; screens that need
-    //  it aren't shown in this preview.)
 }

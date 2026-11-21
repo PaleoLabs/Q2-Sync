@@ -279,6 +279,59 @@ struct CardFileSystem: Sendable {
         }
     }
 
+    // MARK: - Firmware file
+
+    /// The size of `update.tar` at the card root, or `nil` if there's none.
+    func firmwareUpdateFileSize() -> UInt64? {
+        fileSize(at: FirmwareImage.fileName)
+    }
+
+    /// Puts a checked firmware file on the card as `update.tar`.
+    ///
+    /// Steps: copy into `.q2sync/tmp/` (the same safe copy songs use), read
+    /// the copy back from the card and compare its SHA-256 with the Mac
+    /// file's, then rename it into place at the card root (replacing an
+    /// older `update.tar`) and tidy any `._update.tar`.
+    ///
+    /// - Parameters:
+    ///   - source: The `update.tar` on the Mac, already checked by
+    ///     `FirmwareImage.inspect`.
+    ///   - expectedSHA256: The source's SHA-256 (lowercase hex).
+    ///   - onProgress: Called with bytes copied, then bytes re-read.
+    /// - Throws: Guard violations, `FirmwareImageError.checksumMismatch`,
+    ///   `CancellationError` or file errors. Nothing is left in place on failure.
+    func placeFirmwareUpdate(from source: URL, expectedSHA256: String,
+                             onProgress: (Int) -> Void = { _ in }) throws {
+        let target = try pathGuard.checkFirmwareUpdateFile(for: .write)
+        let staged = "\(tempFolder)/firmware-\(UUID().uuidString).part"
+        try copyFromMac(source: source, to: staged, onProgress: onProgress)
+        let stagedURL = try pathGuard.check(staged, for: .delete)
+        do {
+            let copied = try FirmwareImage.sha256(of: stagedURL, onProgress: onProgress)
+            guard copied == expectedSHA256.lowercased() else { throw FirmwareImageError.checksumMismatch }
+            Self.removeExtendedAttributes(at: stagedURL)
+            // Re-check right before the rename: the card must still be the card.
+            _ = try pathGuard.checkFirmwareUpdateFile(for: .write)
+            try Self.rename(stagedURL, to: target)
+        } catch {
+            try? FileManager.default.removeItem(at: stagedURL)
+            throw error
+        }
+        if let companion = try? pathGuard.checkFirmwareUpdateCompanion() {
+            _ = Darwin.unlink(companion.path)
+        }
+    }
+
+    /// Deletes `update.tar` from the card root (and its `._` companion).
+    func removeFirmwareUpdate() throws {
+        let url = try pathGuard.checkFirmwareUpdateFile(for: .delete)
+        if let companion = try? pathGuard.checkFirmwareUpdateCompanion() {
+            _ = Darwin.unlink(companion.path)
+        }
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        try FileManager.default.removeItem(at: url)
+    }
+
     // MARK: - AppleDouble companions
 
     /// What happened when tidying a `._` companion.

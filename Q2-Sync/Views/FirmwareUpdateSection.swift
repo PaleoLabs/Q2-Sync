@@ -4,12 +4,12 @@
 //
 //  PURPOSE
 //  The "Firmware Updates" part of a Q2's Settings tab.
+//    • Install Firmware… (Q2 Pod or stock), and the status of firmware put
+//      on the card that the Q2 hasn't installed yet.
 //    • Q2 Pod: an optional check of GitHub for new releases, your installed
 //      version (typed in, as the card doesn't record it), the latest
-//      release's notes, a link, and Dismiss.
-//    • Stock: a link to Shanling's download page (not checked
-//      automatically, as it isn't kept up to date).
-//  Q2 Sync never downloads or installs firmware.
+//      release's notes, a link, Update…, and Dismiss.
+//  Firmware is only downloaded when you click Install or Update.
 //
 //  HOW IT FITS
 //  Shown inside `DeviceSettingsView`'s Form. Data from `FirmwareModel`;
@@ -24,6 +24,7 @@ struct FirmwareUpdateSection: View {
     let connected: ConnectedDevice
     let devices: DeviceMonitor
     let firmware: FirmwareModel
+    let installer: FirmwareInstaller
 
     /// Whether checking is on (saved in UserDefaults).
     @AppStorage(FirmwareModel.enabledKey) private var checkEnabled = false
@@ -33,17 +34,49 @@ struct FirmwareUpdateSection: View {
 
     var body: some View {
         Section {
+            installContent
             if connected.device.firmware == .q2Pod {
                 q2PodContent
-            } else {
-                stockContent
             }
         } header: {
             Text("Firmware Updates")
         } footer: {
-            Text("Q2 Sync only tells you about new firmware. It never downloads or installs it; you update on the Q2 itself.")
+            Text("Firmware is downloaded only when you click Install or Update. Q2 Sync checks it and copies it to the card as update.tar; your Q2 installs it when you choose TF card update.")
         }
         .onAppear { versionText = connected.device.installedFirmwareVersion ?? "" }
+        // Follow changes made elsewhere (Mark as Installed, the "Did the
+        // update finish?" question), unless it's the user's own typing.
+        .onChange(of: connected.device.installedFirmwareVersion) { _, saved in
+            let shown = versionText.trimmingCharacters(in: .whitespaces)
+            if shown != (saved ?? "") { versionText = saved ?? "" }
+        }
+    }
+
+    // MARK: Installing
+
+    @ViewBuilder
+    private var installContent: some View {
+        if let pending = connected.device.pendingFirmwareInstall {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("\(pending.image.displayName) is on the card, waiting for you to install it on the Q2: \(connected.device.profile.tfCardUpdateMenuPath).",
+                      systemImage: "clock.arrow.circlepath")
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button("Mark as Installed") {
+                        installer.markPendingInstalled(removeFile: false)
+                    }
+                    .help("Switch this Q2's settings to \(pending.image.kind.displayName)")
+                    Button("Remove from Card") { installer.cancelPending() }
+                }
+            }
+        }
+        HStack {
+            Text("Switch between Q2 Pod and Shanling's stock firmware, or update.")
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Install Firmware…") { installer.present() }
+                .disabled(connected.accessURL == nil || installer.isBusy)
+        }
     }
 
     // MARK: Q2 Pod
@@ -125,18 +158,11 @@ struct FirmwareUpdateSection: View {
                 Spacer()
                 if firmware.status(for: connected.device)?.shouldNotify == true {
                     Button("Dismiss") { devices.dismissFirmwareRelease(release.tag) }
+                    Button("Update to \(release.tag)…") { installer.present(selecting: .q2Pod) }
+                        .disabled(connected.accessURL == nil || installer.isBusy)
                 }
             }
         }
-    }
-
-    // MARK: Stock
-
-    @ViewBuilder
-    private var stockContent: some View {
-        Text("Shanling's stock firmware isn't checked automatically: its download page isn't kept up to date. On the Q2, System Setting → System Update → Network update checks Shanling's servers.")
-            .font(.callout)
-        Link("Open Shanling's Q2 Download Page", destination: FirmwareUpdateChecker.stockDownloadPage)
     }
 
     /// Release notes as styled text; falls back to plain text.

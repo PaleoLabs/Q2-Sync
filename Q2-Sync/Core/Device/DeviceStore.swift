@@ -62,6 +62,11 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     /// The last firmware release the user dismissed, e.g. "1.8.5".
     var dismissedFirmwareRelease: String?
 
+    /// Firmware Q2 Sync put on this card that the Q2 hasn't been confirmed
+    /// to have installed yet. Next time the card connects, the app asks
+    /// whether the update finished (the card can't tell us).
+    var pendingFirmwareInstall: PendingFirmwareInstall?
+
     /// The auto-sync setting, with its default.
     var effectiveAutoSync: AutoSyncMode { autoSync ?? .ask }
 
@@ -79,6 +84,14 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
 
     /// This device's firmware profile.
     var profile: DeviceProfile { firmware.profile }
+}
+
+/// A firmware file Q2 Sync placed on the card as `update.tar`.
+struct PendingFirmwareInstall: Codable, Hashable, Sendable {
+    /// What the file is.
+    let image: FirmwareImageInfo
+    /// When it was put on the card.
+    let placedAt: Date
 }
 
 /// Persistent list of known and ignored devices.

@@ -40,8 +40,13 @@ date, and writes your playlists in a format the Q2 can import.
   with a warning when the selection won't fit.
 - **Auto-sync** when the Q2 connects (ask first, or sync automatically),
   notifications, a menu bar item, and an option to open at login.
-- **Firmware update notices** for Q2 Pod (optional, from GitHub). It never
-  downloads or installs firmware.
+- **Switch firmware** between Q2 Pod and Shanling's stock firmware, or
+  update, from the Q2's Settings tab or **Device → Install Firmware…**. Q2 Sync
+  downloads the latest version, checks it's genuine Q2 firmware (and matches
+  GitHub's checksum for Q2 Pod), copies it to the card as `update.tar`, and
+  walks you through **TF card update** on the Q2. Next time you connect, it
+  asks whether the update finished and switches its settings to match.
+- **Firmware update notices** for Q2 Pod (optional, from GitHub).
 - **Clean cards:** FAT/exFAT-safe file names, no stray macOS `._` files next to
   synced songs, and firmware folders are never touched.
 - **A first-class Mac app:** SwiftUI, sidebar and detail layout, SF Symbols,
@@ -103,6 +108,13 @@ the card, which you fix by syncing again.
   another drive is never mistaken for it.
 - **"Mac looks empty" guard.** If the library can't be read or your music drive
   is disconnected, the sync stops before touching the card.
+- **Firmware only when you ask.** Firmware is downloaded only when you
+  click Install or Update, and checked before it touches the card: it must
+  say it's for a Shanling Q2, be the firmware you picked, and (for Q2 Pod)
+  match GitHub's SHA-256. The copy on the card is read back and checked too.
+  The path guard's one exception for it covers exactly `update.tar` at the
+  card root. Q2 Sync never changes the firmware on the Q2 itself: the Q2's
+  own updater does that when you choose **TF card update**.
 - **Nothing is removed without asking.** Removals are off by default, go to a
   trash folder on the card, and removing more than 20% needs extra
   confirmation.
@@ -116,7 +128,8 @@ the card, which you fix by syncing again.
 | Syncing music | ✅ | ✅ |
 | Playlists (`_explaylist_data/*.m3u`) | ✅ documented format, to verify on device | ✅ same folder, to verify on device |
 | "Update the library on your Q2" steps | Library → Update Library → Scan music now | Local Songs → Update Library → Scan music now |
-| Firmware update notices | ✅ from GitHub releases | Link to Shanling's download page |
+| Install / switch firmware | ✅ latest GitHub release (checksum-verified) | ✅ latest from Shanling's download page |
+| Firmware update notices | ✅ from GitHub releases | Not checked automatically |
 | Card trash hidden from the library | ✅ (`database.ignore`) | May appear; empty it in Finder |
 
 Firmware-specific behaviour lives in one place, `DeviceProfile`, so other

@@ -76,7 +76,7 @@ flowchart TB
 | --- | --- |
 | `Q2-Sync/Core/Models` | Plain values: `Track`, `Playlist`, `LibrarySnapshot`, `SyncSelection` |
 | `Q2-Sync/Core/Library` | Reading Apple Music: `LibrarySource`, `ITunesLibrarySource`, `FixtureLibrarySource`, `LibraryHealthCheck` |
-| `Q2-Sync/Core/Device` | Device facts: `DeviceProfile`, `ReservedItemRules`, `VolumeInfo`, `DeviceStore`, `FirmwareUpdates` |
+| `Q2-Sync/Core/Device` | Device facts: `DeviceProfile`, `ReservedItemRules`, `VolumeInfo`, `CardConnection`, `DeviceStore`, `FirmwareUpdates`, `FirmwareSources`, `FirmwareImage`, `ZipExtractor` |
 | `Q2-Sync/Core/SyncEngine` | Planning, diffing, copying, playlists, path guard, safety |
 | `Q2-Sync/App` | App entry point and UI-facing models (`@Observable` classes) |
 | `Q2-Sync/Views` | SwiftUI views |
@@ -223,7 +223,19 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   New fields are optional so older files still load.
 - **`FirmwareUpdateChecker`** · `fetchLatest()` reads GitHub's latest Q2 Pod
   release; `status(latest:installed:dismissedTag:)` decides what to show.
-  `FirmwareVersion` parses "1.8.5", "v1.8.5", "V1850". Never downloads firmware.
+  `FirmwareVersion` parses "1.8.5", "v1.8.5", "V1850". `FirmwareRelease`
+  also carries the release's `update.tar` link and GitHub's SHA-256 of it.
+- **`CardConnection.classify(_:)`** · from a `DriveIdentity` (USB IDs and
+  names, disk vendor/model), tells a Q2 on a USB cable (Ingenic + Linux
+  storage gadget) from a card reader. A hint for the UI only, never a safety
+  check. Read by `DriveIdentityReader` (App, Disk Arbitration + I/O Kit).
+- **`FirmwareSources`** · builds a `FirmwareOffer` from the GitHub release
+  (Q2 Pod) or Shanling's download page (stock: version + Google Drive link).
+- **`FirmwareImage.inspect(_:)`** · checks an `update.tar`: GNU tar whose
+  first entry `firmware_v20.info` says "Shanling Q2" and a version ("V1.36"
+  = stock, "V1890" = Q2 Pod 1.8.9). Also `sha256(of:)`.
+- **`ZipExtractor.extract(fileNamed:from:to:)`** · takes one file out of a
+  zip (stored or deflate), checking size and CRC-32.
 
 ### Sync engine (`Core/SyncEngine`)
 
@@ -263,6 +275,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks. |
 | `NotificationManager` | Posts notifications; handles Sync Now / Eject / Open buttons. |
 | `FirmwareModel` | Firmware check state (opt-in, at most daily, cached). |
+| `FirmwareInstaller` | Install sheet state and pipeline: find offers, download (`FileDownloader`), unzip, inspect, verify checksum, check free space, `CardFileSystem.placeFirmwareUpdate`, then remember `pendingFirmwareInstall` and ask on the next connection whether the Q2 installed it. |
+| `DriveIdentityReader` | Reads a volume's USB/disk identity for `CardConnection`. |
 
 ### Views (`Q2-Sync/Views`)
 
@@ -331,7 +345,7 @@ Defence in depth: several independent layers, each enough on its own.
 | `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark. |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
 | `files.downloads.read-write` | "Copy to Mac" into `~/Downloads/Q2 Recovered`. |
-| `network.client` | The optional GitHub firmware check. |
+| `network.client` | The optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
 
 ### Layer 2 — The single PathGuard
 

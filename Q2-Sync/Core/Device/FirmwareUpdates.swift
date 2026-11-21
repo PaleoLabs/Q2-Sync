@@ -3,10 +3,11 @@
 //  Q2-Sync › Core › Device
 //
 //  PURPOSE
-//  Optional check for new Q2 Pod firmware releases on GitHub. It only
-//  READS release information (version, notes, link) and tells you about
-//  it. It never downloads or installs firmware: you update the Q2 yourself
-//  (System settings → System Update), as Q2 Pod's guide describes.
+//  Optional check for new Q2 Pod firmware releases on GitHub: version,
+//  notes, link, and the release's `update.tar` with GitHub's SHA-256 of it.
+//  Checking only reads release information. Downloading and putting the
+//  file on the card is a separate, user-started step (`FirmwareInstaller`);
+//  the Q2 itself does the actual update.
 //
 //  WHAT WE KNOW (checked 2026-11-15)
 //  • Releases: https://api.github.com/repos/DiamondBond/q2-pod/releases/latest
@@ -16,9 +17,8 @@
 //    Q2 Sync can't read it. You can type it in (the Q2 shows it under
 //    About as "CFW. Version"); otherwise Q2 Sync tells you about releases
 //    newer than the last one you dismissed.
-//  • Stock firmware: Shanling's download page still lists V1.32 while
-//    V1.36 exists, so it isn't a reliable source and isn't checked. The
-//    Q2's own System Update → Network update checks Shanling's servers.
+//  • Stock firmware has no release feed; see `FirmwareSources` for how its
+//    download is found on Shanling's page.
 //
 
 import Foundation
@@ -35,6 +35,20 @@ struct FirmwareRelease: Codable, Sendable, Equatable {
     let pageURL: URL
     /// When it was published.
     let publishedAt: Date?
+    /// The release's `update.tar`, if it has one. Optional so releases
+    /// saved by older versions of the app still load.
+    var updateFile: ReleaseFile?
+
+    /// A downloadable file attached to a release.
+    struct ReleaseFile: Codable, Sendable, Equatable {
+        /// The download link.
+        let url: URL
+        /// Size in bytes, as GitHub recorded it.
+        let size: Int64
+        /// GitHub's SHA-256 of the uploaded file (64 lowercase hex digits),
+        /// if GitHub gave one.
+        let sha256: String?
+    }
 
     /// The fields we read from GitHub's JSON. `CodingKeys` maps GitHub's
     /// snake_case names to our Swift names.
@@ -46,6 +60,15 @@ struct FirmwareRelease: Codable, Sendable, Equatable {
         let published_at: Date?
         let draft: Bool?
         let prerelease: Bool?
+        let assets: [Asset]?
+
+        struct Asset: Decodable {
+            let name: String
+            let size: Int64?
+            let browser_download_url: URL?
+            /// e.g. "sha256:3841f8c4…".
+            let digest: String?
+        }
     }
 
     /// Parses GitHub's "latest release" JSON.
@@ -61,8 +84,22 @@ struct FirmwareRelease: Codable, Sendable, Equatable {
               json.draft != true, json.prerelease != true else {
             throw FirmwareCheckError.unexpectedResponse
         }
+        let file = json.assets?.first { $0.name == FirmwareImage.fileName }.flatMap { asset -> ReleaseFile? in
+            guard let url = asset.browser_download_url, let size = asset.size else { return nil }
+            return ReleaseFile(url: url, size: size, sha256: parseDigest(asset.digest))
+        }
         return FirmwareRelease(tag: json.tag_name, name: json.name ?? json.tag_name, notes: json.body ?? "",
-                               pageURL: json.html_url, publishedAt: json.published_at)
+                               pageURL: json.html_url, publishedAt: json.published_at, updateFile: file)
+    }
+
+    /// Reads GitHub's "sha256:<64 hex digits>" digest.
+    ///
+    /// - Parameter digest: The asset's `digest` field.
+    /// - Returns: The lowercase hex digest, or `nil` if missing or malformed.
+    static func parseDigest(_ digest: String?) -> String? {
+        guard let digest, digest.lowercased().hasPrefix("sha256:") else { return nil }
+        let hex = digest.dropFirst("sha256:".count).lowercased()
+        return hex.wholeMatch(of: /[0-9a-f]{64}/) != nil ? String(hex) : nil
     }
 }
 
@@ -148,9 +185,6 @@ enum FirmwareUpdateChecker {
 
     /// GitHub's "latest release" endpoint for Q2 Pod.
     static let latestReleaseURL = URL(string: "https://api.github.com/repos/DiamondBond/q2-pod/releases/latest")!
-
-    /// Shanling's download page for the Q2's stock firmware.
-    static let stockDownloadPage = URL(string: "https://en.shanling.com/download/150")!
 
     /// Fetches the latest Q2 Pod release (read-only HTTPS request).
     ///

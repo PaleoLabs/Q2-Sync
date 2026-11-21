@@ -40,6 +40,10 @@ struct NewDeviceSheet: View {
                 }
             }
 
+            Label(connectionNote, systemImage: connection == .q2 ? "cable.connector" : "sdcard")
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+
             Text("Q2 Sync will only ever write to a card you confirm here. It remembers this card by its unique ID, so other drives are never mistaken for it.")
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -68,6 +72,18 @@ struct NewDeviceSheet: View {
         }
         .padding(24)
         .frame(width: 460)
+    }
+
+    /// How the drive is connected.
+    private var connection: CardConnection { devices.connection(for: volume) }
+
+    /// Explains what the connection suggests.
+    private var connectionNote: String {
+        switch connection {
+        case .q2: return "This drive looks like a Shanling Q2 connected by USB."
+        case .otherDrive: return "This drive is in a card reader or is another kind of drive, not a Q2 on a USB cable. That's fine if it's your Q2's card."
+        case .unknown: return "Q2 Sync couldn't tell how this drive is connected."
+        }
     }
 
     /// e.g. "“Q2CARD” · 256 GB · ExFAT".
