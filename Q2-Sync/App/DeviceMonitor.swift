@@ -81,10 +81,18 @@ final class DeviceMonitor {
     /// `nil` if it couldn't be read.
     private(set) var cardManifest: SyncManifest?
 
+    /// The Mac-side record of what was on each Q2's card when last read,
+    /// by volume UUID. Lets the library browser mark "On Q2" while the Q2
+    /// is unplugged. Saved whenever the card's manifest is read.
+    private(set) var cardContents: [String: CardContentsRecord] = [:]
+
     // MARK: Private
 
     /// Saved devices and ignored drives.
     private let store: DeviceStore
+
+    /// Where `cardContents` is saved (Application Support).
+    private let contentsStore: CardContentsStore
 
     /// UUIDs postponed this session (not saved: asked again next launch).
     private var postponedUUIDs: Set<String> = []
@@ -99,9 +107,28 @@ final class DeviceMonitor {
     private static let logger = Logger(subsystem: "io.github.q2sync.Q2Sync", category: "device")
 
     /// Creates the monitor.
-    /// - Parameter store: Where devices are remembered.
-    init(store: DeviceStore = DeviceStore()) {
+    /// - Parameters:
+    ///   - store: Where devices are remembered.
+    ///   - contentsStore: Where each Q2's last known contents are kept.
+    init(store: DeviceStore = DeviceStore(), contentsStore: CardContentsStore = CardContentsStore()) {
         self.store = store
+        self.contentsStore = contentsStore
+        for device in store.knownDevices {
+            if let record = contentsStore.load(volumeUUID: device.volumeUUID) {
+                cardContents[device.volumeUUID] = record
+            }
+        }
+    }
+
+    /// The Q2 the library browser compares against: the connected one, or
+    /// else the one read most recently. `nil` before any Q2 has been read.
+    var referenceContents: (device: KnownDevice, record: CardContentsRecord)? {
+        if let connected, let record = cardContents[connected.device.volumeUUID] {
+            return (connected.device, record)
+        }
+        return store.knownDevices
+            .compactMap { device in cardContents[device.volumeUUID].map { (device, $0) } }
+            .max { $0.1.checkedAt < $1.1.checkedAt }
     }
 
     // MARK: - Watching
@@ -261,6 +288,13 @@ final class DeviceMonitor {
     func reloadManifest() {
         guard let current = connected, let root = current.accessURL else { cardManifest = nil; return }
         cardManifest = try? SyncManifest.load(cardRoot: root, profile: current.device.profile)
+        // Keep the Mac-side note in step. A manifest that couldn't be read
+        // leaves the old note alone rather than claiming the card is empty.
+        if let manifest = cardManifest {
+            let record = CardContentsRecord(volumeUUID: current.device.volumeUUID, manifest: manifest)
+            contentsStore.save(record)
+            cardContents[record.volumeUUID] = record
+        }
     }
 
     /// Updates free space and the manifest after the card's contents changed.
@@ -455,6 +489,8 @@ final class DeviceMonitor {
         guard let uuid = connected?.device.volumeUUID else { return }
         disconnect()
         try? store.forget(uuid: uuid)
+        contentsStore.remove(volumeUUID: uuid)
+        cardContents[uuid] = nil
         refresh()
     }
 

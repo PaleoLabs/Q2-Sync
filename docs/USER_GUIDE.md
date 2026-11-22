@@ -109,6 +109,25 @@ The bar at the bottom shows:
 
 Your choices are saved for this Q2 automatically.
 
+### Browse your Music library
+
+The **Music Library** section of the sidebar (Artists, Albums, Genres,
+Playlists) shows your library as it relates to your Q2, even when the Q2 is
+unplugged:
+
+- a **checkmark**: on your Q2; a **half circle**: partly on it; a blue
+  **arrow**: chosen, and copied at the next sync; nothing: not chosen.
+- an orange **lock**: some (outline) or all (filled) of these songs can't be
+  copied.
+- Hover over an icon for the numbers, or select the row: each song shows
+  **On Q2** or **Next sync** in the **Q2** column, and its status icon says
+  why it can't be copied.
+
+These marks come from Q2 Sync's record of the card from the last time it was
+connected; the window's subtitle says which Q2 and when. If the card was
+changed elsewhere since (on the Q2 itself or another Mac), they catch up the
+next time you connect it.
+
 ---
 
 ## 4. Run a sync

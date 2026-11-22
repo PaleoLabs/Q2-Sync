@@ -191,6 +191,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `Track` | One song, copied out of Apple Music into a plain value | `availability` says if it can be copied (`available`, `cloudOnly`, `drmProtected`, `fileMissing`, `unsupported`). `effectiveAlbumArtist` mirrors Q2 Pod's album grouping. |
 | `Playlist` | One playlist: name, kind (regular/smart/folder), ordered track IDs | Smart playlists are their current contents. |
 | `LibrarySnapshot` | Immutable picture of the library | `artistGroups`, `albumGroups`, `genreGroups` build the selection lists. `SortKey` sorts like the Q2 (ignores leading The/A/An). |
+| `LibraryMarks` | The library browser's marks: per song `TrackPlacement` (on Q2 / next sync / not chosen / can't sync), per group `GroupMarks` counts | Built once per library read, card record and selection (it resolves the selection); compares against `CardContentsRecord`. |
 | `SyncSelection` | What you ticked for a device | Stores *intent* (artist/album/genre/playlist IDs) so new albums by a ticked artist sync automatically. |
 
 ### Library (`Core/Library`)
@@ -221,6 +222,11 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   security-scoped bookmark, selection, auto-sync mode, firmware version,
   dry-run state) and ignored drives to `devices.json` in the app container.
   New fields are optional so older files still load.
+- **`CardContentsRecord` / `CardContentsStore`** · a Mac-side note of which
+  songs (IDs only) Q2 Sync put on each card, saved whenever `DeviceMonitor`
+  reads the card's manifest, so the library browser can mark "On Q2" while
+  the Q2 is unplugged. Display only: syncing always uses the card's manifest.
+  Deleted when the Q2 is forgotten.
 - **`FirmwareUpdateChecker`** · `fetchLatest()` reads GitHub's latest Q2 Pod
   release; `status(latest:installed:dismissedTag:)` decides what to show.
   `FirmwareVersion` parses "1.8.5", "v1.8.5", "V1850". `FirmwareRelease`
@@ -297,7 +303,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 `CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 `FirmwareUpdateSection`, `LibraryCategoryView` + `TrackTableView` (library
-browser), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
+browser with "can sync" and "On Q2 / next sync" marks, compared with the
+connected Q2 or the one read most recently), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
 
 ---
 
@@ -459,6 +466,7 @@ Paths on the Mac are inside the app's sandbox container,
 | What | Where |
 | --- | --- |
 | Known devices, selections, auto-sync mode, bookmarks | `Library/Application Support/Q2 Sync/devices.json` |
+| Each Q2's last known contents (song IDs, dates) for the library browser | `Library/Application Support/Q2 Sync/Card Contents/<volume UUID>.json` |
 | Sync and dry-run logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
 | Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarItem`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |

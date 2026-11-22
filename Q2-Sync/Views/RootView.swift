@@ -183,7 +183,7 @@ struct RootView: View {
                                        description: Text("Set the Q2's USB switch to USB Storage and connect it."))
             }
         case .library(let category):
-            LibraryCategoryView(library: library, category: category)
+            LibraryCategoryView(library: library, devices: devices, category: category)
         case nil:
             ContentUnavailableView("Nothing Selected", systemImage: "sidebar.left")
         }

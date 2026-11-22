@@ -47,6 +47,10 @@ final class LibraryModel {
     /// How long the last load took, for the prototype's diagnostics.
     private(set) var lastLoadDuration: Duration?
 
+    /// Goes up by one each time a snapshot loads, so views can tell a new
+    /// read from the old one cheaply (snapshots aren't `Equatable`).
+    private(set) var loadCount = 0
+
     /// The source we read from. Real library in the app; fixtures in previews.
     private let source: any LibrarySource
 
@@ -96,6 +100,7 @@ final class LibraryModel {
         do {
             let loaded = try await source.loadSnapshot()
             snapshot = loaded
+            loadCount += 1
             health = LibraryHealthCheck.evaluate(loaded)
             lastLoadDuration = clock.now - start
             state = .loaded
