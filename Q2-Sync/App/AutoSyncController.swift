@@ -105,13 +105,52 @@ final class AutoSyncController {
         }
     }
 
+    // MARK: - Card busy state
+
+    /// The things that can use the card.
+    enum CardTool { case sync, installer, verifier, podData }
+
+    /// `true` while something other than `tool` is using the card (or a
+    /// sync sheet is open), so `tool` must not start. Every Sync, Install,
+    /// Verify and Back Up / Restore button uses this, so they agree.
+    func isCardInUse(except tool: CardTool? = nil) -> Bool {
+        (tool != .sync && sync.phase != .idle)
+            || (tool != .installer && installer.isBusy)
+            || (tool != .verifier && verifier.isBusy)
+            || (tool != .podData && podData.isBusy)
+    }
+
+    /// `true` while anything is reading or writing the card, so it must
+    /// not be ejected. (An open preview or result sheet doesn't count: a
+    /// stale preview can't be applied to an ejected card.)
+    var isCardBusy: Bool {
+        sync.isUsingCard || installer.isBusy || verifier.isBusy || podData.isBusy
+    }
+
+    /// `true` if a new card operation (sync, install, verify) can start.
+    var canStartCardOperation: Bool {
+        devices.connected?.accessURL != nil && !isCardInUse()
+    }
+
+    /// Ejects the card, unless something is still using it. Every Eject
+    /// button and notification action goes through here.
+    ///
+    /// - Returns: `true` if the card was ejected.
+    @discardableResult
+    func eject() async -> Bool {
+        guard !isCardBusy else {
+            devices.errorMessage = "Q2 Sync is still using the card. Wait for it to finish, then eject."
+            return false
+        }
+        return await devices.eject()
+    }
+
     /// Starts a sync of the connected Q2.
     ///
     /// - Parameter automatic: `true` applies it without the preview when
     ///   `AutoSyncPolicy` allows; `false` shows the preview as usual.
     func startSync(automatic: Bool) async {
-        guard let connected = devices.connected, sync.phase == .idle, !installer.isBusy,
-              !verifier.isBusy, !podData.isBusy else { return }
+        guard let connected = devices.connected, !isCardInUse() else { return }
         if !automatic { showMainWindow() }
         await sync.prepare(connected: connected, library: library, devices: devices, automatic: automatic)
     }
@@ -164,7 +203,8 @@ final class AutoSyncController {
             // From "Q2 connected — sync now?": same safety rules as auto-sync.
             Task { await startSync(automatic: true) }
         case .eject:
-            Task { await devices.eject() }
+            // The notification may be old; never eject mid-operation.
+            Task { await eject() }
         case .open:
             showMainWindow()
         }

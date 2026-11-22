@@ -192,6 +192,7 @@ struct DeviceSidebarRow: View {
 
     let connected: ConnectedDevice
     let devices: DeviceMonitor
+    @Environment(AutoSyncController.self) private var autoSync
 
     var body: some View {
         HStack {
@@ -205,11 +206,12 @@ struct DeviceSidebarRow: View {
                 ProgressView().controlSize(.small)
             } else {
                 Button {
-                    Task { await devices.eject() }
+                    Task { await autoSync.eject() }
                 } label: {
                     Image(systemName: "eject.fill")
                 }
                 .buttonStyle(.borderless)
+                .disabled(autoSync.isCardBusy)
                 .help("Eject “\(connected.device.name)”")
             }
         }

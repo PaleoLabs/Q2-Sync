@@ -29,9 +29,9 @@ struct MenuBarContent: View {
                 Text("Syncing… \(Int(sync.progress.fractionComplete * 100))%")
             }
             Button("Sync Now") { Task { await controller.startSync(automatic: false) } }
-                .disabled(sync.phase != .idle || connected.accessURL == nil)
-            Button("Eject “\(connected.device.name)”") { Task { await devices.eject() } }
-                .disabled(sync.phase == .running || devices.isEjecting)
+                .disabled(!controller.canStartCardOperation)
+            Button("Eject “\(connected.device.name)”") { Task { await controller.eject() } }
+                .disabled(controller.isCardBusy || devices.isEjecting)
         } else {
             Text("No Q2 connected")
         }

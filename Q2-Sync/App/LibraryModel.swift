@@ -72,7 +72,24 @@ final class LibraryModel {
     /// - Side effects: Updates `state`, `snapshot`, `health`. Read-only
     ///   toward the library itself.
     func load() async {
-        guard state != .loading else { return } // Ignore double-clicks.
+        // Already loading (a double-click, or a sync starting during a
+        // read): wait for that load instead of starting another, so the
+        // caller sees its result rather than an old or missing snapshot.
+        if let loadTask {
+            await loadTask.value
+            return
+        }
+        let task = Task { await performLoad() }
+        loadTask = task
+        await task.value
+        loadTask = nil
+    }
+
+    /// The load in progress, shared by everyone who asks for one meanwhile.
+    @ObservationIgnored private var loadTask: Task<Void, Never>?
+
+    /// Reads the library once and updates `state`, `snapshot` and `health`.
+    private func performLoad() async {
         state = .loading
         let clock = ContinuousClock()
         let start = clock.now

@@ -92,11 +92,12 @@ struct DeviceHeaderView: View {
             }
             Spacer()
             Button {
-                Task { await devices.eject() }
+                Task { await autoSync.eject() }
             } label: {
                 Label("Eject", systemImage: "eject")
             }
-            .disabled(devices.isEjecting)
+            .disabled(devices.isEjecting || autoSync.isCardBusy)
+            .help(autoSync.isCardBusy ? "Q2 Sync is using the card. Wait for it to finish." : "Eject the card")
         }
     }
 
@@ -207,7 +208,7 @@ struct DeviceSettingsView: View {
             }
 
             PodDataSection(model: autoSync.podData, connected: connected,
-                           isBlocked: autoSync.sync.phase != .idle || autoSync.verifier.isBusy)
+                           isBlocked: autoSync.isCardInUse(except: .podData))
 
             Section("After Each Sync") {
                 ForEach(Array(connected.device.profile.libraryUpdateSteps.enumerated()), id: \.offset) { index, step in
@@ -222,8 +223,7 @@ struct DeviceSettingsView: View {
                 LabeledContent("Remembered Since",
                                value: connected.device.addedDate.formatted(date: .abbreviated, time: .omitted))
                 Button("Verify Card…") { autoSync.verifier.present() }
-                    .disabled(connected.accessURL == nil || autoSync.sync.phase != .idle
-                              || autoSync.installer.isBusy || autoSync.podData.isBusy)
+                    .disabled(connected.accessURL == nil || autoSync.isCardInUse(except: .verifier))
                     .help("Compare every song on the card with your Mac's copy and fix damaged ones")
                 Button("Show Sync Logs") {
                     let folder = SyncLog.logsDirectory

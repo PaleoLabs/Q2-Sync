@@ -47,6 +47,7 @@ struct SyncPreview {
     func assessment(for options: SyncOptions) -> SafetyAssessment {
         SyncSafety.assess(plan: plan, health: health, isFirstSync: isFirstSync,
                           availableBytes: availableBytes, includeRemovals: options.applyRemovals,
+                          removalsToTrash: options.moveRemovalsToTrash,
                           cardOnlyActions: options.cardOnlyActions)
     }
 }
@@ -95,6 +96,12 @@ final class SyncCoordinator {
     /// The running copy task, kept so Cancel can stop it.
     private var task: Task<Void, Never>?
 
+    /// Bumped by each `prepare` and by `close`. Planning runs across
+    /// several `await`s; when it resumes it checks this, so a cancelled
+    /// or superseded plan is dropped instead of reopening the sheet (or,
+    /// for auto-sync, being applied after the user pressed Cancel).
+    @ObservationIgnored private var planningGeneration = 0
+
     /// What happened in an AUTOMATIC sync, for notifications.
     enum AutomaticEvent {
         case upToDate
@@ -113,6 +120,12 @@ final class SyncCoordinator {
     /// `true` while a sheet should be shown.
     var isPresentingSheet: Bool { phase != .idle }
 
+    /// `true` while the card is being read (planning) or written (running).
+    var isUsingCard: Bool {
+        if case .planning = phase { return true }
+        return phase == .running
+    }
+
     // MARK: - Planning
 
     /// Re-reads the library, checks safety, scans the card and builds a plan.
@@ -129,6 +142,8 @@ final class SyncCoordinator {
     func prepare(connected: ConnectedDevice, library: LibraryModel, devices: DeviceMonitor,
                  automatic: Bool = false) async {
         guard phase == .idle else { return }
+        planningGeneration += 1
+        let generation = planningGeneration
         options = SyncOptions()
         report = nil
         didEject = false
@@ -136,6 +151,7 @@ final class SyncCoordinator {
 
         phase = .planning("Reading your library…")
         await library.load()
+        guard isCurrentPlanning(generation) else { return }
         guard let snapshot = library.snapshot, let health = library.health else {
             fail("Your Apple Music library couldn't be read, so nothing was synced.")
             return
@@ -168,6 +184,8 @@ final class SyncCoordinator {
                                                             albumCovers: connected.device.effectiveAlbumCovers,
                                                             onlyChangedPlaylists: connected.device.effectiveImportOnlyChangedPlaylists,
                                                             reimportAllPlaylists: connected.device.reimportAllPlaylists == true)
+            // Cancelled while the card was being scanned: drop the plan.
+            guard isCurrentPlanning(generation) else { return }
 
             let isFirstSync = connected.device.hasCompletedDryRun != true
             var dryRunLog: URL?
@@ -195,8 +213,16 @@ final class SyncCoordinator {
             phase = .preview
             if automatic, let preview { decideAutomatically(preview, devices: devices) }
         } catch {
+            guard isCurrentPlanning(generation) else { return }
             fail(error.localizedDescription)
         }
+    }
+
+    /// `true` if the planning run numbered `generation` is still the one
+    /// the user is waiting for (not cancelled, not replaced by another).
+    private func isCurrentPlanning(_ generation: Int) -> Bool {
+        guard generation == planningGeneration, case .planning = phase else { return false }
+        return true
     }
 
     /// For automatic syncs: apply, close as up to date, or stop and leave
@@ -336,7 +362,9 @@ final class SyncCoordinator {
     /// Closes the sheet and resets.
     func close() {
         guard phase != .running else { return }
+        planningGeneration += 1 // Any planning still in flight is now stale.
         phase = .idle
         preview = nil
+        isAutomatic = false
     }
 }

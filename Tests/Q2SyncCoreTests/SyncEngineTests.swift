@@ -200,6 +200,21 @@ struct SyncSafetyTests {
                                       availableBytes: 10_000_000_000, includeRemovals: true)
         #expect(!small.needsLargeRemovalConfirmation)
     }
+
+    @Test("Files moved to the card's trash don't count as freed space; deletes do")
+    func trashFreesNothing() {
+        var plan = planWithRemovals(1, of: 10)
+        plan.cardOnly = [CardOnlyItem(path: "x.mp3", size: 300, origin: .unmanaged)]
+        let removalSize = Int64(plan.bytesFreedByRemovals)
+        func free(toTrash: Bool, cardOnly action: CardOnlyAction) -> Int64 {
+            SyncSafety.assess(plan: plan, health: .healthy, isFirstSync: false, availableBytes: 1_000,
+                              includeRemovals: true, removalsToTrash: toTrash,
+                              cardOnlyActions: ["x.mp3": action]).projectedFreeBytes
+        }
+        #expect(free(toTrash: true, cardOnly: .moveToTrash) == 1_000)
+        #expect(free(toTrash: false, cardOnly: .moveToTrash) == 1_000 + removalSize)
+        #expect(free(toTrash: true, cardOnly: .delete) == 1_300)
+    }
 }
 
 @Suite("Sync executor")

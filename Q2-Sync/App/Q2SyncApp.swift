@@ -91,23 +91,21 @@ struct DeviceCommands: Commands {
             let connected = controller.devices.connected
             Button("Sync Now") { Task { await controller.startSync(automatic: false) } }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(connected?.accessURL == nil || controller.sync.phase != .idle || controller.installer.isBusy)
+                .disabled(!controller.canStartCardOperation)
             Button("Install Firmware…") {
                 controller.showMainWindow()
                 controller.installer.present()
             }
-            .disabled(connected?.accessURL == nil || controller.sync.phase != .idle)
+            .disabled(connected?.accessURL == nil || controller.isCardInUse(except: .installer))
             Button("Verify Card…") {
                 controller.showMainWindow()
                 controller.verifier.present()
             }
-            .disabled(connected?.accessURL == nil || controller.sync.phase != .idle || controller.installer.isBusy)
+            .disabled(connected?.accessURL == nil || controller.isCardInUse(except: .verifier))
             Divider()
-            Button("Eject") { Task { await controller.devices.eject() } }
+            Button("Eject") { Task { await controller.eject() } }
                 .keyboardShortcut("e", modifiers: .command)
-                .disabled(connected == nil || controller.devices.isEjecting
-                          || controller.sync.phase == .running || controller.installer.isBusy
-                          || controller.verifier.isBusy || controller.podData.isBusy)
+                .disabled(connected == nil || controller.devices.isEjecting || controller.isCardBusy)
         }
     }
 }
