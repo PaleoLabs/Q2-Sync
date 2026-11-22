@@ -20,8 +20,9 @@ music files. It only copies music **to** your Q2.
 6. [Update the library on your Q2](#6-update-the-library-on-your-q2)
 7. [Auto-sync](#7-auto-sync)
 8. [Firmware: install, switch and update](#8-firmware-install-switch-and-update)
-9. [Eject safely](#9-eject-safely)
-10. [Frequently asked questions](#10-frequently-asked-questions)
+9. [Verify the card and back up Q2 Pod data](#9-verify-the-card-and-back-up-q2-pod-data)
+10. [Eject safely](#10-eject-safely)
+11. [Frequently asked questions](#11-frequently-asked-questions)
 
 ---
 
@@ -316,6 +317,8 @@ Setting → System Update → Network update**.
 
 ---
 
+## 9. Verify the card and back up Q2 Pod data
+
 ### Verify the card
 
 microSD cards can damage files without warning. On your Q2's **Settings**
@@ -346,7 +349,7 @@ Backups**. To put them on a card (for example a new one), click
 
 ---
 
-## 9. Eject safely
+## 10. Eject safely
 
 Always eject before unplugging:
 
@@ -360,7 +363,7 @@ Finder windows showing the card and try again.
 
 ---
 
-## 10. Frequently asked questions
+## 11. Frequently asked questions
 
 **Can Q2 Sync damage my Apple Music library?**
 No. It only reads your library, and macOS itself prevents it from writing to

@@ -115,7 +115,10 @@ the card, which you fix by syncing again.
   there. Song files are opened read-only.
 - **One path guard.** Every change on the card passes a single checker that
   refuses anything outside the confirmed card, on the wrong or an internal
-  disk, inside your Music folder, or on the list of firmware files.
+  disk, inside your Music folder, or on the list of firmware files. It has
+  two narrow exceptions, each used only when you ask: `update.tar` at the
+  card root (Install Firmware), and the fixed list of Q2 Pod's data files
+  (Restore Q2 Pod Data).
 - **The card is recognised by its unique ID**, which you confirm once, so
   another drive is never mistaken for it.
 - **"Mac looks empty" guard.** If the library can't be read or your music drive
@@ -138,7 +141,8 @@ the card, which you fix by syncing again.
 | | Q2 Pod (custom) | Shanling stock |
 | --- | --- | --- |
 | Syncing music | ✅ | ✅ |
-| Playlists (`_explaylist_data/*.m3u`) | ✅ documented format, to verify on device | ✅ same folder, to verify on device |
+| Playlists (`_explaylist_data/*.m3u`) | ✅ confirmed on Q2 Pod 1.8.9 | ✅ same folder, to verify on device |
+| Album covers (`cover.jpg`, optional) | ✅ Cover Flow and Library (refresh Cover Flow after changes) | ✅ Now Playing and Album Wall (to verify on device) |
 | "Update the library on your Q2" steps | Library → Update Library → Scan music now | Local Songs → Update Library → Scan music now |
 | Install / switch firmware | ✅ latest GitHub release (checksum-verified) | ✅ latest from Shanling's download page |
 | Firmware update notices | ✅ from GitHub releases | Not checked automatically |

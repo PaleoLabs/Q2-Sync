@@ -252,7 +252,9 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `PathGuard.check(_:for:)` | card path + operation → approved URL, or throws `Violation` | none (checks only) |
 | `PathGuard.checkAppleDoubleCompanion(of:)` | managed file → its `._` companion URL | none |
 | `CardFileSystem` | `copyFromMac`, `move`, `removeFile`, `moveToTrash`, `writeAtomically`, `createDirectory`, `removeEmptyFolders`, `removeAppleDoubleCompanion`, `cleanTempFolder` | **the only card writes**, each guarded |
-| `SyncManifest.load` / `save` | card ↔ record of managed songs and playlist files | `save` writes `.q2sync/manifest.json` atomically |
+| `SyncManifest.load` / `save` | card ↔ record of managed songs, playlist files, playlist fingerprints and covers (newer fields are optional, so older manifests load) | `save` writes `.q2sync/manifest.json` atomically |
+| `PlaylistNaming.disambiguate(_:folders:)` | selected playlists → same-named ones in a folder renamed "Folder - Name" | none |
+| `PlaylistImportRule.needsImport(...)` / `digest` | a playlist's bytes + its last fingerprint → whether it goes up for the Q2's Import (only changed playlists stay in `_explaylist_data`) | none |
 | `AlbumCovers.plan(tracks:finalPaths:manifest:cardFiles:)` | songs' final paths → `[CoverWrite]` (one `cover.jpg` per album folder; skips folders with the user's own cover/folder image; manifest `albumCovers` records Q2 Sync's) | none |
 | `CoverImage.makeJPEG(from:maxPixels:)` | artwork bytes → baseline RGB JPEG ≤ 1000 px (what the Q2 decodes cheaply) | none |
 | `TimeRemainingEstimator.update(bytesCopied:totalBytes:at:)` / `describe` | progress samples → seconds left, "About 12 minutes remaining" | none |
@@ -354,7 +356,7 @@ Defence in depth: several independent layers, each enough on its own.
 | `assets.music.read-only` | **Read-only** access to `~/Music` for ITLibrary and copying. There is deliberately no read-write variant. |
 | `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark. |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
-| `files.downloads.read-write` | "Copy to Mac" into `~/Downloads/Q2 Recovered`. |
+| `files.downloads.read-write` | "Copy to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups`. |
 | `network.client` | The optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
 
 ### Layer 2 — The single PathGuard
@@ -459,6 +461,8 @@ Paths on the Mac are inside the app's sandbox container,
 | Sync and dry-run logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
 | Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarItem`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |
+| Q2 Pod data backups | `~/Downloads/Q2 Sync Backups/<card> <date>/` with `backup.json` and `About this backup.txt` |
+| Firmware downloads | a temporary folder, deleted after copying to the card |
 | Diagnostics | Console.app, subsystem `io.github.q2sync.Q2Sync` (counts only, no song names or paths) |
 
 On the card:
@@ -467,7 +471,9 @@ On the card:
 | --- | --- |
 | Synced music | `Music/<Album Artist>/<Album>/<disc-track> <Title>.<ext>` |
 | Playlists | `_explaylist_data/<Name>.m3u` |
-| Manifest | `.q2sync/manifest.json` |
+| Manifest | `.q2sync/manifest.json`: managed songs (`entries`), playlist files (`playlistFiles`), playlist fingerprints for quick imports (`playlistDigests`), Q2 Sync's album covers (`albumCovers`) |
+| Album covers (optional) | `Music/<Album Artist>/<Album>/cover.jpg` |
+| Firmware waiting to install | `update.tar` at the card root |
 | Card trash | `.q2sync/Trash/<date at time>/…` (safe to delete in Finder) |
 | Temp files | `.q2sync/tmp/` (cleaned every sync) |
 
