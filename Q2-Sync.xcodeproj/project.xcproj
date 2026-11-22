@@ -43,7 +43,7 @@
         "INFOPLIST_KEY_CFBundleDisplayName": "Q2 Sync",
         "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.music",
         "INFOPLIST_KEY_NSAppleMusicUsageDescription": "Q2 Sync reads your Apple Music library (read-only) so you can choose music to copy to your Shanling Q2. It never changes your library.",
-        "INFOPLIST_KEY_NSHumanReadableCopyright": "Released under the GNU GPL v3.",
+        "INFOPLIST_KEY_NSHumanReadableCopyright": "Copyright © 2026 PaleoDev and Q2 Sync contributors. Released under the GNU GPL v3.",
         "LD_RUNPATH_SEARCH_PATHS": "@executable_path/../Frameworks",
         "MARKETING_VERSION": "0.1",
         "PRODUCT_BUNDLE_IDENTIFIER": "io.github.q2sync.Q2Sync",

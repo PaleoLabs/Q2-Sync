@@ -1,19 +1,90 @@
-# Q2 Sync
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.png">
+    <img src="docs/images/logo-light.png" alt="Q2 Sync" width="360">
+  </picture>
+</p>
 
-**Sync your Apple Music library to a Shanling Q2, the way Finder syncs an iPod.**
+<p align="center">
+  <b>Sync your Apple Music library to a Shanling Q2, the way Finder syncs an iPod.</b>
+</p>
 
-Q2 Sync is a native macOS app for people who keep their music in Apple Music
-and listen on a [Shanling Q2](https://en.shanling.com/) portable player,
-running either Shanling's stock firmware or the
-[Q2 Pod](https://github.com/DiamondBond/q2-pod) custom firmware. The Q2 shows
-up on a Mac as a plain drive, with no Finder sync and no playlist sync. Q2 Sync
-fills that gap: tick the artists, albums, genres and playlists you want, click
-**Sync**, and it copies exactly those to the Q2's microSD card, keeps it up to
-date, and writes your playlists in a format the Q2 can import.
+<p align="center">
+  <img alt="macOS 27.2+" src="https://img.shields.io/badge/macOS-27.2%2B-0A54DB?logo=apple&logoColor=white">
+  <img alt="Swift 6.2" src="https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white">
+  <img alt="SwiftUI" src="https://img.shields.io/badge/UI-SwiftUI-0A84FF">
+  <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPLv3-34C759"></a>
+</p>
 
-> **Safety first:** Q2 Sync is strictly **read-only toward your Apple Music
-> library**. It never writes to your library or its media folder in any way.
-> It only reads them and copies music *to* the Q2's card.
+<p align="center">
+  <img src="docs/images/hero.png" alt="Q2 Sync showing a connected Shanling Q2 and the Ready to Sync preview" width="880">
+</p>
+
+---
+
+Remember plugging in an iPod? It showed up in the sidebar, you ticked the
+music you wanted, clicked **Sync**, and that was it. Everything just stayed
+up to date.
+
+The Shanling Q2 is a wonderful little player, but on a Mac it's just a drive.
+No sidebar, no sync, no playlists. **Q2 Sync brings that iPod experience back.**
+Your Q2 appears in its own window the moment you plug it in. Choose your
+artists, albums, genres and playlists, preview exactly what will change, and
+click Sync. Next time, only what's new is copied.
+
+It's a native Mac app built with SwiftUI, and it's built to feel like part of
+macOS: a sidebar and detail layout, SF Symbols, a menu bar item, notifications,
+and light and dark mode.
+
+## Highlights
+
+### 🎵 Pick your music, the familiar way
+Sync your **entire library**, or tick exactly the **artists, albums, genres and
+playlists** you want. Add a new album by an artist you've ticked, and it
+syncs on its own.
+
+### 👀 See every change before it happens
+The **Ready to Sync** preview lists every song that will be added, updated,
+renamed or removed, and how much space is left afterwards. Your first sync
+with a card is always a preview.
+
+### ⚡️ Fast, incremental syncs
+Only new or changed songs are copied. Retag a song in Apple Music and it's
+renamed on the card instead of copied again. A **time remaining** estimate
+keeps you posted.
+
+### 📋 Playlists that actually make it
+Regular playlists, smart playlists and Genius playlists are written for the
+Q2's **Library → Playlists → Import**. Only playlists that changed are put up
+for import, so the Q2 doesn't re-read everything each time.
+
+### 📊 A capacity bar you'll recognise
+Music, other files, what this sync adds, and free space, all at a glance, with
+a warning when your selection won't fit.
+
+### 🔌 Plug in and forget
+**Auto-sync** when your Q2 connects (or ask first), notifications when it's
+done, a menu bar item, and an option to open at login.
+
+### 🖼️ Album covers
+Optionally add a `cover.jpg` to each album folder, made from Apple Music's
+artwork, so the Q2 shows covers even for songs without embedded art. Turn it
+off and they're removed again. Your own cover files are never touched.
+
+### 🛠️ Firmware, handled
+Install, update or switch between **[Q2 Pod](https://github.com/DiamondBond/q2-pod)**
+custom firmware and Shanling's stock firmware. Q2 Sync downloads the latest
+version, checks that it's genuine Q2 firmware (and matches GitHub's checksum
+for Q2 Pod), copies it to the card and walks you through the update on the Q2.
+
+### 🧰 Card tools
+**Verify Card** compares every song with your Mac's copy, byte for byte, and
+re-copies anything damaged. **Back up and restore Q2 Pod's data** (ratings,
+unsent scrobbles, EQ presets, radio favourites and settings). Music that's only
+on the card is never removed without asking: keep it, copy it back to your
+Mac, trash it or delete it.
+
+## A closer look
 
 | | |
 | --- | --- |
@@ -22,47 +93,38 @@ date, and writes your playlists in a format the Q2 can import.
 | ![Capacity bar](docs/images/capacity-bar.png) | ![Menu bar](docs/images/menu-bar.png) |
 | *Finder-style capacity bar* | *Menu bar item and auto-sync* |
 
-## Features
+## Safe by design
 
-- **Finder-style selection.** Sync your entire library, or tick artists,
-  albums, genres and playlists. New albums by a ticked artist sync
-  automatically.
-- **Fast, incremental syncs.** Only new or changed songs are copied; retagged
-  songs are renamed rather than copied again.
-- **Preview before applying.** See every song that will be added, updated,
-  renamed or removed. Your first sync with a card is always a preview.
-- **Playlists**, including smart playlists, written as `.m3u` files in the Q2's
-  `_explaylist_data` folder for **Library → Playlists → Import**.
-- **Card-only music.** Music on the card that isn't in your selection is listed
-  with a choice for each file: leave it, copy it back to your Mac, move it to
-  the card's trash, or delete it. Nothing is removed automatically.
-- **Capacity bar** showing music, other files, what a sync adds and free space,
-  with a warning when the selection won't fit.
-- **Auto-sync** when the Q2 connects (ask first, or sync automatically),
-  notifications, a menu bar item, and an option to open at login.
-- **Switch firmware** between Q2 Pod and Shanling's stock firmware, or
-  update, from the Q2's Settings tab or **Device → Install Firmware…**. Q2 Sync
-  downloads the latest version, checks it's genuine Q2 firmware (and matches
-  GitHub's checksum for Q2 Pod), copies it to the card as `update.tar`, and
-  walks you through **TF card update** on the Q2. Next time you connect, it
-  asks whether the update finished and switches its settings to match.
-- **Firmware update notices** for Q2 Pod (optional, from GitHub).
-- **Album covers (optional):** a `cover.jpg` in each album folder, made from
-  Apple Music's artwork, so the Q2 shows covers even for songs without
-  embedded art. Off by default; turning it off later removes them again.
-  Your own cover files are never touched.
-- **Quick playlist imports:** only new or changed playlists are left for
-  the Q2's Import, so it doesn't re-read every playlist each time.
-- **Time remaining** while syncing.
-- **Verify Card:** compares every song on the card with your Mac's copy,
-  byte for byte, and copies damaged or missing ones again.
-- **Back up Q2 Pod's data** on the card (ratings, unsent scrobbles, EQ
-  presets, radio favourites, scrobbling and Rockbox settings) to
-  `~/Downloads/Q2 Sync Backups`, and restore it to a new card.
-- **Clean cards:** FAT/exFAT-safe file names, no stray macOS `._` files next to
-  synced songs, and firmware folders are never touched.
-- **A first-class Mac app:** SwiftUI, sidebar and detail layout, SF Symbols,
-  light and dark mode.
+Q2 Sync was built so that the worst thing that can go wrong is a bad sync to
+the card, which you fix by syncing again.
+
+- **Read-only toward Apple Music.** The library is read with Apple's
+  `iTunesLibrary` framework, which can't change it. The App Sandbox gives the
+  app **read-only** access to `~/Music`, so macOS itself blocks any write
+  there. Song files are opened read-only.
+- **One path guard.** Every change on the card passes a single checker that
+  refuses anything outside the confirmed card, on the wrong or an internal
+  disk, inside your Music folder, or on the list of firmware files. It has
+  two narrow exceptions, each used only when you ask: `update.tar` at the
+  card root (Install Firmware), and the fixed list of Q2 Pod's data files
+  (Restore Q2 Pod Data).
+- **Your card is recognised by its unique ID**, which you confirm once, so
+  another drive is never mistaken for it.
+- **"Mac looks empty" guard.** If the library can't be read or your music drive
+  is disconnected, the sync stops before touching the card.
+- **Firmware only when you ask.** Firmware is downloaded only when you click
+  Install or Update, and checked before and after it's copied to the card.
+  Q2 Sync never flashes the Q2 itself: the Q2's own updater does that when
+  you choose **TF card update**.
+- **Nothing is removed without asking.** Removals are off by default, go to a
+  trash folder on the card, and removing more than 20% needs extra
+  confirmation.
+- **Private.** The only network access is for firmware (GitHub, and
+  Shanling's download page for stock firmware). Nothing about you or your
+  library is ever sent anywhere.
+- **Keep a backup of your Mac.** Q2 Sync can back up Q2 Pod's data on the
+  card, but it doesn't back up your Mac: please use Time Machine or another
+  backup, as always.
 
 ## Requirements
 
@@ -73,7 +135,7 @@ date, and writes your playlists in a format the Q2 can import.
 - Music stored as local files in Apple Music (cloud-only and DRM-protected
   songs are listed but can't be copied)
 
-## Install and build
+## Install
 
 There's no prebuilt release yet. To build and install it yourself:
 
@@ -102,39 +164,8 @@ swift test
 ```
 
 New to the app? Read the [User Guide](docs/USER_GUIDE.md). Want to work on the
-code? Start with the [Code Guide](docs/CODE_GUIDE.md).
-
-## Safety
-
-Q2 Sync was designed so that the worst thing that can go wrong is a bad sync to
-the card, which you fix by syncing again.
-
-- **Read-only toward Apple Music.** The library is read with Apple's
-  `iTunesLibrary` framework, which can't change it. The App Sandbox gives the
-  app **read-only** access to `~/Music`, so macOS itself blocks any write
-  there. Song files are opened read-only.
-- **One path guard.** Every change on the card passes a single checker that
-  refuses anything outside the confirmed card, on the wrong or an internal
-  disk, inside your Music folder, or on the list of firmware files. It has
-  two narrow exceptions, each used only when you ask: `update.tar` at the
-  card root (Install Firmware), and the fixed list of Q2 Pod's data files
-  (Restore Q2 Pod Data).
-- **The card is recognised by its unique ID**, which you confirm once, so
-  another drive is never mistaken for it.
-- **"Mac looks empty" guard.** If the library can't be read or your music drive
-  is disconnected, the sync stops before touching the card.
-- **Firmware only when you ask.** Firmware is downloaded only when you
-  click Install or Update, and checked before it touches the card: it must
-  say it's for a Shanling Q2, be the firmware you picked, and (for Q2 Pod)
-  match GitHub's SHA-256. The copy on the card is read back and checked too.
-  The path guard's one exception for it covers exactly `update.tar` at the
-  card root. Q2 Sync never changes the firmware on the Q2 itself: the Q2's
-  own updater does that when you choose **TF card update**.
-- **Nothing is removed without asking.** Removals are off by default, go to a
-  trash folder on the card, and removing more than 20% needs extra
-  confirmation.
-- **Keep a backup.** Backups are best practice regardless: please use Time
-  Machine or another backup. Q2 Sync has no backup feature.
+code? Start with the [Code Guide](docs/CODE_GUIDE.md) and
+[Contributing](CONTRIBUTING.md).
 
 ## Firmware compatibility
 
@@ -163,12 +194,21 @@ for testing; see [docs/DEVICE_CHECKS.md](docs/DEVICE_CHECKS.md).
   Daugherty, used only as a reference for playlist-export edge cases. No code
   is borrowed or bundled (its repository doesn't state a license).
 
-Q2 Sync is an independent project, not affiliated with Shanling, Apple or the
-Q2 Pod project.
-
 ## License
+
+Copyright © 2026 PaleoDev and Q2 Sync contributors.
 
 Q2 Sync is free software, released under the
 [GNU General Public License v3.0](LICENSE). You can use, study, share and
 improve it; if you distribute changed versions, they must stay open under the
-same license. Contributions are welcome.
+same license. It comes with **no warranty**, to the extent permitted by law.
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Trademarks
+
+Q2 Sync is an independent project, not affiliated with, endorsed or sponsored
+by Shanling, Apple or the Q2 Pod project. Apple, Apple Music, Finder, iPod,
+iTunes, Mac, macOS, SF Symbols and Time Machine are trademarks of Apple Inc.,
+registered in the U.S. and other countries. Shanling and Q2 are trademarks of
+their respective owner. All other names are the property of their respective
+owners and are used only to describe compatibility.
