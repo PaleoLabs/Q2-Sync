@@ -4,6 +4,14 @@ Q2 Sync copies music from Apple Music on your Mac to your Shanling Q2, much like
 Finder used to sync an iPod. This guide walks you through everything, step by
 step. No technical knowledge needed.
 
+**What Q2 Sync can sync:** music stored as **local, DRM-free files** in the
+Music app on your Mac, such as MP3, AAC, Apple Lossless (ALAC), WAV and AIFF
+files you've ripped from CDs, bought (iTunes Store purchases have been
+DRM-free since 2009) or downloaded. **It can't sync songs from an Apple Music
+subscription**, even ones downloaded for offline listening, because Apple
+protects them with DRM so they only play in Apple's apps. Songs that are only
+in iCloud are skipped too. These are listed as "can't be synced".
+
 **The most important thing first:** Q2 Sync only *reads* your Apple Music
 library. It never changes, moves or deletes anything in your library or its
 music files. It only copies music **to** your Q2.
@@ -89,9 +97,10 @@ sync automatically next time.
 The bar at the bottom shows:
 
 - how many songs and how much space your selection uses;
-- **"can't be synced"**: click it to see songs that won't be copied, such as
-  songs only in iCloud (Q2 Sync never downloads them; download them in Music
-  first if you want them) and protected (DRM) songs;
+- **"can't be synced"**: click it to see songs that won't be copied: songs
+  only in iCloud (Q2 Sync never downloads them; if they're your own music,
+  download them in Music first) and protected (DRM) songs, which includes
+  every song from an Apple Music subscription;
 - the **capacity bar**: your music, music you've unticked, what this sync will
   add, other files, and free space. A warning appears if your selection won't
   fit.
@@ -371,8 +380,21 @@ your Music folder. It still makes sense to keep a backup of your Mac, as with
 any app.
 
 **Why are some songs "can't be synced"?**
-They're only in iCloud (not downloaded to your Mac) or protected by DRM. Q2 Sync
-never downloads songs. Download them in Music first if you want them on your Q2.
+They're either protected by DRM or only in iCloud (not downloaded to your Mac).
+
+- **Apple Music subscription songs** are always protected, even when you've
+  downloaded them for offline listening, so they can never be copied to a Q2
+  (or any other non-Apple player). The same goes for iTunes Store purchases
+  from before 2009 that were never upgraded to iTunes Plus.
+- **Your own music that's only in iCloud** (uploaded or matched through
+  iTunes Match or Sync Library) can be synced once it's on your Mac: download
+  it in Music first. Q2 Sync never downloads songs itself.
+
+**Does Q2 Sync work with an Apple Music subscription?**
+Only for the music files you own. Your subscription doesn't stop Q2 Sync from
+syncing your local, DRM-free files, but songs added from the Apple Music
+catalogue can't be copied. To get a song onto your Q2, buy it (the iTunes
+Store sells DRM-free files) or add your own copy to the Music app.
 
 **I unticked an album but it's still on my Q2.**
 Removals are always your choice. Tick **Remove the … songs you no longer sync**

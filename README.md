@@ -6,7 +6,11 @@
 </p>
 
 <p align="center">
-  <b>Sync your Apple Music library to a Shanling Q2, the way Finder syncs an iPod.</b>
+  <b>Sync the music files in your Mac's Music app to a Shanling Q2, the way Finder syncs an iPod.</b>
+</p>
+
+<p align="center">
+  Your own MP3, AAC, Apple Lossless, WAV and AIFF files · Not Apple Music subscription streams or downloads
 </p>
 
 <p align="center">
@@ -20,6 +24,18 @@
   <img src="docs/images/hero.png" alt="Q2 Sync showing a connected Shanling Q2 and the Ready to Sync preview" width="880">
 </p>
 
+> [!IMPORTANT]
+> **Q2 Sync copies music files you own, not the Apple Music subscription.**
+> It syncs songs stored as **local, DRM-free files** in the Music app's
+> library: music you've ripped from CDs, bought from the iTunes Store
+> (DRM-free since 2009), downloaded from Bandcamp or elsewhere, or added
+> yourself, in formats like MP3, AAC, Apple Lossless (ALAC), WAV and AIFF.
+> Songs from an **Apple Music subscription can't be synced**, even when
+> they're downloaded for offline listening: Apple protects them with DRM
+> so they only play inside Apple's apps. Songs that are only in iCloud
+> (not downloaded to your Mac) are skipped too. Q2 Sync lists all of these
+> under "can't be synced" so you always know what's left out.
+
 ---
 
 Remember plugging in an iPod? It showed up in the sidebar, you ticked the
@@ -27,9 +43,10 @@ music you wanted, clicked **Sync**, and that was it. Everything just stayed
 up to date.
 
 The Shanling Q2 is a wonderful little player, but on a Mac it's just a drive.
-No sidebar, no sync, no playlists. **Q2 Sync brings that iPod experience back.**
-Your Q2 appears in its own window the moment you plug it in. Choose your
-artists, albums, genres and playlists, preview exactly what will change, and
+No sidebar, no sync, no playlists. **Q2 Sync brings that iPod experience back** for
+the music collection you keep in the Music app. Your Q2 appears in its own
+window the moment you plug it in. Choose your artists, albums, genres and
+playlists, preview exactly what will change, and
 click Sync. Next time, only what's new is copied.
 
 It's a native Mac app built with SwiftUI, and it's built to feel like part of
@@ -39,7 +56,7 @@ and light and dark mode.
 ## Highlights
 
 ### 🎵 Pick your music, the familiar way
-Sync your **entire library**, or tick exactly the **artists, albums, genres and
+Sync your **entire library** of local music files, or tick exactly the **artists, albums, genres and
 playlists** you want. Add a new album by an artist you've ticked, and it
 syncs on its own.
 
@@ -132,8 +149,11 @@ the card, which you fix by syncing again.
 - Xcode 27.2 or later (to build)
 - A Shanling Q2 with a microSD card formatted **exFAT** or **FAT32**, set to
   **USB Storage** in its quick-access menu (or the card in a card reader)
-- Music stored as local files in Apple Music (cloud-only and DRM-protected
-  songs are listed but can't be copied)
+- Music stored as **local, DRM-free files** in the Music app (MP3, AAC,
+  Apple Lossless, WAV, AIFF). Apple Music subscription songs (DRM-protected,
+  even when downloaded), older protected iTunes Store purchases, and songs
+  only in iCloud are listed but can't be copied. Files are copied as they
+  are, without converting.
 
 ## Install
 

@@ -91,7 +91,7 @@ render("hero.png", width: 2400, height: 1500) { r in
     icon.draw(in: NSRect(x: r.midX - iconSize / 2, y: r.maxY - 60 - iconSize, width: iconSize, height: iconSize))
     drawCentered("Your music. Your Q2. In sync.", font: font(104, .bold), color: ink,
                  midX: r.midX, y: r.maxY - 420, kern: -2)
-    drawCentered("Tick what you love in Apple Music, click Sync, and it’s on your Shanling Q2.",
+    drawCentered("Your own music files from the Music app, on your Shanling Q2. Tick, click Sync, done.",
                  font: font(44, .regular), color: subInk, midX: r.midX, y: r.maxY - 510)
 
     // The app window, bleeding off the bottom edge, with the sync sheet
@@ -128,7 +128,7 @@ render("social-preview.png", width: 1280, height: 640) { r in
     backdrop(r, glowAt: NSPoint(x: 1000, y: 200), radius: 700)
     icon.draw(in: NSRect(x: 70, y: 330, width: 210, height: 210))
     _ = wordmark(at: NSPoint(x: 90, y: 200), size: 112, color: ink)
-    let tag = NSAttributedString(string: "Sync Apple Music to your\nShanling Q2, the way Finder\nsyncs an iPod.",
+    let tag = NSAttributedString(string: "Sync your Mac’s music files\nto a Shanling Q2, the way\nFinder syncs an iPod.",
                                  attributes: [.font: font(34, .medium), .foregroundColor: subInk])
     tag.draw(in: NSRect(x: 96, y: 40, width: 560, height: 150))
     let winW: CGFloat = 820
