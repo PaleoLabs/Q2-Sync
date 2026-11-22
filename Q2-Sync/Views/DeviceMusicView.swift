@@ -47,14 +47,7 @@ struct DeviceMusicView: View {
             content(snapshot: snapshot)
         } else {
             VStack(spacing: 0) {
-                ContentUnavailableView {
-                    Label("Library Not Read Yet", systemImage: "music.note.house")
-                } description: {
-                    Text("Read your Apple Music library to choose what to sync. Q2 Sync only reads it and never changes anything.")
-                } actions: {
-                    Button("Read Library") { Task { await library.load() } }
-                        .disabled(library.state == .loading)
-                }
+                LibraryNotReadView(library: library)
                 Divider()
                 // Current card usage, before any selection is known.
                 CapacityBarView(estimate: capacity(for: nil))

@@ -55,7 +55,7 @@ The card must be formatted **exFAT** or **FAT32**. New cards usually are.
 
 1. Open **Q2 Sync**.
 2. A notice titled **Before You Start** explains that Q2 Sync never changes your
-   Apple Music library, and reminds you to keep a backup of your Mac (for
+   Music library, and reminds you to keep a backup of your Mac (for
    example with Time Machine). Read it and click **I Understand**. You'll only
    see it once.
 3. The first time macOS asks whether Q2 Sync may access **Apple Music**, click
@@ -82,7 +82,9 @@ From now on, Q2 Sync recognises your card automatically and shows it under
 ## 3. Choose what to sync
 
 1. Click your Q2 in the sidebar, then the **Music** tab.
-2. If you see **Library Not Read Yet**, click **Read Library**.
+2. Q2 Sync reads your Music library when the window opens and whenever the
+   Q2 connects. To re-read it (after adding music, say), click **Refresh
+   Music Library** (the arrow at the top right).
 3. Choose one:
    - **Entire music library**: everything that can be copied, plus all your
      playlists.

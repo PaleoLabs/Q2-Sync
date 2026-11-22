@@ -78,7 +78,7 @@ final class CardVerifyModel {
             return nil
         }
         guard let snapshot = library.snapshot else {
-            phase = .failed("Read your library first (the arrow at the top right), so there's something to compare with.")
+            phase = .failed("Your Music library hasn't been read yet. Click Refresh Music Library (the arrow at the top right), then try again.")
             return nil
         }
         do {

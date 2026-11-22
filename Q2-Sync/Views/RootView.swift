@@ -95,11 +95,20 @@ struct RootView: View {
                 Button {
                     Task { await library.load() }
                 } label: {
-                    Label(library.snapshot == nil ? "Read Library" : "Reload Library",
-                          systemImage: "arrow.clockwise")
+                    Label("Refresh Music Library", systemImage: "arrow.clockwise")
                 }
                 .disabled(library.state == .loading)
-                .help("Read your Apple Music library (read-only)")
+                .help(LibraryWording.refreshHelp)
+            }
+        }
+        // Read the Music library the first time the window is shown (once
+        // the first-launch notice is accepted), so the views have something
+        // to show. Not at app launch: Q2 Sync may run in the menu bar for
+        // days without the window open. The Q2 connecting also reads it
+        // (see `AutoSyncController`).
+        .task(id: noticeAcknowledged) {
+            if noticeAcknowledged && library.state == .idle {
+                await library.load()
             }
         }
         // The "Is this your Q2?" sheet appears whenever a new drive is pending.
@@ -147,7 +156,7 @@ struct RootView: View {
                 }
             }
 
-            Section("Library") {
+            Section("Music Library") {
                 ForEach(BrowseCategory.allCases) { item in
                     Label(item.rawValue, systemImage: item.symbolName)
                         .tag(SidebarItem.library(item))

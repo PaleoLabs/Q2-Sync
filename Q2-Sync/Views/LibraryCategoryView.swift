@@ -11,7 +11,8 @@
 //  Shown by `RootView` when a Library row is selected in the sidebar.
 //
 //  SAFETY
-//  The library is never read automatically; the user clicks Read Library.
+//  Only reads the library snapshot. `RootView` reads the Music library the
+//  first time the window shows; the toolbar's Refresh Music Library re-reads it.
 //
 
 import SwiftUI
@@ -86,11 +87,7 @@ struct LibraryCategoryView: View {
                     }
                 }
             } else {
-                ContentUnavailableView {
-                    Label("Library Not Read Yet", systemImage: "music.note.house")
-                } description: {
-                    Text("Click Read Library to load your Apple Music library. Q2 Sync only ever reads it. It never changes anything.")
-                }
+                LibraryNotReadView(library: library)
             }
         }
         .navigationTitle(category.rawValue)

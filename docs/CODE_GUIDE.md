@@ -279,7 +279,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | Type | Purpose |
 | --- | --- |
 | `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra`, `Settings`. `AppDelegate` keeps the app running when the window closes. |
-| `LibraryModel` | Loads the snapshot for the UI; never reads automatically at launch. |
+| `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
 | `DeviceMonitor` | Watches mounts (NSWorkspace), recognises the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel), eject, per-device settings, card manifest for the capacity bar. |
 | `SyncCoordinator` | Sync state machine (idle → planning → preview → running → finished/failed); automatic mode consults `AutoSyncPolicy`. |
 | `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks. |
@@ -401,7 +401,8 @@ staging folder, never inside `~/Music` or the media folder, never overwriting.
 
 Tests use temp folders and `FixtureLibrarySource` only. `PathGuard` takes an
 injectable `homeMusicFolder` so tests never touch the real `~/Music`. The app
-never reads the library at launch; you click **Read Library**.
+never reads the library at app launch; it reads it when the window first shows
+(after the first-launch notice) and when the Q2 connects.
 
 ---
 

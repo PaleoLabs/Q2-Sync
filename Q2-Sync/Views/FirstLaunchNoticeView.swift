@@ -37,8 +37,8 @@ struct FirstLaunchNoticeView: View {
             }
 
             point(symbol: "music.note.house",
-                  title: "Your Apple Music library is never changed",
-                  text: "Q2 Sync NEVER writes to your Apple Music library or its media folder in any way. It is entirely read-only toward them: it only reads your library and copies music from your Mac to your Q2's card.")
+                  title: "Your Music library is never changed",
+                  text: "Q2 Sync NEVER writes to the Music app's library or its media folder in any way. It is entirely read-only toward them: it only reads your library and copies song files from your Mac to your Q2's card.")
 
             point(symbol: "externaldrive.badge.timemachine",
                   title: "Keep a backup anyway",

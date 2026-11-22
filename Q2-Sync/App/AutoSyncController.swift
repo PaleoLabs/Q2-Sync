@@ -94,6 +94,13 @@ final class AutoSyncController {
     private func runConnectBehaviour(_ connected: ConnectedDevice) {
         Task { await checkFirmware(for: connected.device) }
         let mode = connected.device.effectiveAutoSync
+        // Read (or refresh) the Music library now, so the device page is
+        // ready to choose from. An automatic sync reads it itself. Not
+        // before the first-launch notice has been accepted.
+        if mode != .automatic,
+           UserDefaults.standard.bool(forKey: FirstLaunchNoticeView.acknowledgedKey) {
+            Task { await library.load() }
+        }
         guard mode != .off else { return }
         Task {
             await notifications.requestPermission()
