@@ -127,6 +127,15 @@ final class AutoSyncController {
         sync.isUsingCard || installer.isBusy || verifier.isBusy || podData.isBusy
     }
 
+    /// What's using the card, in words for the Quit warning, or `nil`.
+    var cardBusyActivity: String? {
+        if sync.phase == .running { return "A sync is in progress" }
+        if installer.isBusy { return "Firmware is being put on the card" }
+        if verifier.isBusy { return "Verify Card is running" }
+        if podData.isBusy { return "Q2 Pod data is being backed up or restored" }
+        return nil
+    }
+
     /// `true` if a new card operation (sync, install, verify) can start.
     var canStartCardOperation: Bool {
         devices.connected?.accessURL != nil && !isCardInUse()

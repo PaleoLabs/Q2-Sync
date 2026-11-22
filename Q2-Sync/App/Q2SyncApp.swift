@@ -52,7 +52,9 @@ struct Q2SyncApp: App {
         _library = State(initialValue: library)
         _devices = State(initialValue: devices)
         _sync = State(initialValue: sync)
-        _autoSync = State(initialValue: AutoSyncController(library: library, devices: devices, sync: sync))
+        let autoSync = AutoSyncController(library: library, devices: devices, sync: sync)
+        _autoSync = State(initialValue: autoSync)
+        AppDelegate.cardBusyActivity = { [weak autoSync] in autoSync?.cardBusyActivity }
     }
 
     var body: some Scene {
@@ -117,6 +119,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Q2 Sync still notices the Q2 connecting. Quit with ⌘Q or the menu.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// Describes what's using the card right now, if anything. Set by
+    /// `Q2SyncApp` (the delegate is created by AppKit, so it can't be
+    /// handed the controller directly).
+    @MainActor static var cardBusyActivity: (@MainActor () -> String?)?
+
+    /// Asks before quitting while something is writing to the card, from
+    /// any Quit (⌘Q, the app menu or the menu bar item).
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let activity = Self.cardBusyActivity?() else { return .terminateNow }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Quit Q2 Sync?"
+        alert.informativeText = "\(activity). Quitting now stops it part-way; "
+            + "anything left unfinished may need to be done again."
+        alert.addButton(withTitle: "Don't Quit")
+        alert.addButton(withTitle: "Quit Anyway")
+        alert.buttons[1].hasDestructiveAction = true
+        return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
     }
 }
 

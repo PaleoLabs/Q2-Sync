@@ -145,6 +145,10 @@ enum CardVerifier {
         guard cardSize == macSize else { return .wrongSize }
         guard let cardHandle = try? FileHandle(forReadingFrom: card) else { return .unreadable }
         defer { try? cardHandle.close() }
+        // Read from the card itself, not from macOS's file cache: songs
+        // copied earlier in this session may still be cached, and a check
+        // against the cache would miss damage on the card.
+        _ = fcntl(cardHandle.fileDescriptor, F_NOCACHE, 1)
         guard let macHandle = try? FileHandle(forReadingFrom: mac) else { return nil } // Mac side unreadable: can't judge
         defer { try? macHandle.close() }
         while true {

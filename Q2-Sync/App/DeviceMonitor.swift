@@ -310,7 +310,9 @@ final class DeviceMonitor {
     /// Re-grants access for the connected card (e.g. after a stale bookmark).
     func regrantAccess() {
         guard let current = connected else { return }
-        disconnect()
+        // Stay connected while the Open panel is up: `confirm` reconnects
+        // with the new access only if it's granted, so cancelling (or
+        // picking the wrong folder) leaves the Q2 in the sidebar.
         confirm(current.volume, firmware: current.device.firmware)
     }
 
