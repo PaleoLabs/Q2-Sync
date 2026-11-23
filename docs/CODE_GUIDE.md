@@ -335,7 +335,7 @@ preview's album rows (by folder and album tag).
 | --- | --- |
 | `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra`, `Settings`. `AppDelegate` keeps the app running when the window closes. |
 | `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
-| `DeviceMonitor` | Watches mounts (NSWorkspace), recognises the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
+| `DeviceMonitor` | Watches mounts (NSWorkspace), recognises the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel; the waiting drive is matched by `id`, not `==`, since free space differs between reads), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
 | `SyncCoordinator` | Sync state machine (idle → planning → preview → running → finished/failed); automatic mode consults `AutoSyncPolicy`. |
 | `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks; tells you about a new Q2 needing setup. Connect and setup notifications are only posted while Q2 Sync isn't in front (`isInFront`, checked 1.5 s after the event so a launching window counts), and notification permission is requested only when one is posted. |
 | `NotificationManager` | Posts notifications; handles Sync Now / Eject / Verify Card / Open buttons. |
@@ -349,7 +349,7 @@ preview's album rows (by folder and album tag).
 
 `RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `DeviceView` (header, Music/Settings tabs,
 `DeviceSettingsView`), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
-table like the browser's; summary bar),
+table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card),
 `CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 `FirmwareUpdateSection`,

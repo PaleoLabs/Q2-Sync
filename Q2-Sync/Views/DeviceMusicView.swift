@@ -96,7 +96,12 @@ struct DeviceMusicView: View {
                       : "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want.",
                       systemImage: hasQ2SyncSongs ? "exclamationmark.triangle" : "hand.point.down")
                     .foregroundStyle(hasQ2SyncSongs ? .orange : .accentColor)
-                    .fixedSize(horizontal: false, vertical: true)
+                    // Wraps to the width it's given. Not `fixedSize(vertical:)`:
+                    // measured narrow, that made the line ask for a huge
+                    // minimum height, and right after a card was set up the
+                    // page overflowed the window (header pushed off the top,
+                    // sidebar blank) until the first click (#43).
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
             }

@@ -230,13 +230,21 @@ final class DeviceMonitor {
         let asksByItself: (VolumeInfo) -> Bool = { [self] volume in
             !postponedUUIDs.contains(volume.uuid ?? "") && connection(for: volume).promptsForSetUp
         }
-        postponedVolumes = unknown.filter { !asksByItself($0) && $0 != pendingVolume }
-        if let pending = pendingVolume, !unknown.contains(pending) {
-            pendingVolume = nil // It was unplugged while we were asking.
+        // Drives are matched by ID, not `==`: a fresh read differs in free
+        // space (a newly formatted card changes while macOS writes its
+        // Spotlight files), which made Set Up… drop the drive it had just
+        // picked, so the sheet never opened.
+        postponedVolumes = unknown.filter { !asksByItself($0) && $0.id != pendingVolume?.id }
+        if let pending = pendingVolume {
+            if let fresh = unknown.first(where: { $0.id == pending.id }) {
+                pendingVolume = fresh // Same drive; keep its facts current.
+            } else {
+                pendingVolume = nil // It was unplugged while we were asking.
+            }
         }
         if pendingVolume == nil, connected == nil {
             pendingVolume = unknown.first(where: asksByItself)
-            postponedVolumes.removeAll { $0 == pendingVolume }
+            postponedVolumes.removeAll { $0.id == pendingVolume?.id }
             if let pendingVolume { onNewDriveNeedsSetUp?(pendingVolume) }
         }
     }
