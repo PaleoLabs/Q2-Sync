@@ -415,7 +415,7 @@ struct SyncSummaryTests {
 
     @Test("Nothing to do says so")
     func upToDate() {
-        #expect(SyncPlan().summary(applyRemovals: false) == "Everything you selected is already on the card.")
+        #expect(SyncPlan().summary(applyRemovals: false) == "Everything you chose is already on the card.")
     }
 
     @Test("Lists changes in order, with the size after the copies")
@@ -426,7 +426,7 @@ struct SyncSummaryTests {
         plan.unchangedCount = 5
         let summary = plan.summary(applyRemovals: false)
         #expect(summary.hasPrefix("This sync will add 1 song ("))
-        #expect(summary.hasSuffix(" Everything else is already on the card."))
+        #expect(summary.hasSuffix(" Everything else you chose is already on the card."))
     }
 
     @Test("Work that copies nothing is still named, never \"already on the card\"")
@@ -441,7 +441,7 @@ struct SyncSummaryTests {
     func removals() {
         var plan = SyncPlan()
         plan.removals = [RemoveOperation(trackID: "T", entry: makeEntry("Music/x.mp3"))]
-        #expect(plan.summary(applyRemovals: false) == "Everything you selected is already on the card.")
+        #expect(plan.summary(applyRemovals: false) == "Everything you chose is already on the card.")
         #expect(plan.summary(applyRemovals: true) == "This sync will remove 1 song.")
     }
 }

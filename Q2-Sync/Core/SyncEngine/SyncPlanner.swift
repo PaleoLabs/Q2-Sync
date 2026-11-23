@@ -312,7 +312,7 @@ extension SyncPlan {
 
     /// One or two plain sentences for the top of the preview, e.g. "This
     /// sync will add 12 songs (1.2 GB) and update 3 playlists. Everything
-    /// else is already on the card."
+    /// else you chose is already on the card."
     ///
     /// - Parameter applyRemovals: Whether the user chose to remove songs
     ///   they no longer sync (they're only mentioned then).
@@ -343,11 +343,11 @@ extension SyncPlan {
             changes.append("take \(Self.count(playlistPlan.leavingImport.count, "imported playlist")) out of the import folder")
         }
 
-        guard !changes.isEmpty else { return "Everything you selected is already on the card." }
+        guard !changes.isEmpty else { return "Everything you chose is already on the card." }
         let list = changes.count == 1 ? changes[0]
             : changes.dropLast().joined(separator: ", ") + " and " + changes[changes.count - 1]
         var text = "This sync will \(list)."
-        if unchangedCount + adoptions.count > 0 { text += " Everything else is already on the card." }
+        if unchangedCount + adoptions.count > 0 { text += " Everything else you chose is already on the card." }
         return text
     }
 

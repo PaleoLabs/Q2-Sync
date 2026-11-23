@@ -221,8 +221,8 @@ struct SyncPreviewView: View {
         }
     }
 
-    /// e.g. "This sync will update 3 playlists. Everything else is already
-    /// on the card. About 158.38 GB will be free on the card."
+    /// e.g. "This sync will update 3 playlists. Everything else you chose is
+    /// already on the card. About 158.38 GB will be free on the card."
     private var summaryText: String {
         var text = plan.summary(applyRemovals: sync.options.applyRemovals)
         if !isUpToDate {

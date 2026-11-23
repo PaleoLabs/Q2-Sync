@@ -192,7 +192,7 @@ next time you connect it.
 1. Click **Sync**.
 2. Q2 Sync reads your library, checks the card, and shows a **preview**: one
    sentence saying what the sync will do (for example "This sync will update
-   3 playlists. Everything else is already on the card."), and how much space
+   3 playlists. Everything else you chose is already on the card."), and how much space
    will be free. If something needs your choice (songs you no longer sync,
    or music that's only on the card), a box below it asks.
    Click **Details** for the counts and every change, song by song. The
