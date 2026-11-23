@@ -304,7 +304,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `SyncSafety.assess(...)` | plan + choices → `SafetyAssessment` (blockers, first sync, >20% removal) | none |
 | `SyncExecutor.run(plan:manifest:options:onProgress:)` | plan + choices → `SyncReport` | changes the card (guarded), saves manifest, writes a log; copy-backs via `RecoveryCopier` |
 | `RecoveryCopier.copyBack(source:cardPath:)` | card file → copy in `~/Downloads/Q2 Recovered` | writes only inside the staging folder; never overwrites |
-| `CapacityEstimate.compute(...)` | sizes + manifest + selection → bar numbers and fit verdict | none |
+| `CapacityEstimate.compute(...)` | sizes + manifest + selection → bar numbers and fit verdict; `cardReadable: false` (no access) → only used and free; `mayIncludeOwnMusic` flags ≥ 1 GB not from Q2 Sync while adding | none |
 | `AutoSyncPolicy.decide(plan:assessment:)` | plan → apply / up to date / needs review | none |
 | `SyncLog` | writes `Logs/Sync <date>.log` | writes in the app container |
 

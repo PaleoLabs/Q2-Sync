@@ -133,8 +133,13 @@ The bar at the bottom shows:
   download them in Music first) and protected (DRM) songs, which includes
   every song from an Apple Music subscription;
 - the **capacity bar**: your music, music you've unticked, what this sync will
-  add, other files, and free space. A warning appears if your selection won't
-  fit.
+  add, files **not from Q2 Sync**, and free space. A warning appears if your
+  selection won't fit. If the card has a lot that Q2 Sync didn't add, a note
+  says some of it may be songs copied onto the card another way: those that
+  match your library are kept at the next sync rather than copied again, so
+  less may be added (the sync preview checks exactly). If Q2 Sync can't read
+  the card (grant access again on the Settings tab), the bar shows only used
+  and free space.
 
 Your choices are saved for this Q2 automatically.
 

@@ -24,6 +24,15 @@
 //                  = free − toAdd + deselected (with removals)
 //  The app always keeps `SyncSafety.reservedFreeBytes` free.
 //
+//  WHEN THE NUMBERS CAN'T BE TRUSTED
+//  • Card unreadable (no access): Q2 Sync can't see its own songs, so all
+//    of `used` is shown as plain used space and nothing as "to add";
+//    otherwise every song would count twice (once as other, once to add).
+//  • Music copied onto the card by hand sits in `other`, and the same songs
+//    count in `toAdd`; the sync adopts library matches instead of copying
+//    them. The bar flags this (`mayIncludeOwnMusic`); the sync preview
+//    scans the card and checks exactly.
+//
 
 import Foundation
 
@@ -52,6 +61,19 @@ struct CapacityEstimate: Sendable, Equatable {
     var toAddBytes: Int64
     /// The verdict.
     var fit: Fit
+    /// `false` if Q2 Sync can't read the card (no access): then only
+    /// `otherBytes` (all used space) and free space mean anything.
+    var isCardReadable: Bool = true
+
+    /// "Other" this big may hold music copied onto the card by hand.
+    static let ownMusicHintBytes: Int64 = 1_000_000_000
+
+    /// `true` if the card holds a lot that Q2 Sync didn't add while the
+    /// selection adds songs: some may already be there (copied by hand),
+    /// matched at the sync, so less may be copied than `toAddBytes`.
+    var mayIncludeOwnMusic: Bool {
+        isCardReadable && otherBytes >= Self.ownMusicHintBytes && toAddBytes > 0
+    }
 
     /// Free space after the sync if deselected songs are kept.
     var freeAfterBytes: Int64 { freeBytes - toAddBytes }
@@ -65,10 +87,19 @@ struct CapacityEstimate: Sendable, Equatable {
     ///   - selection: The resolved selection, or `nil` if the library
     ///     hasn't been read yet (then nothing is "to add").
     ///   - reserve: Space always left free.
+    ///   - cardReadable: `false` if Q2 Sync can't read the card (no
+    ///     access): all used space is shown as such, nothing to add.
     /// - Returns: The estimate.
     static func compute(totalBytes: Int64, freeBytes: Int64, manifest: SyncManifest?,
                         selection: ResolvedSelection?,
-                        reserve: Int64 = SyncSafety.reservedFreeBytes) -> CapacityEstimate {
+                        reserve: Int64 = SyncSafety.reservedFreeBytes,
+                        cardReadable: Bool = true) -> CapacityEstimate {
+        guard cardReadable else {
+            return CapacityEstimate(totalBytes: totalBytes, freeBytes: freeBytes,
+                                    selectedMusicBytes: 0, deselectedMusicBytes: 0,
+                                    otherBytes: max(0, totalBytes - freeBytes), toAddBytes: 0,
+                                    fit: .fits, isCardReadable: false)
+        }
         let entries = manifest?.entries ?? [:]
         let selectedIDs = Set(selection.map { ($0.tracksToSync + $0.skippedTracks).map(\.id) } ?? [])
 

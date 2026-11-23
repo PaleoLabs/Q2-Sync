@@ -65,7 +65,8 @@ struct DeviceMusicView: View {
         CapacityEstimate.compute(totalBytes: connected.volume.totalCapacity ?? 0,
                                  freeBytes: connected.volume.availableCapacity ?? 0,
                                  manifest: devices.cardManifest,
-                                 selection: resolved)
+                                 selection: resolved,
+                                 cardReadable: connected.accessURL != nil)
     }
 
     // MARK: - Main content

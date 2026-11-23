@@ -28,6 +28,32 @@ struct CapacityEstimateTests {
                   makeCopyableTrack(id: "new", title: "New", size: bytes)])
     }
 
+    @Test("An unreadable card shows all used space as used, with nothing to add")
+    func unreadable() {
+        let estimate = CapacityEstimate.compute(totalBytes: 256 * gb, freeBytes: 158 * gb,
+                                                manifest: nil, selection: selection(adding: 96_000_000_000),
+                                                cardReadable: false)
+        #expect(!estimate.isCardReadable)
+        #expect(estimate.otherBytes == 98 * gb)
+        #expect(estimate.toAddBytes == 0)
+        #expect(estimate.selectedMusicBytes == 0)
+        #expect(estimate.fit == .fits)
+        #expect(!estimate.mayIncludeOwnMusic)
+    }
+
+    @Test("A lot not from Q2 Sync, while adding songs, flags possible hand-copied music")
+    func ownMusicHint() {
+        let lots = CapacityEstimate.compute(totalBytes: 256 * gb, freeBytes: 150 * gb,
+                                            manifest: nil, selection: selection(adding: 96_000_000_000))
+        #expect(lots.mayIncludeOwnMusic)
+        let little = CapacityEstimate.compute(totalBytes: 256 * gb, freeBytes: 255_800_000_000,
+                                              manifest: nil, selection: selection(adding: 96_000_000_000))
+        #expect(!little.mayIncludeOwnMusic)
+        let nothingToAdd = CapacityEstimate.compute(totalBytes: 100 * gb, freeBytes: 90 * gb,
+                                                    manifest: manifest, selection: resolved([]))
+        #expect(!nothingToAdd.mayIncludeOwnMusic)
+    }
+
     @Test("Splits used space into selected music, deselected music and other files")
     func breakdown() {
         let estimate = CapacityEstimate.compute(totalBytes: 100 * gb, freeBytes: 90 * gb,

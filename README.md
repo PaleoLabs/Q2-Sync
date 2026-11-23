@@ -81,8 +81,8 @@ Q2's **Library → Playlists → Import**. Only playlists that changed are put u
 for import, so the Q2 doesn't re-read everything each time.
 
 ### 📊 A capacity bar you'll recognise
-Music, other files, what this sync adds, and free space, all at a glance, with
-a warning when your selection won't fit.
+Music, files not from Q2 Sync, what this sync adds, and free space, all at a
+glance, with a warning when your selection won't fit.
 
 ### 🔌 Plug in and forget
 **Auto-sync** when your Q2 connects (or ask first), notifications when it's

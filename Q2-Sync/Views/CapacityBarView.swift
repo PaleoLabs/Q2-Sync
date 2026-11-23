@@ -4,9 +4,11 @@
 //
 //  PURPOSE
 //  The Finder-style capacity bar at the bottom of the Music tab: one bar
-//  split into coloured parts (other files, your synced music, music that's
-//  no longer selected, music the sync would add, free space), a legend
-//  with sizes, and a warning when the selection won't fit.
+//  split into coloured parts (files not from Q2 Sync, your synced music,
+//  music that's no longer selected, music the sync would add, free space),
+//  a legend with sizes, and a warning when the selection won't fit. When
+//  the card can't be read it shows only used and free space; when the card
+//  holds a lot Q2 Sync didn't add, a note says less may be copied.
 //
 //  HOW IT FITS
 //  `DeviceMusicView` builds a `CapacityEstimate` (Core) from the card's
@@ -31,11 +33,17 @@ struct CapacityBarView: View {
 
     /// The parts, in Finder's left-to-right order. Empty parts are dropped.
     private var segments: [Segment] {
-        [
+        guard estimate.isCardReadable else {
+            return [
+                Segment(id: "used", label: "Used", bytes: estimate.otherBytes, color: .gray),
+                Segment(id: "free", label: "Free", bytes: estimate.freeBytes, color: .secondary.opacity(0.15)),
+            ].filter { $0.bytes > 0 }
+        }
+        return [
             Segment(id: "music", label: "Music", bytes: estimate.selectedMusicBytes, color: .blue),
             Segment(id: "deselected", label: "Not selected", bytes: estimate.deselectedMusicBytes, color: .blue.opacity(0.4)),
             Segment(id: "add", label: "To add", bytes: estimate.toAddBytes, color: .green),
-            Segment(id: "other", label: "Other", bytes: estimate.otherBytes, color: .yellow),
+            Segment(id: "other", label: "Not from Q2 Sync", bytes: estimate.otherBytes, color: .yellow),
             Segment(id: "free", label: "Free", bytes: max(0, estimate.freeAfterBytes), color: .secondary.opacity(0.15)),
         ].filter { $0.bytes > 0 }
     }
@@ -82,9 +90,22 @@ struct CapacityBarView: View {
         .font(.caption)
     }
 
-    /// A warning when the selection doesn't fit.
+    /// A note when the numbers are unknown or may be high, and a warning
+    /// when the selection doesn't fit.
     @ViewBuilder
     private var status: some View {
+        if !estimate.isCardReadable {
+            Label("Q2 Sync can't read this card, so it can't show what's on it or what a sync would add. Grant access in the Settings tab.",
+                  systemImage: "lock")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if estimate.mayIncludeOwnMusic {
+            Label("“Not from Q2 Sync” may include songs copied onto the card another way. Those that match your library are kept at the next sync, not copied again, so less may be added; the sync preview checks exactly.",
+                  systemImage: "info.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
         switch estimate.fit {
         case .fits:
             EmptyView()
