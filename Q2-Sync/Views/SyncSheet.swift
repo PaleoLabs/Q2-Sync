@@ -231,11 +231,17 @@ struct SyncPreviewView: View {
         }
     }
 
+    /// One count. Zero counts stay (so "Remove: 0" still reassures) but
+    /// are greyed out, icon and text, so the non-zero ones stand out.
     private func countCell(_ title: String, _ count: Int, _ symbol: String, _ color: Color) -> some View {
         Label {
-            Text("\(title): \(Text(count.formatted()).bold())")
+            if count == 0 {
+                Text("\(title): 0").foregroundStyle(.tertiary)
+            } else {
+                Text("\(title): \(Text(count.formatted()).bold())")
+            }
         } icon: {
-            Image(systemName: symbol).foregroundStyle(color)
+            Image(systemName: symbol).foregroundStyle(count == 0 ? AnyShapeStyle(.tertiary) : AnyShapeStyle(color))
         }
     }
 

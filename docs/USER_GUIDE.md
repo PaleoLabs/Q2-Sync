@@ -185,7 +185,8 @@ next time you connect it.
 1. Click **Sync**.
 2. Q2 Sync reads your library, checks the card, and shows a **preview** of every
    change: songs to **Add**, **Update** or **Rename**, songs **Already on card**,
-   and songs that **Can't sync**.
+   and songs that **Can't sync**. Counts of 0 are greyed out, so the ones
+   that matter stand out.
 3. **Nothing changes until you click Sync** on the preview. Click **Cancel**
    to leave the card as it is.
 4. **Removing songs you unticked:** these are listed under **Remove**, but
