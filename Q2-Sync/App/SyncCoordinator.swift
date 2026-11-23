@@ -259,7 +259,8 @@ final class SyncCoordinator {
         // Card-only music anywhere on the card (reserved items excluded).
         let wholeCard = CardScanner.scan(folder: "", on: fileSystem)
         var cardOnly = CardOnlyFinder.find(allCardFiles: wholeCard, manifest: manifest,
-                                           orphanedEntries: plan.orphanedEntries, profile: profile)
+                                           orphanedEntries: plan.orphanedEntries,
+                                           adoptedPaths: plan.adoptions.map(\.path), profile: profile)
         await AudioTagReader.fillTags(&cardOnly, cardRoot: fileSystem.pathGuard.cardRoot)
         CardOnlyFinder.markLibraryMatches(&cardOnly, snapshot: snapshot)
         adjusted.cardOnly = cardOnly

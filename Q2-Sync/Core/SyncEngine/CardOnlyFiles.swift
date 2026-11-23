@@ -92,11 +92,18 @@ enum CardOnlyFinder {
     ///   - allCardFiles: Every non-reserved file on the card (whole-card scan).
     ///   - manifest: Songs Q2 Sync manages.
     ///   - orphanedEntries: Managed songs whose track left the library.
+    ///   - adoptedPaths: Files this sync's plan adopts (library songs already
+    ///     on the card but missing from the manifest, e.g. after a sync was
+    ///     interrupted before it saved the manifest). They're about to be
+    ///     managed, so they're not card-only, and must never be offered for
+    ///     trashing or deleting.
     ///   - profile: Folder names.
     /// - Returns: Items sorted by path.
     static func find(allCardFiles: [String: CardFile], manifest: SyncManifest,
-                     orphanedEntries: [RemoveOperation], profile: DeviceProfile) -> [CardOnlyItem] {
+                     orphanedEntries: [RemoveOperation], adoptedPaths: [CardPath] = [],
+                     profile: DeviceProfile) -> [CardOnlyItem] {
         let managedKeys = Set(manifest.entries.values.map { CardLayout.caseKey($0.path) })
+            .union(adoptedPaths.map(CardLayout.caseKey))
         let skippedTopFolders: Set<String> = [profile.appStateFolderName.lowercased(),
                                               profile.playlistFolderName.lowercased()]
         var items: [CardOnlyItem] = []

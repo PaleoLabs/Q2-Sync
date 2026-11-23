@@ -159,7 +159,9 @@ sequenceDiagram
    Q2 Sync manages), orphaned (songs gone from the library), playlists.
    `PlaylistWriter.dropUnchangedWrites` skips playlists already up to date.
 8. **Card-only music.** `CardOnlyFinder.find` lists audio files Q2 Sync doesn't
-   manage plus orphaned songs; `AudioTagReader.fillTags` reads their tags;
+   manage plus orphaned songs. Files the plan adopts (library songs already on
+   the card but not in the manifest, as after an interrupted sync) are not
+   card-only and are never offered for trashing. `AudioTagReader.fillTags` reads their tags;
    `CardOnlyFinder.markLibraryMatches` marks ones already in your library.
 9. **First sync.** If nothing has been synced to the card yet, the preview
    says so and `AutoSyncPolicy` won't apply it automatically; a sync you

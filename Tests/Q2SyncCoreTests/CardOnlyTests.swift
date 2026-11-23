@@ -41,6 +41,24 @@ struct CardOnlyFinderTests {
         #expect(items.allSatisfy { $0.origin == .unmanaged })
     }
 
+    @Test("After an interrupted sync, songs it copied are adopted, not listed as card-only")
+    func interruptedSyncNotCardOnly() {
+        // The killed sync copied the song but never saved the manifest.
+        let track = makeTrack(id: "1", title: "Hello", artist: "Adele", album: "25")
+        let path = CardLayout(profile: .q2Pod).preferredPath(for: track)
+        let card = [CardFile(path: path, size: track.fileSize),
+                    CardFile(path: "Music/Other/manual.mp3", size: 500)]
+        let files = Dictionary(card.map { (CardLayout.caseKey($0.path), $0) }, uniquingKeysWith: { a, _ in a })
+        let plan = SyncPlanner.plan(selection: resolved([track]), allSelectedIDs: ["1"], manifest: SyncManifest(),
+                                    cardFiles: files, layout: CardLayout(profile: .q2Pod))
+        #expect(plan.adoptions.map(\.path) == [path])
+
+        let items = CardOnlyFinder.find(allCardFiles: files, manifest: SyncManifest(),
+                                        orphanedEntries: plan.orphanedEntries,
+                                        adoptedPaths: plan.adoptions.map(\.path), profile: .q2Pod)
+        #expect(items.map(\.path) == ["Music/Other/manual.mp3"])
+    }
+
     @Test("Songs that left the library become card-only, not plain removals")
     func orphans() {
         var manifest = SyncManifest()
