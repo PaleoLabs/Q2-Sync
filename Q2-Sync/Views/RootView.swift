@@ -156,6 +156,24 @@ struct RootView: View {
                         .foregroundStyle(.secondary)
                         .tag(SidebarItem.connectQ2)
                 }
+                // Other mounted cards already set up as a Q2. One card is
+                // shown at a time; clicking another switches to it (not
+                // while a sync or check is using the current card).
+                ForEach(devices.otherKnownVolumes) { volume in
+                    Button {
+                        devices.switchTo(volume)
+                    } label: {
+                        Label(volume.name, systemImage: "ipod")
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(autoSync.isCardBusy)
+                    .help("Show “\(volume.name)”")
+                    .selectionDisabled()
+                }
                 // A drive waiting to be set up: the whole row is the button
                 // (a small "Set Up…" alone was hard to hit), and "Set Up…"
                 // never shrinks, so it isn't cut off.

@@ -103,7 +103,11 @@ in a card reader.
      click **Ask Again About Drives Marked "Not My Q2"**.
 
 From now on, Q2 Sync recognises your card automatically and shows it under
-**Devices** in the sidebar, like Finder does.
+**Devices** in the sidebar, like Finder does. It works with one card at a
+time: if more than one card you've set up is connected (say your Q2 by USB
+and a spare card in a reader), one is shown (the one you just set up or last clicked), and the
+others are listed below it in grey. Click one to switch to it (not while a
+sync or Verify Card is running).
 
 ---
 

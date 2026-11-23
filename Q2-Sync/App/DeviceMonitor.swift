@@ -67,6 +67,15 @@ final class DeviceMonitor {
     /// don't pop up the setup sheet. Shown in the sidebar with "Set Up…".
     private(set) var postponedVolumes: [VolumeInfo] = []
 
+    /// Other mounted cards already set up as a Q2, besides `connected`.
+    /// One card is shown at a time; these are listed in the sidebar so you
+    /// can switch to one.
+    private(set) var otherKnownVolumes: [VolumeInfo] = []
+
+    /// The card to connect to when several known cards are mounted: the
+    /// one just set up, or the one the user switched to.
+    private var preferredUUID: String?
+
     /// The last error to show in an alert, if any.
     var errorMessage: String?
 
@@ -190,6 +199,10 @@ final class DeviceMonitor {
                   let volume = eligible.first(where: { $0.uuid == current.device.volumeUUID }) {
             connected?.volume = volume // Update free space, name, etc.
         }
+        otherKnownVolumes = eligible.filter { volume in
+            guard let uuid = volume.uuid else { return false }
+            return uuid != connected?.device.volumeUUID && store.device(withUUID: uuid) != nil
+        }
 
         // 3. Unknown drives: ask once, unless ignored or postponed.
         let unknown = eligible.filter { volume in
@@ -255,7 +268,10 @@ final class DeviceMonitor {
     /// - Parameter volumes: Eligible mounted volumes.
     /// - Returns: The volume and its saved record, or `nil`.
     private func firstKnownDevice(in volumes: [VolumeInfo]) -> (volume: VolumeInfo, device: KnownDevice)? {
-        for volume in volumes {
+        // The preferred card first (just set up, or switched to).
+        let ordered = volumes.filter { $0.uuid != nil && $0.uuid == preferredUUID }
+            + volumes.filter { $0.uuid == nil || $0.uuid != preferredUUID }
+        for volume in ordered {
             if let uuid = volume.uuid, let device = store.device(withUUID: uuid) {
                 return (volume, device)
             }
@@ -366,11 +382,28 @@ final class DeviceMonitor {
             try store.upsert(device)
             pendingVolume = nil
             postponedUUIDs.remove(uuid)
+            // Show the card just set up, even if another Q2 card is
+            // connected too (before, the first one found won, and the new
+            // card seemed to vanish from the sidebar).
+            preferredUUID = uuid
             disconnect()
             refresh()
         } catch {
             errorMessage = "Couldn't remember this card: \(error.localizedDescription)"
         }
+    }
+
+    /// Shows another mounted Q2 card instead of the connected one.
+    ///
+    /// - Parameter volume: One of `otherKnownVolumes`.
+    /// - Side effects: Releases the current card's access and connects to
+    ///   the other one (which may start an automatic sync, as plugging it
+    ///   in would). Callers must not switch while a card is busy.
+    func switchTo(_ volume: VolumeInfo) {
+        guard let uuid = volume.uuid, store.device(withUUID: uuid) != nil else { return }
+        preferredUUID = uuid
+        disconnect()
+        refresh()
     }
 
     /// Re-grants access for the connected card (e.g. after a stale bookmark).
