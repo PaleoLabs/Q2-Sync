@@ -87,7 +87,8 @@ struct LibrarySnapshot: Sendable {
             key: { $0.displayArtist },
             title: { $0.displayArtist },
             subtitle: { _ in nil },
-            prefix: "artist"
+            prefix: "artist",
+            order: Self.albumThenPlayOrder
         )
     }
 
@@ -108,7 +109,8 @@ struct LibrarySnapshot: Sendable {
             key: { $0.displayGenre },
             title: { $0.displayGenre },
             subtitle: { _ in nil },
-            prefix: "genre"
+            prefix: "genre",
+            order: Self.artistThenAlbumOrder
         )
     }
 
@@ -126,24 +128,27 @@ struct LibrarySnapshot: Sendable {
     ///
     /// Tracks are grouped case-insensitively (so "Beatles" and "beatles"
     /// land together), each group's tracks are ordered by disc then track
-    /// number, and groups are sorted with `SortKey.compare`.
+    /// number (unless `order` says otherwise), and groups are sorted with
+    /// `SortKey.compare`.
     ///
     /// - Parameters:
     ///   - key: Produces the grouping key for a track.
     ///   - title: Produces the row title from a group's first track.
     ///   - subtitle: Produces the optional row subtitle.
     ///   - prefix: Namespace for the group ID ("artist", "album", "genre").
+    ///   - order: How each group's tracks are ordered.
     /// - Returns: Sorted groups.
     private func makeGroups(
         key: (Track) -> String,
         title: (Track) -> String,
         subtitle: (Track) -> String?,
-        prefix: String
+        prefix: String,
+        order: (Track, Track) -> Bool = Self.playOrder
     ) -> [TrackGroup] {
         let grouped = Dictionary(grouping: tracks) { key($0).lowercased() }
 
         let groups = grouped.map { (groupKey, members) -> TrackGroup in
-            let ordered = members.sorted(by: Self.playOrder)
+            let ordered = members.sorted(by: order)
             let first = ordered[0] // Dictionary(grouping:) never makes empty groups.
             return TrackGroup(
                 id: "\(prefix):\(groupKey)",
@@ -153,6 +158,23 @@ struct LibrarySnapshot: Sendable {
             )
         }
         return groups.sorted { SortKey.compare($0.title, $1.title) }
+    }
+
+    /// Orders a genre's tracks by album artist (so albums and compilations
+    /// stay together), then album by album, each in play order. Names sort
+    /// like the Q2 sorts them.
+    static func artistThenAlbumOrder(_ a: Track, _ b: Track) -> Bool {
+        let byArtist = SortKey.order(a.effectiveAlbumArtist, b.effectiveAlbumArtist)
+        if byArtist != .orderedSame { return byArtist == .orderedAscending }
+        return albumThenPlayOrder(a, b)
+    }
+
+    /// Orders an artist's tracks album by album (albums sorted like the
+    /// Q2 sorts names), each album in play order.
+    static func albumThenPlayOrder(_ a: Track, _ b: Track) -> Bool {
+        let byAlbum = SortKey.order(a.displayAlbum, b.displayAlbum)
+        if byAlbum != .orderedSame { return byAlbum == .orderedAscending }
+        return playOrder(a, b)
     }
 
     /// Orders tracks the way an album plays: disc, then track, then title.
@@ -186,6 +208,13 @@ enum SortKey {
     /// using Finder-style ("localized standard") comparison so "Track 2"
     /// sorts before "Track 10".
     static func compare(_ a: String, _ b: String) -> Bool {
-        sortableName(a).localizedStandardCompare(sortableName(b)) == .orderedAscending
+        order(a, b) == .orderedAscending
+    }
+
+    /// The three-way version of `compare`. Names that differ only in case
+    /// or a leading article ("Beatles", "The Beatles") are `.orderedSame`,
+    /// so a sort can go on to its next key instead of splitting them.
+    static func order(_ a: String, _ b: String) -> ComparisonResult {
+        sortableName(a).localizedStandardCompare(sortableName(b))
     }
 }

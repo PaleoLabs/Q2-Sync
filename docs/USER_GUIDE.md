@@ -129,6 +129,9 @@ unplugged:
 - Hover over an icon for the numbers, or select the row: each song shows
   **On Q2** or **Next sync** in the **Q2** column, and its status icon says
   why it can't be copied.
+- An artist's songs are listed album by album (albums in A–Z order, as on
+  the Q2), each album in track order. A genre's songs are listed by album
+  artist, then album, then track. Click a column header to sort another way.
 - Drag the divider between the list and the songs to resize the list; Q2
   Sync remembers the width.
 - Click **Song Info** in the toolbar (or right-click a song and choose

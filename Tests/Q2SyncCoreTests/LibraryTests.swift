@@ -66,6 +66,32 @@ struct LibrarySnapshotTests {
         #expect(band?.trackIDs == ["2", "1", "3"])
     }
 
+    @Test("An artist's songs are ordered album by album, then disc and track")
+    func artistOrder() {
+        let snapshot = LibrarySnapshot(tracks: [
+            makeTrack(id: "z2", title: "Z2", artist: "AC/DC", album: "The Razors Edge", track: 2),
+            makeTrack(id: "b1", title: "B1", artist: "AC/DC", album: "Back In Black", track: 1),
+            makeTrack(id: "z1", title: "Z1", artist: "AC/DC", album: "The Razors Edge", track: 1),
+            makeTrack(id: "h3", title: "H3", artist: "AC/DC", album: "Highway To Hell", track: 3),
+            makeTrack(id: "b2", title: "B2", artist: "AC/DC", album: "Back In Black", track: 2),
+        ], playlists: [], mediaFolderURL: nil)
+        // "The Razors Edge" sorts under R, as on the Q2.
+        #expect(snapshot.artistGroups.first?.trackIDs == ["b1", "b2", "h3", "z1", "z2"])
+    }
+
+    @Test("A genre's songs are ordered by album artist, then album, then track")
+    func genreOrder() {
+        let snapshot = LibrarySnapshot(tracks: [
+            makeTrack(id: "w1", artist: "Wings", albumArtist: "Wings", album: "Venus", track: 1),
+            makeTrack(id: "b2", artist: "Beatles", albumArtist: "The Beatles", album: "Abbey Road", track: 2),
+            makeTrack(id: "f1", artist: "Guest", albumArtist: "Beatles", album: "Abbey Road", track: 1),
+            makeTrack(id: "a1", artist: "AC/DC", album: "Powerage", track: 1),
+            makeTrack(id: "b9", artist: "The Beatles", albumArtist: "The Beatles", album: "1", track: 9),
+        ], playlists: [], mediaFolderURL: nil)
+        // Album artist decides (the guest track stays in its album); "The" is ignored.
+        #expect(snapshot.genreGroups.first?.trackIDs == ["a1", "b9", "f1", "b2", "w1"])
+    }
+
     @Test("Compilations without an album artist group under Various Artists")
     func compilationGrouping() {
         let snapshot = LibrarySnapshot(tracks: [
