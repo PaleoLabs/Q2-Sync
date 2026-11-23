@@ -14,8 +14,9 @@
 //     the first parent with USB properties (vendor/product ID and strings).
 //  Both are read-only lookups of system information; nothing on the drive
 //  is opened or read. Any failure simply gives `nil` (unknown connection).
-//  `partitionScheme` reads the whole disk's partition table type the same
-//  way, for `CardFormatAdvice`.
+//  `cardLayout` reads the whole disk's partition table type and sizes the
+//  same way, and counts its other partitions by walking DOWN the whole
+//  disk's I/O Kit entry, for `CardFormatAdvice`.
 //
 
 import DiskArbitration
@@ -56,23 +57,73 @@ enum DriveIdentityReader {
         return identity
     }
 
-    /// How the disk behind a mounted volume is partitioned.
+    /// How the card behind a mounted volume is laid out: its partition
+    /// scheme and the volume's and whole card's sizes.
     ///
-    /// - Parameter volumeURL: The volume's mount point.
-    /// - Returns: The scheme, or `nil` if it can't be read.
+    /// - Parameters:
+    ///   - volumeURL: The volume's mount point.
+    ///   - volumeName: The volume's name (for the Raspberry Pi hint).
+    /// - Returns: The layout, or `nil` if the scheme can't be read.
     /// - Side effects: None (system lookups only).
-    static func partitionScheme(forVolumeAt volumeURL: URL) -> PartitionScheme? {
+    static func cardLayout(forVolumeAt volumeURL: URL, volumeName: String) -> CardPartitions? {
         guard let session = DASessionCreate(kCFAllocatorDefault),
               let disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, volumeURL as CFURL),
               let whole = DADiskCopyWholeDisk(disk) else {
             return nil
         }
         // A volume that IS the whole disk has no partition table.
-        let volumeName = DADiskGetBSDName(disk).map { String(cString: $0) }
-        let wholeName = DADiskGetBSDName(whole).map { String(cString: $0) }
-        let description = DADiskCopyDescription(whole) as? [CFString: Any]
-        return PartitionScheme(mediaContent: description?[kDADiskDescriptionMediaContentKey] as? String,
-                               volumeIsWholeDisk: volumeName != nil && volumeName == wholeName)
+        let volumeBSDName = DADiskGetBSDName(disk).map { String(cString: $0) }
+        let wholeBSDName = DADiskGetBSDName(whole).map { String(cString: $0) }
+        let wholeDescription = DADiskCopyDescription(whole) as? [CFString: Any]
+        let volumeDescription = DADiskCopyDescription(disk) as? [CFString: Any]
+        guard let scheme = PartitionScheme(
+            mediaContent: wholeDescription?[kDADiskDescriptionMediaContentKey] as? String,
+            volumeIsWholeDisk: volumeBSDName != nil && volumeBSDName == wholeBSDName) else {
+            return nil
+        }
+        return CardPartitions(scheme: scheme,
+                          volumeBytes: (volumeDescription?[kDADiskDescriptionMediaSizeKey] as? NSNumber)?.int64Value,
+                          cardBytes: (wholeDescription?[kDADiskDescriptionMediaSizeKey] as? NSNumber)?.int64Value,
+                          volumeName: volumeName,
+                          otherPartitionBytes: otherPartitionSizes(of: whole, besides: volumeBSDName))
+    }
+
+    /// The sizes of the card's partitions other than the volume's own:
+    /// every leaf `IOMedia` below the whole disk (whatever its format,
+    /// mounted or not).
+    ///
+    /// - Parameters:
+    ///   - whole: The whole disk.
+    ///   - volumeBSDName: The volume's BSD name, e.g. "disk5s1", left out.
+    /// - Returns: Each other partition's size in bytes, or `nil` if the
+    ///   registry couldn't be read.
+    private static func otherPartitionSizes(of whole: DADisk, besides volumeBSDName: String?) -> [Int64]? {
+        let media = DADiskCopyIOMedia(whole)
+        guard media != 0 else { return nil }
+        defer { IOObjectRelease(media) }
+        var iterator: io_iterator_t = 0
+        guard IORegistryEntryCreateIterator(media, kIOServicePlane,
+                                            IOOptionBits(kIORegistryIterateRecursively), &iterator) == KERN_SUCCESS else {
+            return nil
+        }
+        defer { IOObjectRelease(iterator) }
+        var sizes: [Int64] = []
+        var entry = IOIteratorNext(iterator)
+        while entry != 0 {
+            defer { IOObjectRelease(entry); entry = IOIteratorNext(iterator) }
+            guard IOObjectConformsTo(entry, "IOMedia") != 0,
+                  property(entry, "Whole") as? Bool == false,
+                  property(entry, "Leaf") as? Bool == true,
+                  property(entry, "BSD Name") as? String != volumeBSDName,
+                  let size = (property(entry, "Size") as? NSNumber)?.int64Value else { continue }
+            sizes.append(size)
+        }
+        return sizes
+    }
+
+    /// One property of an I/O Kit entry.
+    private static func property(_ entry: io_registry_entry_t, _ key: String) -> Any? {
+        IORegistryEntryCreateCFProperty(entry, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue()
     }
 
     /// Finds a property on the entry or the nearest parent that has it.

@@ -157,8 +157,8 @@ the card, which you fix by syncing again.
 
 - macOS 27.2 or later
 - Xcode 27.2 or later (to build)
-- A Shanling Q2 with a microSD card formatted **exFAT** or **FAT32** on a
-  Master Boot Record partition table, set to
+- A Shanling Q2 with a microSD card formatted **exFAT** or **FAT32** as one
+  volume on a Master Boot Record partition table, set to
   **USB Storage** in its quick-access menu (or the card in a card reader)
 - Music stored as **local, DRM-free files** in the Music app (MP3, AAC,
   Apple Lossless, WAV, AIFF). Apple Music subscription songs (DRM-protected,

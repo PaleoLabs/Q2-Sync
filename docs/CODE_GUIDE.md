@@ -232,13 +232,22 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 - **`VolumeEligibility.problem(with:) -> VolumeIneligibility?`** · which disks
   may ever be a Q2: never the startup disk or an internal fixed disk; must be
   removable/ejectable, have a UUID, and be exFAT/FAT.
-- **`CardFormatAdvice.check(scheme:)`** · warns (never blocks) when a card
-  isn't on a Master Boot Record partition table, with Disk Utility steps.
-  exFAT and FAT32 are both fine (Shanling supports both). `PartitionScheme` comes from
-  `DriveIdentityReader.partitionScheme` (the whole disk's Disk Arbitration
-  media content), read once per mount by `DeviceMonitor`, except through the
-  Q2's USB cable: its storage gadget exposes only the volume, as a whole
-  disk, so the scheme isn't read there. Unknown never warns.
+- **`CardFormatAdvice.check(layout:)`** · warns (never blocks) when a card
+  isn't one volume filling a Master Boot Record card, with Disk Utility
+  steps: first a scheme that isn't MBR (`check(scheme:)`; erasing fixes the
+  rest too), then any other partition of any format or size (a reused
+  Raspberry Pi card: small `bootfs` plus a Linux partition; named in the
+  message when the volume is `bootfs`/`boot`), then a volume under 97% of
+  the card (unused space; a normal card loses only a 1–16 MB alignment gap).
+  exFAT and FAT32 are both fine (Shanling supports both). `CardPartitions`
+  (scheme, volume and card sizes, other partitions' sizes) comes from
+  `DriveIdentityReader.cardLayout`: Disk Arbitration media content and sizes,
+  plus every leaf `IOMedia` below the whole disk besides the volume. It's read
+  once per mount by `DeviceMonitor`, except through the Q2's USB cable: its
+  storage gadget exposes only the volume, as a whole disk, so nothing is read
+  there. Unknown never warns. `NewDeviceSheet` shows the warning (Later
+  becomes the default button, Continue Anyway stays) and the device page
+  shows `CardFormatAdviceSection`.
 - **`DeviceStore`** · saves `KnownDevice` records (UUID, name, firmware,
   security-scoped bookmark, selection, auto-sync mode, firmware version,
   first-sync state) and ignored drives to `devices.json` in the app container.

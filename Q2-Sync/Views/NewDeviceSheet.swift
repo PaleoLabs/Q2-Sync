@@ -14,6 +14,12 @@
 //  A different card or USB stick must never be mistaken for the Q2. Only a
 //  drive the user explicitly confirms (remembered by its UUID) is synced.
 //
+//  CARD FORMAT
+//  A card that isn't one volume on Master Boot Record (e.g. a reused
+//  Raspberry Pi card: a small boot partition plus a Linux one) is warned
+//  about here, where the user decides, with the Disk Utility steps; Later
+//  becomes the default button. Continuing is still allowed.
+//
 
 import SwiftUI
 
@@ -44,6 +50,10 @@ struct NewDeviceSheet: View {
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if let advice = formatAdvice {
+                formatWarning(advice)
+            }
+
             Text("Q2 Sync will only ever write to a card you confirm here. It remembers this card by its unique ID, so other drives are never mistaken for it.")
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -64,14 +74,53 @@ struct NewDeviceSheet: View {
                 Button("Not My Q2") { devices.markNotQ2(volume) }
                     .help("Never ask about this drive again")
                 Spacer()
-                Button("Later") { devices.postpone(volume) }
-                    .keyboardShortcut(.cancelAction)
-                Button("Continue…") { devices.confirm(volume, firmware: firmware) }
-                    .keyboardShortcut(.defaultAction)
+                // With a format warning, Return means Later, so a card that
+                // probably needs erasing isn't approved by reflex.
+                if formatAdvice == nil {
+                    Button("Later") { devices.postpone(volume) }
+                        .keyboardShortcut(.cancelAction)
+                    Button("Continue…") { devices.confirm(volume, firmware: firmware) }
+                        .keyboardShortcut(.defaultAction)
+                } else {
+                    Button("Continue Anyway…") { devices.confirm(volume, firmware: firmware) }
+                    Button("Later") { devices.postpone(volume) }
+                        .keyboardShortcut(.defaultAction)
+                }
             }
         }
         .padding(24)
         .frame(width: 460)
+    }
+
+    /// Whether the Disk Utility steps are shown.
+    @State private var showsSteps = false
+
+    /// Advice if the card's layout is wrong for the Q2.
+    private var formatAdvice: CardFormatAdvice? { devices.formatAdvice(for: volume) }
+
+    /// The format warning, with the Disk Utility steps behind a disclosure.
+    private func formatWarning(_ advice: CardFormatAdvice) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(advice.problem, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Erase it in Disk Utility before using it with the Q2. Q2 Sync never erases or formats a card.")
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+            DisclosureGroup("How to Erase It", isExpanded: $showsSteps) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(CardFormatAdvice.diskUtilitySteps.enumerated()), id: \.offset) { index, step in
+                        Label(step, systemImage: "\(index + 1).circle")
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Button("Open Disk Utility") { CardFormatAdviceSection.openDiskUtility() }
+                }
+                .font(.callout)
+                .padding(.top, 4)
+            }
+        }
+        .padding(12)
+        .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
     }
 
     /// How the drive is connected.

@@ -83,8 +83,8 @@ struct DeviceHeaderView: View {
                 Text("Shanling Q2 · \(connected.device.firmware.displayName) · \(connected.connection.label)")
                     .foregroundStyle(.secondary)
                 Text(capacityText).font(.callout).foregroundStyle(.secondary)
-                if devices.formatAdvice(for: connected.volume) != nil {
-                    Button("This card isn't on Master Boot Record", systemImage: "exclamationmark.triangle") {
+                if let advice = devices.formatAdvice(for: connected.volume) {
+                    Button(advice.summary, systemImage: "exclamationmark.triangle") {
                         showSettings()
                     }
                     .buttonStyle(.link)
@@ -261,8 +261,8 @@ struct DeviceSettingsView: View {
     }
 }
 
-/// Warns that the card isn't on Master Boot Record and explains how
-/// to erase it in Disk Utility. Q2 Sync never formats a card itself.
+/// Warns that the card isn't one volume on Master Boot Record and explains
+/// how to erase it in Disk Utility. Q2 Sync never formats a card itself.
 struct CardFormatAdviceSection: View {
 
     let advice: CardFormatAdvice
@@ -280,7 +280,7 @@ struct CardFormatAdviceSection: View {
         } header: {
             Text("Card Format")
         } footer: {
-            Text("Syncing still works, but the Q2 may not read the card reliably, or at all. Q2 Sync never erases or formats a card.")
+            Text("\(advice.consequence) Q2 Sync never erases or formats a card.")
         }
     }
 

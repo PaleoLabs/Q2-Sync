@@ -105,9 +105,9 @@ final class DeviceMonitor {
     /// mount and forgotten when the drive goes away.
     private var connections: [String: CardConnection] = [:]
 
-    /// How each mounted drive is partitioned, by volume UUID (read with
-    /// the connection, for `CardFormatAdvice`).
-    private var partitionSchemes: [String: PartitionScheme] = [:]
+    /// How each mounted drive is laid out (scheme and sizes), by volume
+    /// UUID (read with the connection, for `CardFormatAdvice`).
+    private var cardLayouts: [String: CardPartitions] = [:]
 
     /// Our notification observers, kept so they stay registered.
     private var observers: [NSObjectProtocol] = []
@@ -217,23 +217,23 @@ final class DeviceMonitor {
         connections[volume.uuid ?? ""] ?? .unknown
     }
 
-    /// Advice if the card isn't on a Master Boot Record partition table,
-    /// or `nil` if it is or the scheme couldn't be read.
+    /// Advice if the card isn't one volume filling a Master Boot Record
+    /// card, or `nil` if it is or its layout couldn't be read.
     func formatAdvice(for volume: VolumeInfo) -> CardFormatAdvice? {
-        CardFormatAdvice.check(scheme: partitionSchemes[volume.uuid ?? ""])
+        CardFormatAdvice.check(layout: cardLayouts[volume.uuid ?? ""])
     }
 
     /// How a mounted drive is partitioned, if known.
     func partitionScheme(for volume: VolumeInfo) -> PartitionScheme? {
-        partitionSchemes[volume.uuid ?? ""]
+        cardLayouts[volume.uuid ?? ""]?.scheme
     }
 
-    /// Reads the connection (and partition scheme) of newly mounted drives
+    /// Reads the connection (and card layout) of newly mounted drives
     /// and forgets drives that went away.
     private func updateConnections(for volumes: [VolumeInfo]) {
         let mounted = Set(volumes.compactMap(\.uuid))
         connections = connections.filter { mounted.contains($0.key) }
-        partitionSchemes = partitionSchemes.filter { mounted.contains($0.key) }
+        cardLayouts = cardLayouts.filter { mounted.contains($0.key) }
         for volume in volumes {
             guard let uuid = volume.uuid, connections[uuid] == nil else { continue }
             let connection = CardConnection.classify(DriveIdentityReader.identity(forVolumeAt: volume.url))
@@ -243,9 +243,9 @@ final class DeviceMonitor {
             // the Mac only the card's volume, as a whole disk: the card's
             // partition table can't be seen, so it isn't judged. A card
             // reader shows the real scheme.
-            if connection != .q2, let scheme = DriveIdentityReader.partitionScheme(forVolumeAt: volume.url) {
-                partitionSchemes[uuid] = scheme
-                Self.logger.notice("Partition scheme: \(scheme.displayName, privacy: .public)")
+            if connection != .q2, let layout = DriveIdentityReader.cardLayout(forVolumeAt: volume.url, volumeName: volume.name) {
+                cardLayouts[uuid] = layout
+                Self.logger.notice("Partition scheme: \(layout.scheme.displayName, privacy: .public); volume \(layout.volumeBytes ?? -1) of \(layout.cardBytes ?? -1) bytes")
             }
         }
     }

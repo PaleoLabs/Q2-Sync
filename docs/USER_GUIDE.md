@@ -54,9 +54,23 @@ pick), Q2 Sync shows a warning on the Q2's Settings tab with the steps to
 erase it in Disk Utility: choose **View → Show All Devices**, select the card
 itself, click **Erase**, and pick Format **ExFAT** and Scheme **Master Boot
 Record**. Erasing deletes everything on the card, and Q2 Sync never erases or
-formats a card itself. Through the Q2's USB cable the partition scheme can't
-be seen (the Q2 shows the Mac only the card's volume), so Q2 Sync only checks
-it when the card is in a card reader.
+formats a card itself.
+
+The Q2 also expects that one volume to be the only thing on the card and to
+fill it. A card reused from a Raspberry Pi (or another Linux computer) needs
+erasing too: it is Master Boot Record, but macOS shows only its small boot
+partition (often named **bootfs**), and the rest of the card is a Linux
+partition neither your Mac nor the Q2 can use. If a card has any other
+partition, of any format or size, or its volume leaves part of the card
+unused, the "Is this your Shanling Q2?" window says so ("This card has
+another partition (124.4 GB) besides this volume… Only 534.8 MB of its
+124.95 GB can hold music."), with the same Disk Utility steps under **How to
+Erase It**. Pressing Return then chooses **Later**; **Continue Anyway** is
+still there if you mean to use the card as it is.
+
+Through the Q2's USB cable the card's partitions can't be seen (the Q2 shows
+the Mac only the card's volume), so Q2 Sync only checks them when the card is
+in a card reader.
 
 ---
 
