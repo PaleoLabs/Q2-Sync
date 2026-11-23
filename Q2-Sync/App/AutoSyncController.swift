@@ -76,7 +76,12 @@ final class AutoSyncController {
             guard let self, let connected = self.devices.connected else { return }
             self.runConnectBehaviour(connected)
         }
-        devices.start()
+        // Start watching drives once the app is running. This init runs
+        // while SwiftUI builds the app, before `NSApp` exists; a Q2 already
+        // plugged in would connect right away and could need the window
+        // (e.g. "Did the firmware update finish?"). The main queue runs
+        // this after launch.
+        DispatchQueue.main.async { devices.start() }
     }
 
     // MARK: - Connecting
@@ -274,6 +279,12 @@ final class AutoSyncController {
     /// Brings the app and its main window to the front: an open (or
     /// minimised) window is brought forward; a closed one is reopened.
     func showMainWindow() {
+        // `NSApp` is nil until the app has launched; try again then (the
+        // window opens at launch anyway).
+        guard NSApp != nil else {
+            DispatchQueue.main.async { [weak self] in self?.showMainWindow() }
+            return
+        }
         // From the menu bar, the app may not be the active app yet.
         NSApp.activate(ignoringOtherApps: true)
         // SwiftUI names the window's identifier after the scene id
