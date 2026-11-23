@@ -90,7 +90,9 @@ struct DeviceMusicView: View {
 
         VStack(alignment: .leading, spacing: 0) {
             // The first step on a new Q2: nothing is chosen yet.
-            if selection.isEmpty {
+            // Always laid out, and just made invisible once something is
+            // ticked, so the list below doesn't jump up when it goes.
+            do {
                 Label(hasQ2SyncSongs
                       ? "Nothing is chosen. Syncing now would remove the songs Q2 Sync put on this card."
                       : "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want.",
@@ -104,6 +106,8 @@ struct DeviceMusicView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
+                    .opacity(selection.isEmpty ? 1 : 0)
+                    .accessibilityHidden(!selection.isEmpty)
             }
 
             // "Entire library" vs "Selected items", like Finder.

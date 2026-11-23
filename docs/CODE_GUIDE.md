@@ -349,7 +349,7 @@ preview's album rows (by folder and album tag).
 
 `RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `DeviceView` (header, Music/Settings tabs,
 `DeviceSettingsView`), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
-table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card),
+table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
 `CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 `FirmwareUpdateSection`,
