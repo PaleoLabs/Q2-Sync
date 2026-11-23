@@ -131,6 +131,12 @@ unplugged:
   why it can't be copied.
 - Drag the divider between the list and the songs to resize the list; Q2
   Sync remembers the width.
+- Click **Song Info** in the toolbar (or right-click a song and choose
+  **Show Info**) to open a panel on the right with everything about the
+  selected song: artwork, whether it can be copied and whether it's on your
+  Q2, its tags (year, genre, composer…), its file (kind, size, bit rate,
+  sample rate, where it is on your Mac, with **Show in Finder**), and plays
+  and dates from Music. Click it again to close the panel.
 - Hover over a song's title to see where its file is on your Mac, or
   right-click songs for **Show in Finder** and **Copy Path**. A **File**
   column is also available: right-click the column headers to show it, or to

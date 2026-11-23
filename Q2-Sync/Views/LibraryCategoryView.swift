@@ -84,6 +84,12 @@ struct LibraryCategoryView: View {
     /// it opens at the narrow width, drags like a divider, and is remembered.
     @AppStorage("libraryListWidth") private var listWidth: Double = Self.listWidthRange.lowerBound
     @State private var dragStartWidth: Double?
+
+    /// Whether the song inspector is open (remembered across launches).
+    @AppStorage("showSongInfo") private var showSongInfo = false
+
+    /// The songs selected in the song table, for the inspector.
+    @State private var selectedSongs: [Track] = []
     private static let listWidthRange: ClosedRange<Double> = 360...560
 
     /// What the marks depend on; a change rebuilds them.
@@ -152,13 +158,17 @@ struct LibraryCategoryView: View {
 
                     ZStack {
                         if let group = groups.first(where: { $0.id == groupID }) {
-                            TrackTableView(tracks: snapshot.tracks(for: group.trackIDs), marks: marks)
+                            TrackTableView(tracks: snapshot.tracks(for: group.trackIDs), marks: marks,
+                                           onSelect: { selectedSongs = $0 },
+                                           onShowInfo: { showSongInfo = true })
                         } else {
                             ContentUnavailableView("Select an Item", systemImage: "music.note",
                                                    description: Text("Choose one on the left to see its songs."))
                         }
                     }
-                    .frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
+                    // Narrow enough that opening the inspector doesn't need a
+                    // wider window.
+                    .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else {
                 LibraryNotReadView(library: library)
@@ -166,7 +176,24 @@ struct LibraryCategoryView: View {
         }
         .navigationTitle(category.rawValue)
         .navigationSubtitle(comparisonSubtitle)
+        .inspector(isPresented: $showSongInfo) {
+            let song = selectedSongs.count == 1 ? selectedSongs.first : nil
+            SongInspectorView(track: song, selectedCount: selectedSongs.count,
+                              placement: song.flatMap { marks?.placement(of: $0.id) },
+                              library: library)
+                .inspectorColumnWidth(min: 220, ideal: 260, max: 360)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Toggle(isOn: $showSongInfo) {
+                    Label("Song Info", systemImage: "info.circle")
+                }
+                .labelStyle(.titleAndIcon)
+                .help("Show or hide details of the selected song")
+            }
+        }
         .onChange(of: category) { groupID = nil }
+        .onChange(of: groupID) { selectedSongs = [] }
         .task(id: marksKey) { await rebuildMarks(for: marksKey) }
     }
 

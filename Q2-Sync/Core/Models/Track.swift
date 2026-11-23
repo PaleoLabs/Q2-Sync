@@ -132,6 +132,30 @@ struct Track: Codable, Hashable, Identifiable, Sendable {
     /// files still decode.
     var hasArtwork: Bool? = nil
 
+    // MARK: Details (shown in the song inspector only)
+    // Optional so older fixture files still decode; `nil` means unknown.
+
+    /// Release year, e.g. 1977.
+    var year: Int? = nil
+
+    /// Composer, if tagged.
+    var composer: String? = nil
+
+    /// Bit rate in kbps, e.g. 256.
+    var bitRate: Int? = nil
+
+    /// Sample rate in Hz, e.g. 44_100.
+    var sampleRate: Int? = nil
+
+    /// How many times it has been played in Music.
+    var playCount: Int? = nil
+
+    /// When it was added to the Music library.
+    var dateAdded: Date? = nil
+
+    /// When it was last played in Music.
+    var lastPlayed: Date? = nil
+
     // MARK: Convenience
 
     /// The name we group this track's album under.

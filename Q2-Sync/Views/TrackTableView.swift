@@ -24,6 +24,13 @@ struct TrackTableView: View {
     /// Q2 marks for the songs, or `nil` while they're being worked out.
     var marks: LibraryMarks? = nil
 
+    /// Called with the selected songs whenever the selection changes (for
+    /// the song inspector).
+    var onSelect: ([Track]) -> Void = { _ in }
+
+    /// Called by the right-click menu's "Show Info".
+    var onShowInfo: (() -> Void)? = nil
+
     /// One table row: the track plus its Q2 placement. The placement is in
     /// the row value so the table redraws when it changes (a `Table` only
     /// redraws rows whose value changed). `position` keeps rows distinct
@@ -118,6 +125,14 @@ struct TrackTableView: View {
         }
         .contextMenu(forSelectionType: Row.ID.self) { ids in
             let urls = rows.filter { ids.contains($0.id) }.compactMap(\.track.fileURL)
+            if let onShowInfo {
+                Button("Show Info") {
+                    selection = ids // Right-clicking an unselected row means that row.
+                    onShowInfo()
+                }
+                    .disabled(ids.isEmpty)
+                Divider()
+            }
             Button("Show in Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting(urls)
             }
@@ -130,6 +145,9 @@ struct TrackTableView: View {
             .disabled(urls.isEmpty)
         }
         .onChange(of: tracks.map(\.id)) { selection = [] }
+        .onChange(of: selection) {
+            onSelect(rows.filter { selection.contains($0.id) }.map(\.track))
+        }
         .onAppear {
             if let saved = try? JSONDecoder().decode(TableColumnCustomization<Row>.self, from: columnsData) {
                 columns = saved

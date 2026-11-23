@@ -183,7 +183,14 @@ struct ITunesLibrarySource: LibrarySource {
             fileKind: item.kind,
             modifiedDate: item.modifiedDate,
             availability: availability(of: item, fileURL: fileURL),
-            hasArtwork: item.hasArtworkAvailable
+            hasArtwork: item.hasArtworkAvailable,
+            year: item.year > 0 ? item.year : nil,
+            composer: item.composer.nonEmpty,
+            bitRate: item.bitrate > 0 ? item.bitrate : nil,
+            sampleRate: item.sampleRate > 0 ? item.sampleRate : nil,
+            playCount: item.playCount,
+            dateAdded: item.addedDate,
+            lastPlayed: item.lastPlayedDate
         )
     }
 

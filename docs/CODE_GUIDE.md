@@ -312,7 +312,9 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 `SyncResultView`), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 `FirmwareUpdateSection`, `LibraryCategoryView` + `TrackTableView` (library
 browser with "can sync" and "On Q2 / next sync" marks, compared with the
-connected Q2 or the one read most recently), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
+connected Q2 or the one read most recently), `SongInspectorView` (the
+browser's song inspector; artwork via `LibraryModel.artworkData(for:)`, one
+whole-library `LibraryArtworkReader` opened on first use), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
 
 ---
 

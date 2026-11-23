@@ -64,6 +64,23 @@ final class LibraryModel {
         source.artworkReader(for: trackIDs)
     }
 
+    /// One song's artwork for the song inspector, read off the main thread.
+    /// The reader covers the whole library and is opened on first use (a
+    /// second or two), then kept until the library is read again.
+    ///
+    /// - Parameter trackID: The song.
+    /// - Returns: Image data, or `nil` if it has none.
+    func artworkData(for trackID: PersistentID) async -> Data? {
+        if browserArtwork == nil, let ids = snapshot.map({ Set($0.tracksByID.keys) }) {
+            browserArtwork = source.artworkReader(for: ids)
+        }
+        guard let reader = browserArtwork else { return nil }
+        return await Task.detached(priority: .userInitiated) { reader.artworkData(for: trackID) }.value
+    }
+
+    /// The inspector's artwork reader (see `artworkData(for:)`).
+    @ObservationIgnored private var browserArtwork: (any AlbumArtworkProviding)?
+
     init(source: any LibrarySource = ITunesLibrarySource()) {
         self.source = source
     }
@@ -100,6 +117,7 @@ final class LibraryModel {
         do {
             let loaded = try await source.loadSnapshot()
             snapshot = loaded
+            browserArtwork = nil // Re-opened on demand for the new read.
             loadCount += 1
             health = LibraryHealthCheck.evaluate(loaded)
             lastLoadDuration = clock.now - start
