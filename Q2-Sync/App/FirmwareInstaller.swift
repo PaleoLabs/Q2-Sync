@@ -98,11 +98,11 @@ final class FirmwareInstaller {
     /// Opens the install sheet and looks up the latest versions.
     ///
     /// - Parameter kind: The firmware to pre-select; by default the one the
-    ///   Q2 doesn't run (or Q2 Pod, to update it, when an update is waiting).
+    ///   Q2 runs now (as saved for it), since updating is more common than
+    ///   switching. Switching is one click on the other tab.
     func present(selecting kind: FirmwareKind? = nil) {
         guard !isBusy else { isPresentingSheet = true; return }
-        let current = devices.connected?.device.firmware ?? .stock
-        target = kind ?? (current == .q2Pod ? .stock : .q2Pod)
+        target = kind ?? devices.connected?.device.firmware ?? .q2Pod
         step = .choosing
         isPresentingSheet = true
         Task { await loadOffers() }

@@ -367,8 +367,10 @@ Q2 Sync can put **Q2 Pod** or **Shanling's stock firmware** on your card, so
 you can switch between them or update. Open your Q2's **Settings** tab and
 click **Install Firmware…** (or choose **Device → Install Firmware…**).
 
-1. Pick **Q2 Pod** or **Shanling (stock)**. Q2 Sync shows the latest version
-   of each: Q2 Pod's from GitHub, stock's from Shanling's download page.
+1. Pick **Q2 Pod** or **Shanling (stock)**. The firmware your Q2 runs now
+   (as set on its Settings tab) is picked to start with, to update it; pick
+   the other to switch. Q2 Sync shows the latest version of each: Q2 Pod's
+   from GitHub, stock's from Shanling's download page.
 2. Click **Download and Copy to Card**. Q2 Sync downloads it, checks it's
    genuine Shanling Q2 firmware of the kind you picked (Q2 Pod must also match
    GitHub's checksum), makes sure the card has room (about twice the file,
