@@ -14,6 +14,13 @@ Open an issue with:
 Please don't attach your music library, playlists or card contents. A few
 example file names are enough.
 
+## Ideas and plans
+
+Planned features and known issues live in
+[GitHub Issues](https://github.com/PaleoLabs/Q2-Sync/issues). Comment on
+one you'd like to see, or open a new one with your idea. Each change that
+fixes an issue closes it from its commit.
+
 ## Testing on a real Q2
 
 Some behaviour, mostly on Shanling's stock firmware, still needs checking on a

@@ -223,7 +223,9 @@ Q2 Sync is free software, released under the
 [GNU General Public License v3.0](LICENSE). You can use, study, share and
 improve it; if you distribute changed versions, they must stay open under the
 same license. It comes with **no warranty**, to the extent permitted by law.
-Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Planned
+features and known issues are in
+[GitHub Issues](https://github.com/PaleoLabs/Q2-Sync/issues).
 
 ## Trademarks
 
