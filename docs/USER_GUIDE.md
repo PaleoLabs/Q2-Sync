@@ -54,7 +54,9 @@ pick), Q2 Sync shows a warning on the Q2's Settings tab with the steps to
 erase it in Disk Utility: choose **View → Show All Devices**, select the card
 itself, click **Erase**, and pick Format **ExFAT** and Scheme **Master Boot
 Record**. Erasing deletes everything on the card, and Q2 Sync never erases or
-formats a card itself.
+formats a card itself. Through the Q2's USB cable the partition scheme can't
+be seen (the Q2 shows the Mac only the card's volume), so Q2 Sync only checks
+it when the card is in a card reader.
 
 ---
 
@@ -188,9 +190,9 @@ your Q2's **Settings** tab → **Show Sync Logs**.
 playlists in `_explaylist_data/`, and Q2 Sync's own records in a hidden
 `.q2sync` folder. Q2 Sync never touches the Q2's own files and folders.
 
-**Album covers (optional, off by default):** Apple Music often keeps artwork
+**Album covers (on by default):** Apple Music often keeps artwork
 in its own library rather than inside the song files, so the Q2 would show no
-cover. Turn on **Add album covers** on your Q2's **Settings** tab and Q2 Sync puts a
+cover. With **Add album covers** on (your Q2's **Settings** tab), Q2 Sync puts a
 `cover.jpg` in each album folder, made from the album's artwork in Apple
 Music (resized to at most 1000 pixels, in a format the Q2 reads quickly).
 The preview lists them under **Album Covers**.

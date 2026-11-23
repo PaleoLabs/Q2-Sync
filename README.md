@@ -94,7 +94,7 @@ A **Connect Your Q2** page walks you through USB Storage mode, and music you
 already copied to the card by hand is recognised instead of copied twice.
 
 ### 🖼️ Album covers
-Optionally add a `cover.jpg` to each album folder, made from Apple Music's
+A `cover.jpg` in each album folder (on by default), made from Apple Music's
 artwork, so the Q2 shows covers even for songs without embedded art. Turn it
 off and they're removed again. Your own cover files are never touched.
 

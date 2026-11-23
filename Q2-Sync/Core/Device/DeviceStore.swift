@@ -63,12 +63,14 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     var pendingFirmwareInstall: PendingFirmwareInstall?
 
     /// Whether to put a `cover.jpg` in each album folder. Optional so
-    /// older files load; `nil` means off.
+    /// older files load; `nil` means on (the default).
     var albumCovers: Bool?
 
-    /// The album-covers setting, with its default (off). Turning it on adds
-    /// covers at the next sync; turning it off removes Q2 Sync's covers then.
-    var effectiveAlbumCovers: Bool { albumCovers ?? false }
+    /// The album-covers setting, with its default (on: most Apple Music
+    /// artwork isn't inside the song files, so without covers the Q2 shows
+    /// none). Turning it on adds covers at the next sync; turning it off
+    /// removes Q2 Sync's covers then.
+    var effectiveAlbumCovers: Bool { albumCovers ?? true }
 
     /// Keep only new or changed playlists in the import folder, so the
     /// Q2's Import is quick. Optional so older files load; `nil` means on.
