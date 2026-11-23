@@ -92,22 +92,24 @@ struct TrackTableView: View {
             .width(50)
             .customizationID("time")
 
-            TableColumn("Status") { row in let track = row.track
+            // "On Mac": can this song's file be copied (on this Mac, not
+            // DRM, not iCloud-only)? Pairs with "On Q2".
+            TableColumn("On Mac") { row in let track = row.track
                 Label(track.availability.shortName, systemImage: track.availability.symbolName)
                     .labelStyle(.iconOnly)
                     .foregroundStyle(track.availability.tint)
                     .help(track.availability.explanation)
             }
-            .width(44)
+            .width(52)
             .customizationID("status")
 
-            TableColumn("Q2") { row in
+            TableColumn("On Q2") { row in
                 if let placement = row.placement {
                     PlacementLabel(placement: placement)
                         .labelStyle(.iconOnly)
                 }
             }
-            .width(32)
+            .width(44)
             .customizationID("q2")
 
             // Too long to read in a column, so off unless asked for.

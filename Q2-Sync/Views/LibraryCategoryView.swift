@@ -130,7 +130,7 @@ struct LibraryCategoryView: View {
                             }
                             .help(row.group.title)
                         }
-                        TableColumn("Q2") { row in
+                        TableColumn("On Q2") { row in
                             // Two fixed slots: can't-copy lock, then Q2 state.
                             HStack(spacing: 4) {
                                 Group {
@@ -143,7 +143,7 @@ struct LibraryCategoryView: View {
                                 .frame(width: 16)
                             }
                         }
-                        .width(40)
+                        .width(48)
                         TableColumn("Songs") { row in
                             Text((row.marks?.total ?? row.group.trackIDs.count).formatted())
                                 .monospacedDigit()
