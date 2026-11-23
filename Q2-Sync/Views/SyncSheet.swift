@@ -83,8 +83,8 @@ struct SyncPreviewView: View {
     /// Filters every list in the preview (title, artist, album or path).
     @State private var searchText = ""
 
-    /// Sections the user opened or closed, by section ID. Sections the user
-    /// hasn't touched use `defaultExpanded(_:count:)`.
+    /// Sections the user opened or closed, by section ID. Untouched
+    /// sections are open (see `isExpanded`).
     @State private var expansion: [String: Bool] = [:]
 
     /// Counts and lists, closed by default; remembered between syncs.
@@ -92,10 +92,6 @@ struct SyncPreviewView: View {
 
     /// Card-only albums the user opened, by `CardOnlyAlbum.id`.
     @State private var expandedAlbums: Set<String> = []
-
-    /// Sections with more items than this start collapsed, so a first sync
-    /// of thousands of songs doesn't bury the sections that need attention.
-    private static let collapseThreshold = 200
 
     private var plan: SyncPlan { preview.plan }
     private var assessment: SafetyAssessment { preview.assessment(for: sync.options) }
@@ -445,7 +441,7 @@ struct SyncPreviewView: View {
 
     /// Every planned change, grouped, in a scrollable list. Sections that
     /// need a choice come first, then the rest in the order of the counts
-    /// (songs, not copied, playlists, covers). Long lists start collapsed.
+    /// (songs, not copied, playlists, covers). All start open.
     private var details: some View {
         let lists = filteredLists()
         return List {
@@ -462,7 +458,7 @@ struct SyncPreviewView: View {
             collapsibleSection("rename", "Rename", lists.moves) { move in
                 row(move.track.title, detail: "\(move.from) → \(move.to)", symbol: "pencil.circle", color: .purple)
             }
-            collapsibleSection("skipped", "Can't Sync", lists.skipped, alwaysOpen: true) { track in
+            collapsibleSection("skipped", "Can't Sync", lists.skipped) { track in
                 row("\(track.displayArtist) — \(track.title)", detail: track.availability.reportDescription,
                     symbol: track.availability.symbolName, color: .orange)
             }
@@ -491,7 +487,7 @@ struct SyncPreviewView: View {
     @ViewBuilder
     private func removalSection(_ removals: [RemoveOperation]) -> some View {
         if !plan.removals.isEmpty {
-            let expanded = isExpanded("remove", count: plan.removals.count)
+            let expanded = isExpanded("remove")
             Section {
                 Toggle("Remove the \(plan.removals.count.formatted()) songs you no longer sync",
                        isOn: Binding(get: { sync.options.applyRemovals },
@@ -518,7 +514,7 @@ struct SyncPreviewView: View {
     @ViewBuilder
     private func cardOnlySection(_ items: [CardOnlyItem]) -> some View {
         if !plan.cardOnly.isEmpty {
-            let expanded = isExpanded("cardOnly", count: plan.cardOnly.count, alwaysOpen: true)
+            let expanded = isExpanded("cardOnly")
             Section {
                 if expanded.wrappedValue {
                     Text(cardOnlyTally)
@@ -562,7 +558,7 @@ struct SyncPreviewView: View {
         let individually = sync.options.cardOnlyChoices.choice(for: group) == .individually
         let single = cardOnlyGroups.count == 1
         let expanded = single ? .constant(true)
-            : isExpanded("cardOnly.\(group.rawValue)", count: all.count, alwaysOpen: true)
+            : isExpanded("cardOnly.\(group.rawValue)")
         if !single {
             Button {
                 withAnimation(.snappy) { expanded.wrappedValue.toggle() }
@@ -730,11 +726,12 @@ struct SyncPreviewView: View {
 
     // MARK: Collapsing
 
-    /// Open/closed state for a section. While filtering, every section is
-    /// open so matches are never hidden.
-    private func isExpanded(_ id: String, count: Int, alwaysOpen: Bool = false) -> Binding<Bool> {
+    /// Open/closed state for a section: open unless the user closed it
+    /// (the lists are already behind Details, so long ones needn't start
+    /// closed). While filtering, every section is open so matches show.
+    private func isExpanded(_ id: String) -> Binding<Bool> {
         Binding(
-            get: { isSearching || (expansion[id] ?? (alwaysOpen || count <= Self.collapseThreshold)) },
+            get: { isSearching || (expansion[id] ?? true) },
             set: { expansion[id] = $0 })
     }
 
@@ -775,10 +772,10 @@ struct SyncPreviewView: View {
     /// A collapsible list section, shown only when it has items.
     @ViewBuilder
     private func collapsibleSection<Item: Identifiable, Row: View>(_ id: String, _ title: String, _ items: [Item],
-                                                                    alwaysOpen: Bool = false, footer: String? = nil,
+                                                                    footer: String? = nil,
                                                                     @ViewBuilder row: @escaping (Item) -> Row) -> some View {
         if !items.isEmpty {
-            let expanded = isExpanded(id, count: items.count, alwaysOpen: alwaysOpen)
+            let expanded = isExpanded(id)
             Section {
                 collapsibleRows(items, expanded: expanded, row: row)
                 if let footer, expanded.wrappedValue { note(footer) }

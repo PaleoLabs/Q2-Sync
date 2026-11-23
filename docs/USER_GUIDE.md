@@ -137,8 +137,10 @@ The bar at the bottom shows:
   download them in Music first) and protected (DRM) songs, which includes
   every song from an Apple Music subscription;
 - the **capacity bar**: your music, music you've unticked, what this sync will
-  add, files **not from Q2 Sync**, and free space. A warning appears if your
-  selection won't fit. If the card has a lot that Q2 Sync didn't add, a note
+  add, **Other** (everything else: the Q2's own data such as its library and
+  Cover Flow images, playlists and album covers, and music copied there
+  another way; hover over it for this), and free space. A warning appears if
+  your selection won't fit. If Other is large, a note
   says some of it may be songs copied onto the card another way: those that
   match your library are kept at the next sync rather than copied again, so
   less may be added (the sync preview checks exactly). If Q2 Sync can't read
@@ -158,9 +160,10 @@ unplugged:
 - an orange **lock**: some (outline) or all (filled) of these songs can't be
   copied.
 - Hover over an icon for the numbers, or select the row: each song's
-  **On Mac** column shows whether its file can be copied (a grey check: the
-  file is on this Mac; hover over any other icon for why not), and its
-  **On Q2** column shows whether it's on your Q2 or comes at the next sync.
+  **On Q2** column shows a grey check (on your Q2), a blue arrow (comes at
+  the next sync), a dash (not chosen), or an orange icon when the song can't
+  be synced (iCloud only, copy-protected, file missing…; hover for why, or
+  open **Song Info**).
 - An artist's songs are listed album by album (albums in A–Z order, as on
   the Q2), each album in track order. A genre's songs are listed by album
   artist, then album, then track. Click a column header to sort another way.

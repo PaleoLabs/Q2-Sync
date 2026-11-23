@@ -29,6 +29,8 @@ struct CapacityBarView: View {
         let label: String
         let bytes: Int64
         let color: Color
+        /// Shown when hovering over the legend item, if set.
+        var help: String? = nil
     }
 
     /// The parts, in Finder's left-to-right order. Empty parts are dropped.
@@ -43,7 +45,11 @@ struct CapacityBarView: View {
             Segment(id: "music", label: "Music", bytes: estimate.selectedMusicBytes, color: .blue),
             Segment(id: "deselected", label: "Not selected", bytes: estimate.deselectedMusicBytes, color: .blue.opacity(0.4)),
             Segment(id: "add", label: "To add", bytes: estimate.toAddBytes, color: .green),
-            Segment(id: "other", label: "Not from Q2 Sync", bytes: estimate.otherBytes, color: .yellow),
+            // "Other", as in Finder: everything that isn't a song in Q2
+            // Sync's record. Not all of it is from elsewhere (playlists,
+            // covers and Q2 Sync's own record count here too).
+            Segment(id: "other", label: "Other", bytes: estimate.otherBytes, color: .yellow,
+                    help: "Everything else on the card: the Q2's own data (library, Cover Flow images, settings), playlists and album covers, and any music copied there another way."),
             Segment(id: "free", label: "Free", bytes: max(0, estimate.freeAfterBytes), color: .secondary.opacity(0.15)),
         ].filter { $0.bytes > 0 }
     }
@@ -85,6 +91,8 @@ struct CapacityBarView: View {
                     Text(segment.label).foregroundStyle(.primary)
                     Text(Self.format(segment.bytes)).foregroundStyle(.secondary)
                 }
+                .contentShape(Rectangle())
+                .modifier(OptionalHelp(text: segment.help))
             }
         }
         .font(.caption)
@@ -100,7 +108,7 @@ struct CapacityBarView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         } else if estimate.mayIncludeOwnMusic {
-            Label("“Not from Q2 Sync” may include songs copied onto the card another way. Those that match your library are kept at the next sync, not copied again, so less may be added; the sync preview checks exactly.",
+            Label("“Other” may include songs copied onto the card another way. Those that match your library are kept at the next sync, not copied again, so less may be added; the sync preview checks exactly.",
                   systemImage: "info.circle")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -134,4 +142,14 @@ struct CapacityBarView: View {
         otherBytes: 4_000_000_000, toAddBytes: 8_000_000_000, fit: .fits))
         .padding()
         .frame(width: 600)
+}
+
+/// A tooltip only when there's text (an empty `.help("")` can still show
+/// an empty tooltip).
+private struct OptionalHelp: ViewModifier {
+    let text: String?
+
+    func body(content: Content) -> some View {
+        if let text { content.help(text) } else { content }
+    }
 }

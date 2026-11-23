@@ -4,7 +4,7 @@
 //
 //  PURPOSE
 //  A sortable, Finder-style table of tracks showing tags, duration and
-//  availability. The source file path on your Mac is in each title's
+//  where each song stands with the Q2 (including why it can't be synced). The source file path on your Mac is in each title's
 //  tooltip, the right-click menu (Show in Finder, Copy Path) and an
 //  optional File column, hidden by default (right-click the header).
 //
@@ -92,19 +92,16 @@ struct TrackTableView: View {
             .width(50)
             .customizationID("time")
 
-            // "On Mac": can this song's file be copied (on this Mac, not
-            // DRM, not iCloud-only)? Pairs with "On Q2".
-            TableColumn("On Mac") { row in let track = row.track
-                Label(track.availability.shortName, systemImage: track.availability.symbolName)
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(track.availability.tint)
-                    .help(track.availability.explanation)
-            }
-            .width(52)
-            .customizationID("status")
-
+            // "On Q2": on the Q2, coming at the next sync, not chosen, or
+            // can't be synced (orange, with the reason: iCloud only,
+            // copy-protected, file missing…). It used to share this with an
+            // "On Mac" column that showed a grey check on almost every row.
             TableColumn("On Q2") { row in
-                if let placement = row.placement {
+                if !row.track.isCopyable {
+                    Image(systemName: row.track.availability.symbolName)
+                        .foregroundStyle(.orange)
+                        .help("Can't be synced: \(row.track.availability.reportDescription.lowercased()). Select it and open Song Info for more.")
+                } else if let placement = row.placement {
                     PlacementLabel(placement: placement)
                         .labelStyle(.iconOnly)
                 }
