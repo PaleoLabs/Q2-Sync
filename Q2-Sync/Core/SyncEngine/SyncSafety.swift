@@ -10,7 +10,8 @@
 //  RULES
 //  Blockers (the sync can't be applied):
 //   • The library failed the "Mac looks empty" check.
-//   • This is the device's first sync: it's always a preview only.
+//   • This is the device's first sync: it may be applied by hand, but
+//     never automatically (see `AutoSyncPolicy`).
 //   • The new songs won't fit on the card.
 //  Extra confirmation required:
 //   • Removing more than 20% of the songs on the card (planned removals
@@ -28,15 +29,16 @@ import Foundation
 struct SafetyAssessment: Sendable, Equatable {
     /// Reasons the sync can't be applied. Empty means it may proceed.
     var blockers: [String] = []
-    /// `true` if this is a first-sync preview (applying is not offered).
-    var isDryRunOnly = false
+    /// `true` if nothing has been synced to this card yet. Doesn't block a
+    /// sync you start yourself; automatic syncs wait for you instead.
+    var isFirstSync = false
     /// `true` if removals exceed the threshold and need extra confirmation.
     var needsLargeRemovalConfirmation = false
     /// Free space left after the sync, in bytes (negative = won't fit).
     var projectedFreeBytes: Int64 = 0
 
     /// `true` if nothing blocks applying the plan.
-    var canApply: Bool { blockers.isEmpty && !isDryRunOnly }
+    var canApply: Bool { blockers.isEmpty }
 }
 
 /// Pre-sync safety checks.
@@ -54,7 +56,7 @@ enum SyncSafety {
     /// - Parameters:
     ///   - plan: The planned sync.
     ///   - health: The library health check result.
-    ///   - isFirstSync: `true` if this device has never had a preview.
+    ///   - isFirstSync: `true` if nothing has been synced to this device yet.
     ///   - availableBytes: Free space on the card now.
     ///   - includeRemovals: Whether removals will be applied.
     ///   - removalsToTrash: Whether removals go to the card's trash. The
@@ -72,7 +74,7 @@ enum SyncSafety {
             result.blockers.append(reason)
         }
 
-        result.isDryRunOnly = isFirstSync
+        result.isFirstSync = isFirstSync
 
         // Files moved to the card's trash stay on the card, so they free
         // nothing: count only permanent deletes as freed space.

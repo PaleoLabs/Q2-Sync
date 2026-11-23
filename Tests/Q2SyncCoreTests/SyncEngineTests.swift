@@ -172,12 +172,12 @@ struct SyncSafetyTests {
         #expect(result.blockers == ["No songs"])
     }
 
-    @Test("The first sync is a preview only")
+    @Test("The first sync is flagged but can still be applied by hand")
     func firstSync() {
         let result = SyncSafety.assess(plan: SyncPlan(), health: .healthy, isFirstSync: true,
                                        availableBytes: 10_000_000_000, includeRemovals: false)
-        #expect(result.isDryRunOnly)
-        #expect(!result.canApply)
+        #expect(result.isFirstSync)
+        #expect(result.canApply)
     }
 
     @Test("Music that doesn't fit blocks the sync")

@@ -19,7 +19,7 @@
 //  SAFETY
 //  • The library is re-read for every sync, and the "Mac looks empty"
 //    check runs first; an unsafe library stops the sync before planning.
-//  • The first sync for a device only previews (dry run).
+//  • The first sync for a device is never applied automatically.
 //  • Nothing is written until the user clicks Sync in the preview.
 //
 
@@ -36,8 +36,6 @@ struct SyncPreview {
     let availableBytes: Int64
     let deviceName: String
     let profile: DeviceProfile
-    /// Log of the dry run, for first syncs.
-    let dryRunLogURL: URL?
     /// Mac folders copy-back must never write to (~/Music, media folder).
     let protectedFolders: [URL]
     /// Reads album artwork for the planned covers (read-only), if any.
@@ -133,12 +131,11 @@ final class SyncCoordinator {
     /// - Parameters:
     ///   - connected: The Q2 to sync.
     ///   - library: The library model (re-read here).
-    ///   - devices: For saving the dry-run state.
-    /// - Side effects: Reads the library and card. For a first sync, writes
-    ///   a dry-run log and marks the dry run as done. Never writes to the card.
+    ///   - devices: For the card's saved state.
     ///   - automatic: `true` for auto-sync: the plan is applied without
     ///     showing the preview ONLY if `AutoSyncPolicy` allows it;
     ///     otherwise the preview is shown and the user is notified.
+    /// - Side effects: Reads the library and card. Never writes to the card.
     func prepare(connected: ConnectedDevice, library: LibraryModel, devices: DeviceMonitor,
                  automatic: Bool = false) async {
         guard phase == .idle else { return }
@@ -187,15 +184,7 @@ final class SyncCoordinator {
             // Cancelled while the card was being scanned: drop the plan.
             guard isCurrentPlanning(generation) else { return }
 
-            let isFirstSync = connected.device.hasCompletedDryRun != true
-            var dryRunLog: URL?
-            if isFirstSync {
-                let log = SyncLog(title: "Dry run", deviceName: connected.device.name)
-                log.write("DRY RUN — nothing was changed on the card.")
-                log.describe(plan, dryRun: true)
-                dryRunLog = log.fileURL
-                devices.markDryRunCompleted()
-            }
+            let isFirstSync = !connected.device.hasCompletedFirstSync
 
             // Read free space fresh: the value from when the card was
             // connected may be out of date.
@@ -206,7 +195,6 @@ final class SyncCoordinator {
                                   isFirstSync: isFirstSync,
                                   availableBytes: freeNow,
                                   deviceName: connected.device.name, profile: connected.device.profile,
-                                  dryRunLogURL: dryRunLog,
                                   protectedFolders: [PathGuard.defaultHomeMusicFolder]
                                       + [snapshot.mediaFolderURL].compactMap { $0 },
                                   artwork: library.artworkReader(for: Set(plan.coverWrites.map(\.trackID))))

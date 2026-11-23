@@ -42,14 +42,9 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     /// When the user first confirmed this card.
     let addedDate: Date
 
-    /// `false` until a real (non-dry-run) sync has completed. The first
-    /// sync for every device is a preview only (a safety rule).
+    /// `false` until a sync has completed. Until then, automatic syncs
+    /// stop for review instead of applying (a safety rule).
     var hasCompletedFirstSync: Bool
-
-    /// `true` once the first-sync preview (dry run) has been shown. Until
-    /// then, syncing only previews. Optional for the same reason as
-    /// `selection` below.
-    var hasCompletedDryRun: Bool?
 
     /// What happens when this card connects. Optional for the same reason
     /// as `selection`; `nil` means the default, `.ask`.

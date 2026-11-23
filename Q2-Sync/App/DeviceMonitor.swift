@@ -101,6 +101,10 @@ final class DeviceMonitor {
     /// mount and forgotten when the drive goes away.
     private var connections: [String: CardConnection] = [:]
 
+    /// How each mounted drive is partitioned, by volume UUID (read with
+    /// the connection, for `CardFormatAdvice`).
+    private var partitionSchemes: [String: PartitionScheme] = [:]
+
     /// Our notification observers, kept so they stay registered.
     private var observers: [NSObjectProtocol] = []
 
@@ -205,16 +209,32 @@ final class DeviceMonitor {
         connections[volume.uuid ?? ""] ?? .unknown
     }
 
-    /// Reads the connection of newly mounted drives and forgets drives
-    /// that went away.
+    /// Advice if the card isn't on a Master Boot Record partition table,
+    /// or `nil` if it is or the scheme couldn't be read.
+    func formatAdvice(for volume: VolumeInfo) -> CardFormatAdvice? {
+        CardFormatAdvice.check(scheme: partitionSchemes[volume.uuid ?? ""])
+    }
+
+    /// How a mounted drive is partitioned, if known.
+    func partitionScheme(for volume: VolumeInfo) -> PartitionScheme? {
+        partitionSchemes[volume.uuid ?? ""]
+    }
+
+    /// Reads the connection (and partition scheme) of newly mounted drives
+    /// and forgets drives that went away.
     private func updateConnections(for volumes: [VolumeInfo]) {
         let mounted = Set(volumes.compactMap(\.uuid))
         connections = connections.filter { mounted.contains($0.key) }
+        partitionSchemes = partitionSchemes.filter { mounted.contains($0.key) }
         for volume in volumes {
             guard let uuid = volume.uuid, connections[uuid] == nil else { continue }
             let connection = CardConnection.classify(DriveIdentityReader.identity(forVolumeAt: volume.url))
             connections[uuid] = connection
             Self.logger.notice("Drive connection: \(connection.rawValue, privacy: .public)")
+            if let scheme = DriveIdentityReader.partitionScheme(forVolumeAt: volume.url) {
+                partitionSchemes[uuid] = scheme
+                Self.logger.notice("Partition scheme: \(scheme.displayName, privacy: .public)")
+            }
         }
     }
 
@@ -458,12 +478,6 @@ final class DeviceMonitor {
     /// Changes what happens when this Q2 connects.
     func setAutoSync(_ mode: AutoSyncMode) {
         updateConnectedDevice { $0.autoSync = mode }
-    }
-
-    /// Records that this device's first-sync preview has been shown, so
-    /// the next sync may be applied.
-    func markDryRunCompleted() {
-        updateConnectedDevice { $0.hasCompletedDryRun = true }
     }
 
     /// Records that a real sync finished successfully.

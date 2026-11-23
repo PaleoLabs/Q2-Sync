@@ -29,9 +29,12 @@
 //  directly inside are allowed). Deleting elsewhere
 //  needs the explicit `.deleteConfirmedByUser` operation, used only for
 //  card-only files the user chose to delete.
-//  Three narrow exceptions to (d):
+//  Four narrow exceptions to (d):
 //  • `checkAppleDoubleCompanion` lets the app delete the macOS `._`
 //    companion of a song it manages (see that method).
+//  • `checkStrayAppleDouble` lets the end-of-sync sweep delete any other
+//    `._` file in Music/ or the playlist folder, if its contents prove it's
+//    macOS metadata (see that method).
 //  • `checkFirmwareUpdateFile` lets the firmware installer write or delete
 //    exactly one file, `update.tar` at the card root, which is where the
 //    Q2's updater looks for firmware (see that method).
@@ -247,6 +250,71 @@ struct PathGuard: Sendable {
             throw Violation.reservedItem(companion.path)
         }
         return companion
+    }
+
+    /// The first four bytes of every macOS AppleDouble file.
+    static let appleDoubleMagic: [UInt8] = [0x00, 0x05, 0x16, 0x07]
+
+    /// Approves deleting a `._` file found by the end-of-sync sweep, whether
+    /// or not Q2 Sync wrote the file it belongs to (or that file still exists).
+    ///
+    /// WHY THIS NARROW EXCEPTION EXISTS
+    /// Music copied to the card in Finder gets `._` companions too, and the
+    /// Q2 can list them as broken songs. `checkAppleDoubleCompanion` only
+    /// covers songs Q2 Sync manages. Conditions, all required:
+    ///  • the path is inside Music/ (any depth) or directly inside the
+    ///    playlist folder;
+    ///  • only its last part is hidden, and it starts with "._" (so nothing
+    ///    inside a hidden folder, such as a firmware one, is ever touched);
+    ///  • it resolves to itself (no symlink leads elsewhere), strictly inside
+    ///    the card and outside the protected Mac folders;
+    ///  • it's a plain file under 1 MB whose first bytes are the AppleDouble
+    ///    signature, so it's macOS metadata and not a file someone named "._";
+    ///  • the card is still the confirmed, eligible card.
+    ///
+    /// - Parameter relativePath: e.g. `"Music/A/B/._01 X.mp3"`.
+    /// - Returns: The approved URL.
+    /// - Throws: `Violation` if any condition fails.
+    func checkStrayAppleDouble(_ relativePath: CardPath) throws -> URL {
+        let components = relativePath.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        guard components.count >= 2, !relativePath.hasPrefix("/"), !relativePath.contains("\\"),
+              !components.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }) else {
+            throw Violation.invalidPath(relativePath)
+        }
+        let top = components[0].lowercased()
+        let inMusic = top == profile.musicFolderName.lowercased()
+        let inPlaylists = top == profile.playlistFolderName.lowercased() && components.count == 2
+        guard inMusic || inPlaylists else { throw Violation.outsideManagedArea(relativePath) }
+        guard let name = components.last, name.hasPrefix("._"), name.count > 2,
+              !components.dropLast().contains(where: { $0.hasPrefix(".") }) else {
+            throw Violation.reservedItem(relativePath)
+        }
+
+        let url = cardRoot.appending(path: relativePath)
+        guard let resolved = Self.resolve(url.path), resolved == url.path else {
+            throw Violation.invalidPath(relativePath)
+        }
+        if protectedFolders.contains(where: { Self.isInside(resolved, folder: $0) || resolved == $0 }) {
+            throw Violation.protectedFolder(resolved)
+        }
+        guard Self.isInside(resolved, folder: cardRoot.path) else { throw Violation.outsideCard(resolved) }
+
+        var info = stat()
+        guard lstat(resolved, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG,
+              UInt64(info.st_size) <= Self.maximumAppleDoubleSize,
+              Self.startsWithAppleDoubleMagic(resolved) else {
+            throw Violation.reservedItem(relativePath)
+        }
+        try checkVolume(at: cardRoot)
+        return URL(filePath: resolved)
+    }
+
+    /// `true` if the file's first bytes are the AppleDouble signature.
+    static func startsWithAppleDoubleMagic(_ path: String) -> Bool {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return false }
+        defer { try? handle.close() }
+        let head = (try? handle.read(upToCount: appleDoubleMagic.count)) ?? Data()
+        return Array(head) == appleDoubleMagic
     }
 
     /// Approves writing or deleting the firmware file `update.tar` at the

@@ -83,6 +83,14 @@ struct DeviceHeaderView: View {
                 Text("Shanling Q2 · \(connected.device.firmware.displayName) · \(connected.connection.label)")
                     .foregroundStyle(.secondary)
                 Text(capacityText).font(.callout).foregroundStyle(.secondary)
+                if devices.formatAdvice(for: connected.volume) != nil {
+                    Button("This card isn't on Master Boot Record", systemImage: "exclamationmark.triangle") {
+                        showSettings()
+                    }
+                    .buttonStyle(.link)
+                    .font(.callout)
+                    .help("See the card's format and how to fix it in Disk Utility")
+                }
                 if let latest = autoSync.firmware.latest,
                    autoSync.firmware.status(for: connected.device)?.shouldNotify == true {
                     Button("Q2 Pod \(latest.tag) is available", systemImage: "arrow.down.circle") { showSettings() }
@@ -130,6 +138,10 @@ struct DeviceSettingsView: View {
                         .foregroundStyle(.orange)
                     Button("Grant Access…") { devices.regrantAccess() }
                 }
+            }
+
+            if let advice = devices.formatAdvice(for: connected.volume) {
+                CardFormatAdviceSection(advice: advice)
             }
 
             Section("Firmware") {
@@ -218,6 +230,8 @@ struct DeviceSettingsView: View {
 
             Section {
                 LabeledContent("Format", value: connected.volume.formatDescription ?? "Unknown")
+                LabeledContent("Partition Scheme",
+                               value: devices.partitionScheme(for: connected.volume)?.displayName ?? "Unknown")
                 LabeledContent("Card ID", value: connected.device.volumeUUID)
                     .textSelection(.enabled)
                 LabeledContent("Remembered Since",
@@ -243,5 +257,35 @@ struct DeviceSettingsView: View {
         } message: {
             Text("Q2 Sync will ask again the next time this card connects. Nothing on the card is changed.")
         }
+    }
+}
+
+/// Warns that the card isn't on Master Boot Record and explains how
+/// to erase it in Disk Utility. Q2 Sync never formats a card itself.
+struct CardFormatAdviceSection: View {
+
+    let advice: CardFormatAdvice
+
+    var body: some View {
+        Section {
+            Label(advice.problem, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+            ForEach(Array(CardFormatAdvice.diskUtilitySteps.enumerated()), id: \.offset) { index, step in
+                Label(step, systemImage: "\(index + 1).circle")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button("Open Disk Utility") { Self.openDiskUtility() }
+        } header: {
+            Text("Card Format")
+        } footer: {
+            Text("Syncing still works, but the Q2 may not read the card reliably, or at all. Q2 Sync never erases or formats a card.")
+        }
+    }
+
+    /// Opens Disk Utility (it's in /System/Applications/Utilities).
+    static func openDiskUtility() {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.DiskUtility") else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 }

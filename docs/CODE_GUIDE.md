@@ -126,7 +126,7 @@ sequenceDiagram
     C->>Card: read manifest + list files (read-only)
     C->>E: SyncPlanner → SyncPlan (adds, updates, moves, removals, playlists)
     C->>E: CardOnlyFinder + AudioTagReader → card-only music
-    C->>UI: Preview (first sync: preview only)
+    C->>UI: Preview
     You->>UI: Choose removals / card-only actions, click Sync
     UI->>C: apply()
     C->>E: SyncExecutor.run (background)
@@ -161,8 +161,9 @@ sequenceDiagram
 8. **Card-only music.** `CardOnlyFinder.find` lists audio files Q2 Sync doesn't
    manage plus orphaned songs; `AudioTagReader.fillTags` reads their tags;
    `CardOnlyFinder.markLibraryMatches` marks ones already in your library.
-9. **First sync = dry run.** If the card has never been previewed, a
-   "Dry run" log is written and the preview can't be applied.
+9. **First sync.** If nothing has been synced to the card yet, the preview
+   says so and `AutoSyncPolicy` won't apply it automatically; a sync you
+   start yourself can be applied straight from the preview.
 10. **Preview.** `SyncPreviewView` shows counts, lists and free space.
     Removals are **off** until you tick them; card-only files default to
     **Leave**. `SyncSafety.assess` lists blockers (unsafe library, doesn't fit)
@@ -218,9 +219,14 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 - **`VolumeEligibility.problem(with:) -> VolumeIneligibility?`** · which disks
   may ever be a Q2: never the startup disk or an internal fixed disk; must be
   removable/ejectable, have a UUID, and be exFAT/FAT.
+- **`CardFormatAdvice.check(scheme:)`** · warns (never blocks) when a card
+  isn't on a Master Boot Record partition table, with Disk Utility steps.
+  exFAT and FAT32 are both fine (Shanling supports both). `PartitionScheme` comes from
+  `DriveIdentityReader.partitionScheme` (the whole disk's Disk Arbitration
+  media content), read once per mount by `DeviceMonitor`. Unknown never warns.
 - **`DeviceStore`** · saves `KnownDevice` records (UUID, name, firmware,
   security-scoped bookmark, selection, auto-sync mode, firmware version,
-  dry-run state) and ignored drives to `devices.json` in the app container.
+  first-sync state) and ignored drives to `devices.json` in the app container.
   New fields are optional so older files still load.
 - **`CardContentsRecord` / `CardContentsStore`** · a Mac-side note of which
   songs (IDs only) Q2 Sync put on each card, saved whenever `DeviceMonitor`
@@ -257,6 +263,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `CardLayout.variant(of:number:)`, `isSameOrVariant`, `caseKey` | name collisions (" (2)"), case-insensitive comparison | none |
 | `PathGuard.check(_:for:)` | card path + operation → approved URL, or throws `Violation` | none (checks only) |
 | `PathGuard.checkAppleDoubleCompanion(of:)` | managed file → its `._` companion URL | none |
+| `PathGuard.checkStrayAppleDouble(_:)` | `._` file in Music/ or the playlist folder → approved URL (AppleDouble signature required) | none |
+| `CardFileSystem.removeStrayAppleDoubleFiles()` | end-of-sync sweep of `._` files in Music/ and the playlist folder | deletes those files only |
 | `CardFileSystem` | `copyFromMac`, `move`, `removeFile`, `moveToTrash`, `writeAtomically`, `createDirectory`, `removeEmptyFolders`, `removeAppleDoubleCompanion`, `cleanTempFolder` | **the only card writes**, each guarded |
 | `SyncManifest.load` / `save` | card ↔ record of managed songs, playlist files, playlist fingerprints and covers (newer fields are optional, so older manifests load) | `save` writes `.q2sync/manifest.json` atomically |
 | `PlaylistNaming.disambiguate(_:folders:)` | selected playlists → same-named ones in a folder renamed "Folder - Name" | none |
@@ -269,12 +277,12 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `SyncPlanner.plan(...)` | selection + manifest + card listing → `SyncPlan` | none |
 | `PlaylistWriter.plan` / `render` / `dropUnchangedWrites` | playlists → file paths and M3U bytes | none |
 | `CardOnlyFinder.find` / `markLibraryMatches`, `AudioTagReader.fillTags` | card listing → `[CardOnlyItem]` | reads tags only |
-| `SyncSafety.assess(...)` | plan + choices → `SafetyAssessment` (blockers, dry-run, >20% removal) | none |
+| `SyncSafety.assess(...)` | plan + choices → `SafetyAssessment` (blockers, first sync, >20% removal) | none |
 | `SyncExecutor.run(plan:manifest:options:onProgress:)` | plan + choices → `SyncReport` | changes the card (guarded), saves manifest, writes a log; copy-backs via `RecoveryCopier` |
 | `RecoveryCopier.copyBack(source:cardPath:)` | card file → copy in `~/Downloads/Q2 Recovered` | writes only inside the staging folder; never overwrites |
 | `CapacityEstimate.compute(...)` | sizes + manifest + selection → bar numbers and fit verdict | none |
 | `AutoSyncPolicy.decide(plan:assessment:)` | plan → apply / up to date / needs review | none |
-| `SyncLog` | writes `Logs/Sync <date>.log` and `Dry run <date>.log` | writes in the app container |
+| `SyncLog` | writes `Logs/Sync <date>.log` | writes in the app container |
 
 **`SyncOptions`** (the preview's choices): `applyRemovals` (default off),
 `moveRemovalsToTrash` (default on), `largeRemovalConfirmed`, `cardOnlyActions`
@@ -394,7 +402,7 @@ staging folder, never inside `~/Music` or the media folder, never overwriting.
 - Copies: temp file in `.q2sync/tmp` → flush → size check → keep dates → atomic
   rename.
 - "Mac looks empty" guard before planning; a damaged manifest stops planning.
-- First sync per card is a preview only.
+- A card's first sync is never applied automatically.
 - Nothing is removed unless you tick it; removed songs go to the card's
   `.q2sync/Trash` by default (with a `database.ignore` marker for Q2 Pod).
 - Removing more than 20% of the card's songs needs an extra confirmation, checked
@@ -467,7 +475,7 @@ Paths on the Mac are inside the app's sandbox container,
 | --- | --- |
 | Known devices, selections, auto-sync mode, bookmarks | `Library/Application Support/Q2 Sync/devices.json` |
 | Each Q2's last known contents (song IDs, dates) for the library browser | `Library/Application Support/Q2 Sync/Card Contents/<volume UUID>.json` |
-| Sync and dry-run logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
+| Sync logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
 | Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarItem`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |
 | Q2 Pod data backups | `~/Downloads/Q2 Sync Backups/<card> <date>/` with `backup.json` and `About this backup.txt` |

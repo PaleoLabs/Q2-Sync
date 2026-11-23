@@ -11,7 +11,7 @@
 //  Auto-sync follows every safety rule, and anything that would normally
 //  ask you something makes it STOP and wait instead. It goes ahead only if
 //  all of these are true:
-//    • it isn't this card's first sync (that's always a preview);
+//    • it isn't this card's first sync (you review that one yourself);
 //    • no safety check failed (library health, free space);
 //    • no songs you deselected would be removed;
 //    • no songs Q2 Sync put on the card have left your library.
@@ -67,8 +67,8 @@ enum AutoSyncPolicy {
     /// - Returns: The decision.
     static func decide(plan: SyncPlan, assessment: SafetyAssessment) -> AutoSyncDecision {
         var reasons: [String] = []
-        if assessment.isDryRunOnly {
-            reasons.append("This is the card's first sync, which is always a preview.")
+        if assessment.isFirstSync {
+            reasons.append("This is the card's first sync, so it waits for you to review it.")
         }
         reasons += assessment.blockers
         if !plan.removals.isEmpty {

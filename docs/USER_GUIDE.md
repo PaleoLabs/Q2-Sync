@@ -47,7 +47,14 @@ the card in a card reader instead.
 > **Tip:** Only insert or remove the microSD card while the Q2 is fully shut
 > down (not just asleep), or the card can be damaged.
 
-The card must be formatted **exFAT** or **FAT32**. New cards usually are.
+The card must be formatted **exFAT** or **FAT32** (Shanling prefers exFAT)
+on a **Master Boot Record** partition table. New cards usually are. If your
+card uses another scheme (such as the GUID Partition Map Disk Utility may
+pick), Q2 Sync shows a warning on the Q2's Settings tab with the steps to
+erase it in Disk Utility: choose **View → Show All Devices**, select the card
+itself, click **Erase**, and pick Format **ExFAT** and Scheme **Master Boot
+Record**. Erasing deletes everything on the card, and Q2 Sync never erases or
+formats a card itself.
 
 ---
 
@@ -84,7 +91,7 @@ From now on, Q2 Sync recognises your card automatically and shows it under
 1. Click your Q2 in the sidebar, then the **Music** tab.
 2. Q2 Sync reads your Music library when the window opens and whenever the
    Q2 connects. To re-read it (after adding music, say), click **Refresh
-   Music Library** (the arrow at the top right).
+   Library** at the top right.
 3. Choose one:
    - **Entire music library**: everything that can be copied, plus all your
      playlists.
@@ -122,6 +129,12 @@ unplugged:
 - Hover over an icon for the numbers, or select the row: each song shows
   **On Q2** or **Next sync** in the **Q2** column, and its status icon says
   why it can't be copied.
+- Drag the divider between the list and the songs to resize the list; Q2
+  Sync remembers the width.
+- Hover over a song's title to see where its file is on your Mac, or
+  right-click songs for **Show in Finder** and **Copy Path**. A **File**
+  column is also available: right-click the column headers to show it, or to
+  show and hide other columns.
 
 These marks come from Q2 Sync's record of the card from the last time it was
 connected; the window's subtitle says which Q2 and when. If the card was
@@ -132,13 +145,12 @@ next time you connect it.
 
 ## 4. Run a sync
 
-1. Click **Sync** (on your very first sync with a card it says
-   **Preview Sync**).
+1. Click **Sync**.
 2. Q2 Sync reads your library, checks the card, and shows a **preview** of every
    change: songs to **Add**, **Update** or **Rename**, songs **Already on card**,
    and songs that **Can't sync**.
-3. **Your first sync with a card is always just a preview.** Nothing changes.
-   Look it over, click **Close**, then click **Sync** again to do it for real.
+3. **Nothing changes until you click Sync** on the preview. Click **Cancel**
+   to leave the card as it is.
 4. **Removing songs you unticked:** these are listed under **Remove**, but
    nothing is removed unless you tick **Remove the … songs you no longer
    sync**. By default they go to a trash folder on the card rather than being

@@ -249,6 +249,64 @@ struct AppleDoubleTests {
         #expect(FileManager.default.fileExists(atPath: outside.appending(path: "keep").path))
     }
 
+    /// Writes a real-looking AppleDouble file (signature + padding).
+    func writeAppleDouble(_ card: TestCard, _ path: String) throws {
+        let url = card.root.appending(path: path)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(PathGuard.appleDoubleMagic + [UInt8](repeating: 0, count: 4_092)).write(to: url)
+    }
+
+    @Test("The sweep removes ._ files in Music/ and the playlist folder, even for music Q2 Sync didn't write")
+    func sweepRemovesStrays() throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let playlists = card.pathGuard.profile.playlistFolderName
+        try write(card, "Music/Finder Copy/01 X.mp3")
+        try writeAppleDouble(card, "Music/Finder Copy/._01 X.mp3")
+        try writeAppleDouble(card, "Music/Gone/._02 Deleted.mp3")      // its song is gone
+        try writeAppleDouble(card, "Music/._Finder Copy")                // a folder's companion
+        try writeAppleDouble(card, "\(playlists)/._Road Trip.m3u")
+
+        let sweep = card.fileSystem.removeStrayAppleDoubleFiles()
+        #expect(sweep.removed == 4)
+        #expect(sweep.failures.isEmpty)
+        #expect(!exists(card, "Music/Finder Copy/._01 X.mp3"))
+        #expect(!exists(card, "Music/Gone/._02 Deleted.mp3"))
+        #expect(!exists(card, "\(playlists)/._Road Trip.m3u"))
+        #expect(exists(card, "Music/Finder Copy/01 X.mp3"))
+    }
+
+    @Test("The sweep leaves ._ files outside Music/, in hidden folders, or without the AppleDouble signature")
+    func sweepLeavesOthers() throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        try writeAppleDouble(card, "Old Rips/._x.mp3")
+        try writeAppleDouble(card, "._Music")
+        try writeAppleDouble(card, "Music/.hidden/._y.mp3")
+        try write(card, "Music/A/._not metadata.mp3")                    // no signature
+        try writeAppleDouble(card, "Music/A/._big.mp3")
+        try Data(PathGuard.appleDoubleMagic + [UInt8](repeating: 0, count: 2 << 20))
+            .write(to: card.root.appending(path: "Music/A/._big.mp3"))
+
+        let sweep = card.fileSystem.removeStrayAppleDoubleFiles()
+        #expect(sweep.removed == 0)
+        for path in ["Old Rips/._x.mp3", "._Music", "Music/.hidden/._y.mp3",
+                     "Music/A/._not metadata.mp3", "Music/A/._big.mp3"] {
+            #expect(exists(card, path))
+        }
+    }
+
+    @Test("The sweep never follows a symlinked ._ file off the card")
+    func sweepRefusesSymlink() throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let outside = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: outside) }
+        let keep = outside.appending(path: "keep")
+        try Data(PathGuard.appleDoubleMagic + [0, 0, 0, 0]).write(to: keep)
+        try FileManager.default.createDirectory(at: card.root.appending(path: "Music/A"), withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: card.root.appending(path: "Music/A/._link.mp3"),
+                                                   withDestinationURL: keep)
+        _ = card.fileSystem.removeStrayAppleDoubleFiles()
+        #expect(FileManager.default.fileExists(atPath: keep.path))
+    }
+
     @Test("Timestamps use 24-hour time with no colons")
     func timestamps() {
         var parts = DateComponents()

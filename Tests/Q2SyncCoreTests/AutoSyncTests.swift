@@ -33,7 +33,7 @@ struct AutoSyncPolicyTests {
 
     @Test("First sync, blockers, removals and orphans each stop it")
     func stops() {
-        var firstSync = SafetyAssessment(); firstSync.isDryRunOnly = true
+        var firstSync = SafetyAssessment(); firstSync.isFirstSync = true
         var blocked = SafetyAssessment(); blocked.blockers = ["Doesn't fit"]
         var withRemoval = addPlan
         withRemoval.removals = [RemoveOperation(trackID: "x", entry: makeEntry("Music/x.mp3"))]

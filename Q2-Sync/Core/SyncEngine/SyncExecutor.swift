@@ -418,18 +418,16 @@ struct SyncExecutor: Sendable {
             log.write("STOPPED  \(error.localizedDescription)")
         }
 
-        // Tidy up `._` companions next to every managed song (including any
-        // left by earlier syncs). Only our own songs' companions are touched.
-        let tidyResults = manifest.entries.values.map { fileSystem.removeAppleDoubleCompanion(of: $0.path) }
-        let removedCompanions = tidyResults.filter { $0 == .removed }.count
-        if removedCompanions > 0 {
-            log.write("TIDY  Removed \(removedCompanions) macOS “._” companion files")
+        // Tidy up `._` files in Music/ and the playlist folder: next to our
+        // songs, next to music copied in Finder, and ones whose song is gone.
+        // Each must prove it's macOS metadata (see `checkStrayAppleDouble`).
+        let sweep = fileSystem.removeStrayAppleDoubleFiles()
+        if sweep.removed > 0 {
+            log.write("TIDY  Removed \(sweep.removed) macOS “._” files")
         }
         // Log the first few failures with their reason (not a sync error:
         // the songs themselves are fine).
-        let failures = tidyResults.compactMap { result -> String? in
-            if case .failed(let reason) = result { return reason } else { return nil }
-        }
+        let failures = sweep.failures
         for reason in failures.prefix(3) { log.write("NOTE  Couldn't remove a “._” file: \(reason)") }
         if failures.count > 3 { log.write("NOTE  …and \(failures.count - 3) more “._” files") }
 

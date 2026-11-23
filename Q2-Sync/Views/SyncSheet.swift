@@ -176,11 +176,11 @@ struct SyncPreviewView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(preview.isFirstSync ? "Preview of Your First Sync" : isUpToDate ? "Already Up to Date" : "Ready to Sync")
+            Text(isUpToDate ? "Already Up to Date" : "Ready to Sync")
                 .font(.title2.bold())
 
-            if preview.isFirstSync {
-                Label("Your first sync with a card is always a preview. Nothing has been changed. Review the list, then click Sync again to apply it.",
+            if preview.isFirstSync && !isUpToDate {
+                Label("This is your first sync with this card. Nothing has changed yet: review the list, then click Sync.",
                       systemImage: "eye")
                     .foregroundStyle(.blue)
                     .fixedSize(horizontal: false, vertical: true)
@@ -555,19 +555,16 @@ struct SyncPreviewView: View {
 
     private var footer: some View {
         HStack {
-            if let log = preview.dryRunLogURL {
-                Button("Show Preview Log") { NSWorkspace.shared.activateFileViewerSelecting([log]) }
-            }
             Spacer()
-            if isUpToDate && !preview.isFirstSync {
+            if isUpToDate {
                 // Nothing to apply: one button that just closes.
                 Button("Done") { sync.close() }
                     .keyboardShortcut(.defaultAction)
             } else {
-                Button(preview.isFirstSync ? "Close" : "Cancel") { sync.close() }
+                Button("Cancel") { sync.close() }
                     .keyboardShortcut(.cancelAction)
             }
-            if !preview.isFirstSync && !isUpToDate {
+            if !isUpToDate {
                 Button("Sync") { continueApplying() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!assessment.canApply || (plan.isEmpty && !hasCardOnlyWork))

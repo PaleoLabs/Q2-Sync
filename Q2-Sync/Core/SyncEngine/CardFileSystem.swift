@@ -29,8 +29,10 @@
 //  in a hidden companion file, e.g. `._01 Hello.m4a`. macOS adds such an
 //  attribute to every file a sandboxed app creates, and some players list
 //  these companions as broken songs. So after each copy or move we strip
-//  the attributes and remove the companion of OUR file only, via the
-//  guard's narrow `checkAppleDoubleCompanion` exception.
+//  the attributes and remove the companion of OUR file, via the guard's
+//  narrow `checkAppleDoubleCompanion` exception. At the end of each sync,
+//  `removeStrayAppleDoubleFiles` also sweeps Music/ and the playlist folder
+//  for any other `._` file (music copied in Finder, songs since deleted).
 //
 
 import Foundation
@@ -410,6 +412,86 @@ struct CardFileSystem: Sendable {
         } catch {
             return .failed("\(path): \(error.localizedDescription)")
         }
+    }
+
+    /// What the end-of-sync `._` sweep did.
+    struct StrayAppleDoubleSweep: Equatable {
+        var removed = 0
+        /// Files that looked like `._` files but couldn't be removed, with
+        /// the reason, for the sync log.
+        var failures: [String] = []
+    }
+
+    /// Deletes every macOS `._` file in Music/ (any depth) and directly in
+    /// the playlist folder, including ones next to music copied in Finder
+    /// and ones whose song is gone. Hidden folders are never entered, and
+    /// each file must pass `PathGuard.checkStrayAppleDouble`.
+    ///
+    /// - Returns: How many were removed, and why any couldn't be.
+    func removeStrayAppleDoubleFiles() -> StrayAppleDoubleSweep {
+        var sweep = StrayAppleDoubleSweep()
+        let profile = pathGuard.profile
+        var candidates: [CardPath] = []
+
+        // Foundation's directory listings silently leave out `._` files, so
+        // folders are read with `readdir`. Music/ is walked recursively,
+        // never entering hidden folders or following symlinks.
+        var folders: [CardPath] = [profile.musicFolderName]
+        while let folder = folders.popLast() {
+            for (name, kind) in Self.rawEntries(of: urlForReading(folder).path) {
+                if kind == DT_DIR {
+                    if !name.hasPrefix(".") { folders.append("\(folder)/\(name)") }
+                } else if kind == DT_REG, name.hasPrefix("._") {
+                    candidates.append("\(folder)/\(name)")
+                }
+            }
+        }
+        // The playlist folder, top level only.
+        for (name, kind) in Self.rawEntries(of: urlForReading(profile.playlistFolderName).path)
+        where kind == DT_REG && name.hasPrefix("._") {
+            candidates.append("\(profile.playlistFolderName)/\(name)")
+        }
+
+        // A plain file someone named "._…" that isn't macOS metadata is
+        // simply left alone (not an error); the guard re-checks the rest.
+        for path in candidates where PathGuard.startsWithAppleDoubleMagic(urlForReading(path).path) {
+            do {
+                let url = try pathGuard.checkStrayAppleDouble(path)
+                if Darwin.unlink(url.path) == 0 {
+                    sweep.removed += 1
+                } else {
+                    sweep.failures.append("\(path): \(String(cString: strerror(errno)))")
+                }
+            } catch {
+                sweep.failures.append("\(path): \(error.localizedDescription)")
+            }
+        }
+        return sweep
+    }
+
+    /// Every entry in a folder (except "." and "..") with its `d_type`,
+    /// read with `readdir`, which, unlike `FileManager`, includes `._`
+    /// files. Empty if the folder can't be opened.
+    static func rawEntries(of folderPath: String) -> [(name: String, kind: Int32)] {
+        guard let dir = opendir(folderPath) else { return [] }
+        defer { closedir(dir) }
+        var entries: [(name: String, kind: Int32)] = []
+        while let entry = readdir(dir) {
+            let name = withUnsafeBytes(of: entry.pointee.d_name) { raw in
+                String(decoding: raw.prefix(Int(entry.pointee.d_namlen)), as: UTF8.self)
+            }
+            guard name != ".", name != ".." else { continue }
+            var kind = Int32(entry.pointee.d_type)
+            if kind == DT_UNKNOWN {
+                // Some file systems don't fill in d_type: ask lstat.
+                var info = stat()
+                if lstat(folderPath + "/" + name, &info) == 0 {
+                    kind = (info.st_mode & S_IFMT) == S_IFDIR ? DT_DIR : DT_REG
+                }
+            }
+            entries.append((name, kind))
+        }
+        return entries
     }
 
     /// Removes every extended attribute from a file we just created on the

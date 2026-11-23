@@ -14,6 +14,8 @@
 //     the first parent with USB properties (vendor/product ID and strings).
 //  Both are read-only lookups of system information; nothing on the drive
 //  is opened or read. Any failure simply gives `nil` (unknown connection).
+//  `partitionScheme` reads the whole disk's partition table type the same
+//  way, for `CardFormatAdvice`.
 //
 
 import DiskArbitration
@@ -52,6 +54,25 @@ enum DriveIdentityReader {
                                    ?? searchParents(media, key: "kUSBProductString")) as? String
         }
         return identity
+    }
+
+    /// How the disk behind a mounted volume is partitioned.
+    ///
+    /// - Parameter volumeURL: The volume's mount point.
+    /// - Returns: The scheme, or `nil` if it can't be read.
+    /// - Side effects: None (system lookups only).
+    static func partitionScheme(forVolumeAt volumeURL: URL) -> PartitionScheme? {
+        guard let session = DASessionCreate(kCFAllocatorDefault),
+              let disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, volumeURL as CFURL),
+              let whole = DADiskCopyWholeDisk(disk) else {
+            return nil
+        }
+        // A volume that IS the whole disk has no partition table.
+        let volumeName = DADiskGetBSDName(disk).map { String(cString: $0) }
+        let wholeName = DADiskGetBSDName(whole).map { String(cString: $0) }
+        let description = DADiskCopyDescription(whole) as? [CFString: Any]
+        return PartitionScheme(mediaContent: description?[kDADiskDescriptionMediaContentKey] as? String,
+                               volumeIsWholeDisk: volumeName != nil && volumeName == wholeName)
     }
 
     /// Finds a property on the entry or the nearest parent that has it.

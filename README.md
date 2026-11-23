@@ -62,8 +62,8 @@ syncs on its own.
 
 ### 👀 See every change before it happens
 The **Ready to Sync** preview lists every song that will be added, updated,
-renamed or removed, and how much space is left afterwards. Your first sync
-with a card is always a preview.
+renamed or removed, and how much space is left afterwards. Nothing changes
+until you click **Sync** on it.
 
 ### ⚡️ Fast, incremental syncs
 Only new or changed songs are copied. Retag a song in Apple Music and it's
@@ -147,7 +147,8 @@ the card, which you fix by syncing again.
 
 - macOS 27.2 or later
 - Xcode 27.2 or later (to build)
-- A Shanling Q2 with a microSD card formatted **exFAT** or **FAT32**, set to
+- A Shanling Q2 with a microSD card formatted **exFAT** or **FAT32** on a
+  Master Boot Record partition table, set to
   **USB Storage** in its quick-access menu (or the card in a card reader)
 - Music stored as **local, DRM-free files** in the Music app (MP3, AAC,
   Apple Lossless, WAV, AIFF). Apple Music subscription songs (DRM-protected,

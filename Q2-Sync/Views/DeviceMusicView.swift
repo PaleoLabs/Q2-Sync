@@ -271,14 +271,11 @@ struct DeviceMusicView: View {
             Button {
                 Task { await autoSync.startSync(automatic: false) }
             } label: {
-                Label(connected.device.hasCompletedDryRun == true ? "Sync" : "Preview Sync",
-                      systemImage: "arrow.triangle.2.circlepath")
+                Label("Sync", systemImage: "arrow.triangle.2.circlepath")
             }
             .buttonStyle(.borderedProminent)
             .disabled(sync.phase != .idle || connected.accessURL == nil)
-            .help(connected.device.hasCompletedDryRun == true
-                  ? "Preview the changes, then copy them to the Q2"
-                  : "Your first sync is a preview: nothing on the card changes")
+            .help("Review the changes, then copy them to the Q2")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
