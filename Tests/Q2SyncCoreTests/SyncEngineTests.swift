@@ -201,19 +201,20 @@ struct SyncSafetyTests {
         #expect(!small.needsLargeRemovalConfirmation)
     }
 
-    @Test("Files moved to the card's trash don't count as freed space; deletes do")
-    func trashFreesNothing() {
+    @Test("Removals, deletes and moves to the Mac free space; leaving or copying doesn't")
+    func freedSpace() {
         var plan = planWithRemovals(1, of: 10)
         plan.cardOnly = [CardOnlyItem(path: "x.mp3", size: 300, origin: .unmanaged)]
         let removalSize = Int64(plan.bytesFreedByRemovals)
-        func free(toTrash: Bool, cardOnly action: CardOnlyAction) -> Int64 {
+        func free(removals: Bool, cardOnly action: CardOnlyAction) -> Int64 {
             SyncSafety.assess(plan: plan, health: .healthy, isFirstSync: false, availableBytes: 1_000,
-                              includeRemovals: true, removalsToTrash: toTrash,
+                              includeRemovals: removals,
                               cardOnlyActions: ["x.mp3": action]).projectedFreeBytes
         }
-        #expect(free(toTrash: true, cardOnly: .moveToTrash) == 1_000)
-        #expect(free(toTrash: false, cardOnly: .moveToTrash) == 1_000 + removalSize)
-        #expect(free(toTrash: true, cardOnly: .delete) == 1_300)
+        #expect(free(removals: false, cardOnly: .leave) == 1_000)
+        #expect(free(removals: true, cardOnly: .leave) == 1_000 + removalSize)
+        #expect(free(removals: false, cardOnly: .delete) == 1_300)
+        #expect(free(removals: false, cardOnly: .moveToMac) == 1_300)
     }
 }
 
@@ -282,8 +283,8 @@ struct SyncExecutorTests {
         #expect(secondPlan.unchangedCount == 2)
     }
 
-    @Test("Removals go to the card's trash, which is hidden from Q2 Pod's library")
-    func removalToTrash() async throws {
+    @Test("Removals happen only when chosen, and delete the file (no card trash)")
+    func removalDeletes() async throws {
         let card = try TestCard(); defer { card.cleanUp() }
         let mac = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: mac) }
         let logs = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: logs) }
@@ -298,20 +299,17 @@ struct SyncExecutorTests {
         let (plan2, manifest2) = try planOnCard([tracks[0]], card: card)
         #expect(plan2.removals.count == 1)
         let kept = await executor.run(plan: plan2, manifest: manifest2, options: SyncOptions()) { _ in }
-        #expect(kept.trashed == 0 && kept.removed == 0)
+        #expect(kept.removed == 0)
         #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Music/Artist/Album/02 Beta.mp3").path))
 
-        // With applyRemovals + trash: moved into .q2sync/Trash, with the marker.
+        // With applyRemovals: deleted, no trash folder.
         // (50% removal needs the large-removal confirmation.)
-        let options = SyncOptions(applyRemovals: true, moveRemovalsToTrash: true, largeRemovalConfirmed: true)
+        let options = SyncOptions(applyRemovals: true, largeRemovalConfirmed: true)
         let (plan3, manifest3) = try planOnCard([tracks[0]], card: card)
         let report = await executor.run(plan: plan3, manifest: manifest3, options: options) { _ in }
-        #expect(report.trashed == 1)
+        #expect(report.removed == 1)
         #expect(!FileManager.default.fileExists(atPath: card.root.appending(path: "Music/Artist/Album/02 Beta.mp3").path))
-        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: ".q2sync/Trash/database.ignore").path))
-        let trashed = FileManager.default.enumerator(atPath: card.root.appending(path: ".q2sync/Trash").path)?
-            .compactMap { $0 as? String }.filter { $0.hasSuffix("02 Beta.mp3") }
-        #expect(trashed?.count == 1)
+        #expect(!FileManager.default.fileExists(atPath: card.root.appending(path: ".q2sync/Trash").path))
         #expect(try SyncManifest.load(from: card.fileSystem).entries.keys.sorted() == ["A"])
     }
 
@@ -327,7 +325,7 @@ struct SyncExecutorTests {
                                     layout: CardLayout(profile: .q2Pod))
         let executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
         let report = await executor.run(plan: plan, manifest: manifest,
-                                        options: SyncOptions(applyRemovals: true, moveRemovalsToTrash: false)) { _ in }
+                                        options: SyncOptions(applyRemovals: true)) { _ in }
         #expect(report.removed == 0)
         #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Music/keep.mp3").path))
     }
@@ -387,5 +385,33 @@ struct SyncExecutorTests {
         }
         let found = Set(CardScanner.scan(folder: "", on: card.fileSystem).values.map(\.path))
         #expect(found == ["Music/a.mp3", "Old/b.mp3"])
+    }
+}
+
+@Suite("Sync summary")
+struct SyncSummaryTests {
+
+    @Test("Nothing to do says so")
+    func upToDate() {
+        #expect(SyncPlan().summary(applyRemovals: false) == "Everything you selected is already on the card.")
+    }
+
+    @Test("Lists changes in order, with the size after the copies")
+    func changes() {
+        var plan = SyncPlan()
+        plan.copies = [CopyOperation(kind: .add, track: makeCopyableTrack(id: "1", title: "A", size: 2_000_000),
+                                     destination: "Music/a.mp3", obsoletePath: nil, reason: nil)]
+        plan.unchangedCount = 5
+        let summary = plan.summary(applyRemovals: false)
+        #expect(summary.hasPrefix("This sync will add 1 song ("))
+        #expect(summary.hasSuffix(" Everything else is already on the card."))
+    }
+
+    @Test("Removals are mentioned only when chosen")
+    func removals() {
+        var plan = SyncPlan()
+        plan.removals = [RemoveOperation(trackID: "T", entry: makeEntry("Music/x.mp3"))]
+        #expect(plan.summary(applyRemovals: false) == "Everything you selected is already on the card.")
+        #expect(plan.summary(applyRemovals: true) == "This sync will remove 1 song.")
     }
 }

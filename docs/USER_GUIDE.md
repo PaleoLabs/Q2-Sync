@@ -183,20 +183,32 @@ next time you connect it.
 ## 4. Run a sync
 
 1. Click **Sync**.
-2. Q2 Sync reads your library, checks the card, and shows a **preview** of every
-   change: songs to **Add**, **Update** or **Rename**, songs **Already on card**,
-   and songs that **Can't sync**. Counts of 0 are greyed out, so the ones
-   that matter stand out.
+2. Q2 Sync reads your library, checks the card, and shows a **preview**: one
+   sentence saying what the sync will do (for example "This sync will update
+   3 playlists. Everything else is already on the card."), and how much space
+   will be free. If something needs your choice (songs you no longer sync,
+   or music that's only on the card), a box below it asks.
+   Click **Details** for the counts and every change, song by song. The
+   counts are in one box per topic: **Songs** (Add, Update, Rename, Remove),
+   **Not Copied** (Already on card, On card only, Can't sync), **Playlists**
+   and **Album Covers**. Counts of 0 are greyed out. The lists below follow
+   the same order, after the sections that need a choice. Q2 Sync remembers
+   whether you left Details open.
 3. **Nothing changes until you click Sync** on the preview. Click **Cancel**
    to leave the card as it is.
-4. **Removing songs you unticked:** these are listed under **Remove**, but
-   nothing is removed unless you tick **Remove the … songs you no longer
-   sync**. By default they go to a trash folder on the card rather than being
-   deleted. If that's more than 20% of the songs on the card, you'll be asked
-   to confirm.
+4. **Removing songs you unticked:** the box says how many are still on the
+   card, but nothing is removed unless you tick **Remove Them** (or, under
+   Details, **Remove the … songs you no longer sync**). Removed songs are
+   deleted from the card. They're still in your library, so ticking them
+   again puts them back at the next sync. If that's more than 20% of the
+   songs on the card, you'll be asked to confirm.
 5. Click **Sync**. A progress bar shows what's being copied, with an
    estimate such as "About 12 minutes remaining" once it has measured the
-   copying speed (after about 10 seconds). You can click
+   copying speed (after about 10 seconds). If album covers are on, they're
+   added after the music: the window then reads **Adding Album Covers…**,
+   with its own progress bar, "Cover 12 of 950", and its own estimate once
+   a few covers are done. Until then, the line under the bar notes "then
+   950 album covers". You can click
    **Cancel** at any time; songs already copied stay, and the next sync carries
    on where it stopped.
 6. When it's done, you'll see **Sync Complete** with three choices:
@@ -222,7 +234,7 @@ The preview lists them under **Album Covers**.
 - When an album leaves the card, its cover goes too.
 - Turn it on any time: the next sync adds covers for everything already on
   the card. Turn it off and the next sync removes the covers Q2 Sync added
-  (listed under **Remove Album Covers** in the preview).
+  (listed under **Remove Covers** in the preview).
 
 **Refresh Cover Flow after covers change (Q2 Pod).** Cover Flow keeps its
 own cache of covers, so after a sync that adds or removes covers (for
@@ -252,35 +264,51 @@ If covers don't rebuild:
 
 If the card has music that isn't part of what you sync (for example songs you
 copied by hand, or songs you've since deleted from Apple Music), the preview
-lists them under **On the Card Only**. Nothing happens to them unless you
-choose. For each file, pick:
+lists them under **On Card Only**, in three groups:
+
+- **On Card Only**: songs Q2 Sync synced earlier whose track
+  has since left Apple Music. The card may hold the only copy.
+- **Not Put There by Q2 Sync**: music copied by hand or by another app.
+- **Already in Your Library**: copies of songs your library has (see below).
+
+Nothing happens to them unless you choose. The box at the top of the preview
+has one pop-up per group:
+**Leave All on Card** (the default), **Move All to Mac**, **Delete All from
+Card**, or **Choose Individually**. Only with
+**Choose Individually** (which opens Details) does each album and song get
+its own pop-up (an album
+whose songs differ shows **Mixed**). Songs are listed by album; click an album
+to see its songs. Hover over a song to see its path on the card, or
+right-click it to copy the path. The choices are:
 
 | Choice | What happens |
 | --- | --- |
 | **Leave on Card** (default) | Nothing. |
-| **Copy to Mac** | A copy goes to your **Downloads › Q2 Recovered** folder. The file stays on the card. |
-| **Move to Card Trash** | Moved into the card's hidden trash folder (you can still get it back). |
+| **Move to Mac** | Copied to your **Downloads › Q2 Recovered** folder, then deleted from the card once the copy is checked. If the copy can't be made, the song stays on the card. |
 | **Delete from Card** | Deleted for good. You'll be asked to confirm. |
 
-Use **Set all to** to choose for every file at once.
+A line under the heading counts what you've chosen (deletes in red), and
+the **Sync** button says how many files it will delete.
 
 **Music you copied to the card yourself** (in Finder, say) is recognised on
 the first sync. A file in the card's `Music` folder that's the same song as
 one you sync (same title, artist and length) and exactly the same file (same
 size) isn't copied again: Q2 Sync takes it over and moves it into its own
 folder layout. Other copies of songs you sync (a different encoding, or
-outside the `Music` folder) are marked **already in your library**; clear them
-all at once with the **Move to Card Trash** or **Delete from Card** buttons
-next to "N already in your library". Only deleting frees their space.
+outside the `Music` folder) are listed under **Already in Your Library**;
+clear them all at once with **Delete All from Card** (Move to Mac isn't
+offered there, since your library already has them).
 
-**About "Copy to Mac":** Q2 Sync never puts files into your Music library. It
+**About "Move to Mac":** Q2 Sync never puts files into your Music library. It
 copies them to **Downloads › Q2 Recovered**, keeping their folders, and lists
 them in `RECOVERED.txt`. To add them to Apple Music, open Music and choose
 **File › Import…**. Songs already in your library aren't copied again, and
 nothing in the Q2 Recovered folder is ever overwritten.
 
-**Emptying the card's trash:** in Finder, open the card, press
-**⌘⇧.** (Command-Shift-period) to show hidden folders, and delete `.q2sync/Trash`.
+**Older versions** of Q2 Sync could move songs to a trash folder on the card.
+If you used that, the folder is still there: in Finder, open the card, press
+**⌘⇧.** (Command-Shift-period) to show hidden folders, and delete
+`.q2sync/Trash` (including the `database.ignore` file in it).
 
 ---
 
@@ -504,15 +532,14 @@ catalogue can't be copied. To get a song onto your Q2, buy it (the iTunes
 Store sells DRM-free files) or add your own copy to the Music app.
 
 **I unticked an album but it's still on my Q2.**
-Removals are always your choice. Tick **Remove the … songs you no longer sync**
-in the preview.
+Removals are always your choice. Tick **Remove Them** in the preview.
 
 **I deleted a song in Apple Music. What happens to the copy on the card?**
-It's listed under **On the Card Only** with the note "no longer in your
-library", so you can copy it back to your Mac or remove it.
+It's listed under **On Card Only**, so you
+can move it to your Mac or delete it.
 
 **What happens to music I copied onto the card myself?**
-It's left alone unless you choose otherwise under **On the Card Only**. Q2 Sync
+It's left alone unless you choose otherwise under **On Card Only**. Q2 Sync
 never overwrites it.
 
 **My new music doesn't show on the Q2.**
@@ -523,7 +550,7 @@ The capacity bar warns you. Untick some music, or allow removals in the preview.
 Q2 Sync always leaves 200 MB free for the Q2's own use.
 
 **What are the `.q2sync` and `_explaylist_data` folders on the card?**
-`.q2sync` holds Q2 Sync's record of what it copied, plus the card's trash.
+`.q2sync` holds Q2 Sync's record of what it copied.
 `_explaylist_data` holds playlists for the Q2 to import. Please don't edit
 `.q2sync/manifest.json`. If it ever gets damaged, delete it: the next sync
 rebuilds it without copying identical songs again.

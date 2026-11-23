@@ -17,8 +17,6 @@ once for **Q2 Pod** and once for **stock** firmware, then update the matching
    - [ ] Album art shows.
    - [ ] Names with accents or non-English characters display correctly.
    - [ ] No “._” or broken entries appear.
-   - [ ] Nothing from `.q2sync/Trash` appears (Q2 Pod hides it via
-         `database.ignore`; **stock firmware may not**).
 
 ## 2. Playlist format
 

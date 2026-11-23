@@ -41,9 +41,17 @@ struct SyncProgress: Sendable, Equatable {
     var totalBytes: UInt64 = 0
     /// What's happening now, e.g. "Copying “Hello”".
     var currentItem = ""
+    /// Album covers to write, and written (or skipped) so far.
+    var coversTotal = 0
+    var coversDone = 0
+    /// `true` during the album-cover step, which has its own progress bar
+    /// and time estimate (covers aren't counted in bytes).
+    var isAddingCovers = false
 
-    /// 0…1, weighted by bytes when there's copying to do.
+    /// 0…1, weighted by bytes when there's copying to do. During the
+    /// album-cover step, how far through the covers.
     var fractionComplete: Double {
+        if isAddingCovers && coversTotal > 0 { return min(1, Double(coversDone) / Double(coversTotal)) }
         if totalBytes > 0 { return min(1, Double(bytesCopied) / Double(totalBytes)) }
         return totalOperations == 0 ? 1 : Double(completedOperations) / Double(totalOperations)
     }
@@ -55,12 +63,10 @@ struct SyncReport: Sendable, Equatable {
     var updated = 0
     var moved = 0
     var removed = 0
-    var trashed = 0
     var adopted = 0
-    var copiedBack = 0
     var copyBackDuplicates = 0
     var cardOnlyRemoved = 0
-    var cardOnlyTrashed = 0
+    var cardOnlyMovedToMac = 0
     var playlistsWritten = 0
     var playlistsUnchanged = 0
     var playlistsRemoved = 0
@@ -90,12 +96,19 @@ struct SyncReport: Sendable, Equatable {
 struct SyncOptions: Sendable, Equatable {
     /// Apply the planned removals at all.
     var applyRemovals = false
-    /// Move removed songs to `.q2sync/Trash` instead of deleting them.
-    var moveRemovalsToTrash = true
     /// The user confirmed a removal above the 20% threshold.
     var largeRemovalConfirmed = false
-    /// What to do with each card-only file (missing = leave).
+    /// What to do with each card-only file (missing = leave). The preview
+    /// derives it from `cardOnlyChoices` (`setCardOnlyChoices`).
     var cardOnlyActions: [CardPath: CardOnlyAction] = [:]
+    /// The choices the preview shows: one per group, or per file.
+    var cardOnlyChoices = CardOnlyChoices()
+
+    /// Changes the card-only choices and recomputes `cardOnlyActions`.
+    mutating func setCardOnlyChoices(_ choices: CardOnlyChoices, items: [CardOnlyItem]) {
+        cardOnlyChoices = choices
+        cardOnlyActions = choices.actions(for: items)
+    }
 }
 
 /// Applies sync plans to the card.
@@ -138,12 +151,12 @@ struct SyncExecutor: Sendable {
 
         // Defence in depth: removals above the threshold need confirmation,
         // whatever the UI did. This covers planned removals AND card-only
-        // files set to trash or delete.
+        // files set to move to the Mac or delete.
         let fraction = plan.removalFraction(cardOnlyActions: options.cardOnlyActions,
                                             includeRemovals: options.applyRemovals)
         let removalsAllowed = fraction <= SyncSafety.largeRemovalThreshold || options.largeRemovalConfirmed
         let removals = (options.applyRemovals && removalsAllowed) ? plan.removals : []
-        let cardOnlyCopies = plan.cardOnly.filter { options.cardOnlyActions[$0.path] == .copyToMac }
+        let cardOnlyCopies = plan.cardOnly.filter { options.cardOnlyActions[$0.path] == .moveToMac }
         let cardOnlyRemovals = removalsAllowed
             ? plan.cardOnly.filter { options.cardOnlyActions[$0.path]?.removesFromCard == true } : []
         if !removalsAllowed {
@@ -156,7 +169,8 @@ struct SyncExecutor: Sendable {
                 + playlistPlan.writes.count + playlistPlan.leavingImport.count + playlistPlan.removals.count
                 + plan.coverWrites.count
                 + plan.coverRemovals.count,
-            totalBytes: plan.bytesToCopy)
+            totalBytes: plan.bytesToCopy,
+            coversTotal: plan.coverWrites.count)
         var lastReport = clock.now
         /// Sends progress, throttled so the UI isn't flooded.
         func publish(force: Bool = false) {
@@ -175,7 +189,9 @@ struct SyncExecutor: Sendable {
         }
 
         fileSystem.cleanTempFolder()
-        let trashBatch = SyncLog.timestamp()
+        // Files set to "Move to Mac" whose copy worked (or was already
+        // there); only these are deleted from the card.
+        var movedToMac = Set<CardPath>()
         // Songs synced earlier that left the library and that the user chose
         // to leave stay recorded in the manifest, so they're offered again.
 
@@ -192,10 +208,11 @@ struct SyncExecutor: Sendable {
                     do {
                         switch try copier.copyBack(source: fileSystem.urlForReading(item.path), cardPath: item.path) {
                         case .copied(let url):
-                            report.copiedBack += 1
+                            movedToMac.insert(item.path)
                             log.write("COPY BACK  \(item.path)  →  \(url.path)")
                         case .duplicate(let url):
                             report.copyBackDuplicates += 1
+                            movedToMac.insert(item.path)
                             log.write("COPY BACK SKIPPED  \(item.path): identical file already at \(url.path)")
                         }
                     } catch let error where Self.isPerSongError(error) {
@@ -207,18 +224,24 @@ struct SyncExecutor: Sendable {
                 try finishOperation()
             }
 
-            // 1b. Card-only files the user chose to trash or delete.
+            // 1b. Card-only files the user chose to delete, or to move to the
+            //     Mac (deleted only once their copy is safely on the Mac).
             for item in cardOnlyRemovals {
                 try Task.checkCancellation()
                 progress.currentItem = "Removing “\(item.displayName)”"
                 publish()
+                let isMove = options.cardOnlyActions[item.path] == .moveToMac
+                if isMove && !movedToMac.contains(item.path) {
+                    log.write("MOVE SKIPPED  \(item.path): not copied to the Mac, so left on the card")
+                    try finishOperation()
+                    continue
+                }
                 do {
-                    if options.cardOnlyActions[item.path] == .moveToTrash {
-                        try fileSystem.moveToTrash(item.path, batch: trashBatch, confirmedByUser: true)
-                        report.cardOnlyTrashed += 1
-                        log.write("TRASH (card-only)  \(item.path)")
+                    try fileSystem.removeFile(item.path, confirmedByUser: true)
+                    if isMove {
+                        report.cardOnlyMovedToMac += 1
+                        log.write("MOVE TO MAC (card-only)  \(item.path)")
                     } else {
-                        try fileSystem.removeFile(item.path, confirmedByUser: true)
                         report.cardOnlyRemoved += 1
                         log.write("DELETE (card-only)  \(item.path)")
                     }
@@ -236,15 +259,9 @@ struct SyncExecutor: Sendable {
                 progress.currentItem = "Removing “\(removal.entry.title)”"
                 publish()
                 do {
-                    if options.moveRemovalsToTrash {
-                        try fileSystem.moveToTrash(removal.entry.path, batch: trashBatch)
-                        report.trashed += 1
-                        log.write("TRASH  \(removal.entry.path)")
-                    } else {
-                        try fileSystem.removeFile(removal.entry.path)
-                        report.removed += 1
-                        log.write("REMOVE  \(removal.entry.path)")
-                    }
+                    try fileSystem.removeFile(removal.entry.path)
+                    report.removed += 1
+                    log.write("REMOVE  \(removal.entry.path)")
                     manifest.entries[removal.trackID] = nil
                     fileSystem.removeEmptyFolders(above: removal.entry.path)
                 } catch let error where Self.isPerSongError(error) {
@@ -328,8 +345,14 @@ struct SyncExecutor: Sendable {
                     record(error, path: path, in: &report, log: log)
                 }
             }
+            progress.isAddingCovers = !plan.coverWrites.isEmpty
             for cover in plan.coverWrites {
                 try Task.checkCancellation()
+                // A pool per cover: the artwork data, the decoded image
+                // and the JPEG are freed as we go, not at the end of the
+                // whole loop (thousands of albums would otherwise pile
+                // up, as copying did before it got its own pools).
+                try autoreleasepool {
                 if songFolders.contains(Self.folderKey(cover.path)), let artwork {
                     progress.currentItem = "Adding cover for “\(cover.albumName)”"
                     publish()
@@ -349,8 +372,11 @@ struct SyncExecutor: Sendable {
                         log.write("NOTE  No usable artwork for \(cover.albumName)")
                     }
                 }
+                progress.coversDone += 1
                 try finishOperation()
+                }
             }
+            progress.isAddingCovers = false
 
             // 7. Playlists, last, so they list exactly the songs now on the card.
             for removal in playlistPlan.removals {
@@ -443,8 +469,8 @@ struct SyncExecutor: Sendable {
         report.duration = clock.now - started
         log.write(String(repeating: "-", count: 72))
         log.write("Added \(report.added), updated \(report.updated), moved \(report.moved), "
-            + "removed \(report.removed), trashed \(report.trashed), adopted \(report.adopted), "
-            + "copied to Mac \(report.copiedBack), card-only trashed \(report.cardOnlyTrashed) / deleted \(report.cardOnlyRemoved), "
+            + "removed \(report.removed), adopted \(report.adopted), "
+            + "card-only moved to Mac \(report.cardOnlyMovedToMac) / deleted \(report.cardOnlyRemoved), "
             + "playlists written \(report.playlistsWritten) / unchanged \(report.playlistsUnchanged) / removed \(report.playlistsRemoved), "
             + "covers written \(report.coversWritten) / removed \(report.coversRemoved), "
             + "skipped \(report.skipped.count), errors \(report.errors.count). "

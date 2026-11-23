@@ -226,7 +226,7 @@ enum PodDataBackup {
     }
 
     /// A path inside the backups folder, refusing anything outside it or in
-    /// a protected folder (same rules as "Copy to Mac").
+    /// a protected folder (same rules as "Move to Mac").
     private static func checkedDestination(_ relative: String, in backupsFolder: URL,
                                            protectedFolders: [URL]) throws -> URL {
         let components = relative.split(separator: "/", omittingEmptySubsequences: false).map(String.init)

@@ -129,8 +129,8 @@ struct CardOnlyFinderTests {
         plan.cardOnly = [CardOnlyItem(path: "x.mp3", size: 1, origin: .unmanaged),
                          CardOnlyItem(path: "y.mp3", size: 1, origin: .unmanaged)]
         #expect(plan.removalFraction(cardOnlyActions: ["x.mp3": .delete]) == 0.1)
-        #expect(plan.removalFraction(cardOnlyActions: ["x.mp3": .delete, "y.mp3": .moveToTrash]) == 0.2)
-        #expect(plan.removalFraction(cardOnlyActions: ["x.mp3": .copyToMac]) == 0)
+        #expect(plan.removalFraction(cardOnlyActions: ["x.mp3": .delete, "y.mp3": .moveToMac]) == 0.2)
+        #expect(plan.removalFraction(cardOnlyActions: ["x.mp3": .leave]) == 0)
         let both: [CardPath: CardOnlyAction] = ["x.mp3": .delete, "y.mp3": .delete]
         func needsConfirmation(_ plan: SyncPlan) -> Bool {
             SyncSafety.assess(plan: plan, health: .healthy, isFirstSync: false, availableBytes: 10_000_000_000,
@@ -211,13 +211,13 @@ struct RecoveryCopierTests {
 @Suite("Applying card-only choices")
 struct CardOnlyExecutorTests {
 
-    @Test("Copy to Mac, trash, delete and leave each do exactly that")
+    @Test("Move to Mac, delete and leave each do exactly that")
     func actions() async throws {
         let card = try TestCard(); defer { card.cleanUp() }
         let home = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: home) }
         let logs = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: logs) }
         let staging = home.appending(path: "Q2 Recovered")
-        for name in ["copy", "trash", "delete", "leave"] { try putOnCard(card, "Old/\(name).mp3") }
+        for name in ["move", "delete", "leave"] { try putOnCard(card, "Old/\(name).mp3") }
         // Plenty of managed songs so the 20% rule isn't triggered.
         var manifest = SyncManifest()
         for i in 0..<20 {
@@ -227,26 +227,36 @@ struct CardOnlyExecutorTests {
 
         var plan = SyncPlan()
         plan.managedSongsOnCard = 20
-        plan.cardOnly = ["copy", "trash", "delete", "leave"].map {
+        plan.cardOnly = ["move", "delete", "leave"].map {
             CardOnlyItem(path: "Old/\($0).mp3", size: 100, origin: .unmanaged)
         }
-        let options = SyncOptions(cardOnlyActions: ["Old/copy.mp3": .copyToMac, "Old/trash.mp3": .moveToTrash,
-                                                    "Old/delete.mp3": .delete])
+        let options = SyncOptions(cardOnlyActions: ["Old/move.mp3": .moveToMac, "Old/delete.mp3": .delete])
         var executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
         executor.recoveryCopier = RecoveryCopier(stagingFolder: staging, protectedFolders: [fakeHomeMusic])
         let report = await executor.run(plan: plan, manifest: manifest, options: options) { _ in }
 
         #expect(report.succeeded)
-        #expect(report.copiedBack == 1 && report.cardOnlyTrashed == 1 && report.cardOnlyRemoved == 1)
+        #expect(report.cardOnlyMovedToMac == 1 && report.cardOnlyRemoved == 1)
         func onCard(_ path: String) -> Bool { FileManager.default.fileExists(atPath: card.root.appending(path: path).path) }
-        #expect(onCard("Old/copy.mp3"), "Copy to Mac leaves the card file")
-        #expect(FileManager.default.fileExists(atPath: staging.appending(path: "Old/copy.mp3").path))
-        #expect(!onCard("Old/trash.mp3"))
+        #expect(!onCard("Old/move.mp3"), "Move to Mac deletes the card file after copying")
+        #expect(FileManager.default.fileExists(atPath: staging.appending(path: "Old/move.mp3").path))
         #expect(!onCard("Old/delete.mp3"))
         #expect(onCard("Old/leave.mp3"))
-        let trash = FileManager.default.enumerator(atPath: card.root.appending(path: ".q2sync/Trash").path)?
-            .compactMap { $0 as? String } ?? []
-        #expect(trash.contains { $0.hasSuffix("Old/trash.mp3") })
+    }
+
+    @Test("Move to Mac leaves the card file when the copy can't be made")
+    func moveNeedsCopy() async throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let logs = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: logs) }
+        try putOnCard(card, "Old/a.mp3")
+        var plan = SyncPlan()
+        plan.managedSongsOnCard = 20
+        plan.cardOnly = [CardOnlyItem(path: "Old/a.mp3", size: 100, origin: .unmanaged)]
+        let executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs) // no copier
+        let report = await executor.run(plan: plan, manifest: SyncManifest(),
+                                        options: SyncOptions(cardOnlyActions: ["Old/a.mp3": .moveToMac])) { _ in }
+        #expect(report.cardOnlyMovedToMac == 0)
+        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Old/a.mp3").path))
     }
 
     @Test("Unconfirmed large card-only deletions are refused by the executor")
@@ -263,7 +273,7 @@ struct CardOnlyExecutorTests {
         #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Old/a.mp3").path))
     }
 
-    @Test("A song already in the library (as a local file) isn't copied back")
+    @Test("A song already in the library (as a local file) isn't copied back or removed")
     func inLibrarySkipped() async throws {
         let card = try TestCard(); defer { card.cleanUp() }
         let home = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: home) }
@@ -276,8 +286,69 @@ struct CardOnlyExecutorTests {
         var executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
         executor.recoveryCopier = RecoveryCopier(stagingFolder: home.appending(path: "R"), protectedFolders: [])
         let report = await executor.run(plan: plan, manifest: SyncManifest(),
-                                        options: SyncOptions(cardOnlyActions: ["Old/a.mp3": .copyToMac])) { _ in }
-        #expect(report.copiedBack == 0)
+                                        options: SyncOptions(cardOnlyActions: ["Old/a.mp3": .moveToMac])) { _ in }
+        #expect(report.cardOnlyMovedToMac == 0)
         #expect(!FileManager.default.fileExists(atPath: home.appending(path: "R/Old/a.mp3").path))
+        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Old/a.mp3").path))
+    }
+}
+
+@Suite("Card-only choices")
+struct CardOnlyChoicesTests {
+
+    let orphan = CardOnlyItem(path: "Music/A/X/1.mp3", size: 1, origin: .removedFromLibrary(trackID: "T1"),
+                              title: "One", artist: "A", album: "X")
+    let orphan2 = CardOnlyItem(path: "Music/A/X/2.mp3", size: 1, origin: .removedFromLibrary(trackID: "T2"),
+                               title: "Two", artist: "A", album: "X")
+    let manual = CardOnlyItem(path: "Old/a.mp3", size: 1, origin: .unmanaged)
+    var duplicate: CardOnlyItem {
+        var item = CardOnlyItem(path: "dup.mp3", size: 1, origin: .unmanaged, title: "Dup")
+        item.isInLibrary = true
+        return item
+    }
+    var items: [CardOnlyItem] { [orphan, orphan2, manual, duplicate] }
+
+    @Test("Items fall into the three groups; in-library wins over origin")
+    func groups() {
+        #expect(items.map(CardOnlyGroup.init) == [.removedFromLibrary, .removedFromLibrary, .unmanaged, .inLibrary])
+        #expect(CardOnlyGroup.inLibrary.actions == [.leave, .delete])
+    }
+
+    @Test("Everything is left by default")
+    func defaults() {
+        #expect(CardOnlyChoices().actions(for: items).isEmpty)
+    }
+
+    @Test("A group choice covers every file and hides per-file choices")
+    func groupChoice() {
+        var choices = CardOnlyChoices()
+        choices.perFile[orphan.path] = .moveToMac
+        choices.setChoice(.all(.delete), for: .removedFromLibrary, items: items)
+        #expect(choices.actions(for: items) == [orphan.path: .delete, orphan2.path: .delete])
+    }
+
+    @Test("Choose Individually starts on the previous choice and keeps earlier picks")
+    func individually() {
+        var choices = CardOnlyChoices()
+        choices.perFile[orphan.path] = .delete
+        choices.setChoice(.all(.moveToMac), for: .removedFromLibrary, items: items)
+        choices.setChoice(.individually, for: .removedFromLibrary, items: items)
+        #expect(choices.actions(for: items) == [orphan.path: .delete, orphan2.path: .moveToMac])
+    }
+
+    @Test("Move to Mac never applies to a song already in the library")
+    func noMoveForDuplicates() {
+        var choices = CardOnlyChoices()
+        choices.perFile[duplicate.path] = .moveToMac
+        choices.setChoice(.individually, for: .inLibrary, items: items)
+        #expect(choices.actions(for: items).isEmpty)
+    }
+
+    @Test("Albums group by folder and album tag, untagged by folder")
+    func albums() {
+        let albums = CardOnlyAlbum.group(items)
+        #expect(albums.map(\.title) == ["X", "Old", "Unknown Album"])
+        #expect(albums[0].items.count == 2 && albums[0].displayName == "A — X")
+        #expect(albums[1].artist == nil)
     }
 }

@@ -223,40 +223,6 @@ struct CardFileSystem: Sendable {
         try FileManager.default.removeItem(at: url)
     }
 
-    /// Moves a card file into the card's trash folder instead of deleting it:
-    /// `.q2sync/Trash/<batch>/<original path>`.
-    ///
-    /// - Parameters:
-    ///   - path: The file to move.
-    ///   - batch: Folder name for this sync, e.g. "2026-11-15 at 15.30.00".
-    ///   - confirmedByUser: As for `removeFile`.
-    func moveToTrash(_ path: CardPath, batch: String, confirmedByUser: Bool = false) throws {
-        let sourceURL = try pathGuard.check(path, for: confirmedByUser ? .deleteConfirmedByUser : .delete)
-        guard FileManager.default.fileExists(atPath: sourceURL.path) else { return }
-        let trashRoot = "\(pathGuard.profile.appStateFolderName)/Trash"
-        try ensureTrashIsHiddenFromLibrary(trashRoot)
-        var destination = "\(trashRoot)/\(batch)/\(path)"
-        var number = 2
-        while fileSize(at: destination) != nil {
-            destination = CardLayout.variant(of: "\(trashRoot)/\(batch)/\(path)", number: number)
-            number += 1
-        }
-        let destinationURL = try pathGuard.check(destination, for: .write)
-        try createDirectory((destination as NSString).deletingLastPathComponent)
-        try Self.rename(sourceURL, to: destinationURL)
-    }
-
-    /// Puts an empty `database.ignore` file in the trash folder so Q2 Pod's
-    /// library scan doesn't list trashed songs. (Stock firmware may ignore
-    /// this marker; trashed songs are inside a hidden folder either way.)
-    private func ensureTrashIsHiddenFromLibrary(_ trashRoot: CardPath) throws {
-        try createDirectory(trashRoot)
-        let marker = "\(trashRoot)/database.ignore"
-        if fileSize(at: marker) == nil {
-            try writeAtomically(Data(), to: marker)
-        }
-    }
-
     /// Removes empty folders left behind by moves/deletes, walking up from
     /// `path`'s folder but never removing the top-level managed folder.
     ///

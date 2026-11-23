@@ -3,13 +3,13 @@
 //  Q2-Sync › Core › SyncEngine
 //
 //  PURPOSE
-//  "Copy to Mac" for card-only music: copies a file FROM the card into a
+//  "Move to Mac" for card-only music: copies a file FROM the card into a
 //  staging folder on the Mac, ~/Downloads/Q2 Recovered, so you can add it
 //  to Music yourself (File › Import). It never writes into your Music
 //  library or its media folder.
 //
 //  HOW IT FITS
-//  The executor calls `copyBack` for items set to "Copy to Mac", before
+//  The executor calls `copyBack` for items set to "Move to Mac", before
 //  any deletions. It's the only code that writes to the Mac outside the
 //  app's own container, and it has its own guard (`checkDestination`).
 //

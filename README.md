@@ -108,8 +108,8 @@ for Q2 Pod), copies it to the card and walks you through the update on the Q2.
 **Verify Card** compares every song with your Mac's copy, byte for byte, and
 re-copies anything damaged. **Back up and restore Q2 Pod's data** (ratings,
 unsent scrobbles, EQ presets, radio favourites and settings). Music that's only
-on the card is never removed without asking: keep it, copy it back to your
-Mac, trash it or delete it.
+on the card is never removed without asking: keep it, move it back to
+your Mac, or delete it.
 
 ## A closer look
 
@@ -143,9 +143,9 @@ the card, which you fix by syncing again.
   Install or Update, and checked before and after it's copied to the card.
   Q2 Sync never flashes the Q2 itself: the Q2's own updater does that when
   you choose **TF card update**.
-- **Nothing is removed without asking.** Removals are off by default, go to a
-  trash folder on the card, and removing more than 20% needs extra
-  confirmation.
+- **Nothing is removed without asking.** Removals are off by default, and
+  removing more than 20% needs extra confirmation. Music that's only on the
+  card can be moved to your Mac before it leaves the card.
 - **Private.** The only network access is for firmware (GitHub, and
   Shanling's download page for stock firmware). Nothing about you or your
   library is ever sent anywhere.
@@ -208,7 +208,6 @@ code? Start with the [Code Guide](docs/CODE_GUIDE.md) and
 | "Update the library on your Q2" steps | Library → Update Library → Scan music now | Local Songs → Update Library → Scan music now |
 | Install / switch firmware | ✅ latest GitHub release (checksum-verified) | ✅ latest from Shanling's download page |
 | Firmware update notices | ✅ from GitHub releases | Not checked automatically |
-| Card trash hidden from the library | ✅ (`database.ignore`) | May appear; empty it in Finder |
 
 Firmware-specific behaviour lives in one place, `DeviceProfile`, so other
 firmware can be added. Some details were documented before a Q2 was available

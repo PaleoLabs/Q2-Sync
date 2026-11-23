@@ -4,7 +4,9 @@
 //
 //  PURPOSE
 //  Estimates how long the rest of a sync's copying will take, for the
-//  progress window ("About 12 minutes remaining").
+//  progress window ("About 12 minutes remaining"). It counts "units":
+//  bytes for copying songs, or covers for the album-cover step (which
+//  gets its own estimator with smaller minimums).
 //
 //  HOW
 //  Copying speed is measured from when the first bytes arrive (so time
@@ -19,10 +21,10 @@ import Foundation
 /// A running estimate of the copying time left.
 struct TimeRemainingEstimator: Sendable {
 
-    /// Copying measured for at least this long before estimating.
-    static let minimumSeconds: TimeInterval = 10
-    /// …and at least this many bytes.
-    static let minimumBytes: UInt64 = 5_000_000
+    /// Measured for at least this long before estimating.
+    let minimumSeconds: TimeInterval
+    /// …and at least this many units (bytes, or covers).
+    let minimumUnits: UInt64
     /// Length of the "recent speed" window.
     static let windowSeconds: TimeInterval = 20
 
@@ -31,7 +33,19 @@ struct TimeRemainingEstimator: Sendable {
     /// Recent samples, for the recent speed.
     private var samples: [(time: TimeInterval, bytes: UInt64)] = []
 
-    init() {}
+    /// - Parameters:
+    ///   - minimumSeconds: Time measured before the first estimate.
+    ///   - minimumUnits: Units done before the first estimate. The defaults
+    ///     suit copying bytes (10 seconds and 5 MB).
+    init(minimumSeconds: TimeInterval = 10, minimumUnits: UInt64 = 5_000_000) {
+        self.minimumSeconds = minimumSeconds
+        self.minimumUnits = minimumUnits
+    }
+
+    /// For the album-cover step: covers, not bytes.
+    static func forCovers() -> TimeRemainingEstimator {
+        TimeRemainingEstimator(minimumSeconds: 5, minimumUnits: 3)
+    }
 
     /// Adds a progress sample and returns the seconds left, if known.
     ///
@@ -51,8 +65,8 @@ struct TimeRemainingEstimator: Sendable {
         samples.append((time, bytesCopied))
         samples.removeAll { time - $0.time > Self.windowSeconds }
 
-        guard let start, time - start.time >= Self.minimumSeconds,
-              bytesCopied - start.bytes >= Self.minimumBytes else { return nil }
+        guard let start, time - start.time >= minimumSeconds,
+              bytesCopied - start.bytes >= minimumUnits else { return nil }
         let overall = Double(bytesCopied - start.bytes) / (time - start.time)
         var speed = overall
         if let first = samples.first, time - first.time >= 5, bytesCopied > first.bytes {

@@ -305,3 +305,43 @@ enum SyncPlanner {
         }
     }
 }
+
+// MARK: - Summary
+
+extension SyncPlan {
+
+    /// One or two plain sentences for the top of the preview, e.g. "This
+    /// sync will add 12 songs (1.2 GB) and update 3 playlists. Everything
+    /// else is already on the card."
+    ///
+    /// - Parameter applyRemovals: Whether the user chose to remove songs
+    ///   they no longer sync (they're only mentioned then).
+    func summary(applyRemovals: Bool) -> String {
+        let adds = copies.lazy.filter { $0.kind == .add }.count
+        let updates = copies.count - adds
+        var changes: [String] = []
+        if adds > 0 { changes.append("add \(Self.count(adds, "song"))") }
+        if updates > 0 { changes.append("update \(Self.count(updates, "song"))") }
+        if !changes.isEmpty, bytesToCopy > 0 {
+            changes[changes.count - 1] += " (\(Int64(bytesToCopy).formatted(ByteCountFormatStyle(style: .file))))"
+        }
+        if !moves.isEmpty { changes.append("rename \(Self.count(moves.count, "song"))") }
+        if applyRemovals && !removals.isEmpty { changes.append("remove \(Self.count(removals.count, "song"))") }
+        if !playlistPlan.writes.isEmpty { changes.append("update \(Self.count(playlistPlan.writes.count, "playlist"))") }
+        if !playlistPlan.removals.isEmpty { changes.append("remove \(Self.count(playlistPlan.removals.count, "playlist"))") }
+        if !coverWrites.isEmpty { changes.append("add \(Self.count(coverWrites.count, "album cover"))") }
+        if !coverRemovals.isEmpty { changes.append("remove \(Self.count(coverRemovals.count, "album cover"))") }
+
+        guard !changes.isEmpty else { return "Everything you selected is already on the card." }
+        let list = changes.count == 1 ? changes[0]
+            : changes.dropLast().joined(separator: ", ") + " and " + changes[changes.count - 1]
+        var text = "This sync will \(list)."
+        if unchangedCount + adoptions.count > 0 { text += " Everything else is already on the card." }
+        return text
+    }
+
+    /// e.g. "1 song", "12 songs".
+    private static func count(_ n: Int, _ noun: String) -> String {
+        "\(n.formatted()) \(noun)\(n == 1 ? "" : "s")"
+    }
+}

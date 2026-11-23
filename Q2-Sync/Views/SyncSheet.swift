@@ -87,6 +87,12 @@ struct SyncPreviewView: View {
     /// hasn't touched use `defaultExpanded(_:count:)`.
     @State private var expansion: [String: Bool] = [:]
 
+    /// Counts and lists, closed by default; remembered between syncs.
+    @AppStorage("syncPreviewShowsDetails") private var showsDetails = false
+
+    /// Card-only albums the user opened, by `CardOnlyAlbum.id`.
+    @State private var expandedAlbums: Set<String> = []
+
     /// Sections with more items than this start collapsed, so a first sync
     /// of thousands of songs doesn't bury the sections that need attention.
     private static let collapseThreshold = 200
@@ -121,30 +127,32 @@ struct SyncPreviewView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
                 .padding(20)
-            Divider()
-            if hasNothingToList {
-                ContentUnavailableView("Already Up to Date", systemImage: "checkmark.circle",
-                                       description: Text("Everything you selected is already on the card."))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                searchField
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+            if showsDetails {
                 Divider()
-                details
+                counts
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                if !hasNothingToList {
+                    Divider()
+                    searchField
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    Divider()
+                    details
+                }
             }
             Divider()
             footer
                 .padding(16)
         }
-        .frame(width: 660, height: 640)
+        .frame(width: 660, height: showsDetails && !hasNothingToList ? 680 : nil)
         .confirmationDialog("Permanently delete \(cardOnlyDeleteCount) files from the card?",
                             isPresented: $confirmingDeletes) {
             Button("Delete \(cardOnlyDeleteCount) Files and Sync", role: .destructive) {
                 continueApplying(deletesConfirmed: true)
             }
         } message: {
-            Text("These files aren't in your Mac library selection and can't be recovered after deleting. Choose “Move to Card Trash” instead to keep a copy on the card.")
+            Text("These files aren't in your Mac library selection and can't be recovered after deleting. Choose “Move to Mac” instead to keep a copy in Downloads › Q2 Recovered.")
         }
         .confirmationDialog(largeRemovalTitle, isPresented: $confirmingLargeRemoval) {
             Button("Remove and Sync", role: .destructive) {
@@ -174,74 +182,183 @@ struct SyncPreviewView: View {
 
     // MARK: Header
 
+    /// Title, one plain summary, anything that needs a choice, and the
+    /// Details disclosure. Everything else is under Details.
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(isUpToDate ? "Already Up to Date" : "Ready to Sync")
                 .font(.title2.bold())
 
+            Text(summaryText)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             if preview.isFirstSync && !isUpToDate {
-                Label("This is your first sync with this card. Nothing has changed yet: review the list, then click Sync.",
+                Label("This is your first sync with this card. Nothing has changed yet.",
                       systemImage: "eye")
                     .foregroundStyle(.blue)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            // Counts at a glance.
-            Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 4) {
-                GridRow {
-                    countCell("Add", addCount, "plus.circle.fill", .green)
-                    countCell("Update", plan.copies.count - addCount, "arrow.triangle.2.circlepath", .blue)
-                    countCell("Rename", plan.moves.count, "pencil.circle.fill", .purple)
-                }
-                GridRow {
-                    countCell("Remove", plan.removals.count, "minus.circle.fill", .red)
-                    countCell("Already on card", plan.unchangedCount + plan.adoptions.count, "checkmark.circle.fill", .secondary)
-                    countCell("Can't sync", plan.skipped.count, "exclamationmark.circle.fill", .orange)
-                }
-                if !plan.playlistPlan.writes.isEmpty || !plan.playlistPlan.removals.isEmpty || !plan.cardOnly.isEmpty {
-                    GridRow {
-                        countCell("Playlists", plan.playlistPlan.writes.count, "music.note.list", .pink)
-                        countCell("Remove playlists", plan.playlistPlan.removals.count, "minus.circle", .red)
-                        countCell("On card only", plan.cardOnly.count, "sdcard", .teal)
-                    }
-                }
-                if !plan.playlistPlan.leavingImport.isEmpty {
-                    GridRow {
-                        countCell("Playlists already imported", plan.playlistPlan.leavingImport.count,
-                                  "tray.and.arrow.up", .secondary)
-                    }
-                }
-                if !plan.coverWrites.isEmpty || !plan.coverRemovals.isEmpty {
-                    GridRow {
-                        countCell("Album covers", plan.coverWrites.count, "photo", .indigo)
-                        countCell("Remove covers", plan.coverRemovals.count, "minus.circle", .red)
-                    }
-                }
-            }
-
-            Text(spaceSummary)
-                .font(.callout)
-                .foregroundStyle(.secondary)
 
             ForEach(assessment.blockers, id: \.self) { blocker in
                 Label(blocker, systemImage: "xmark.octagon.fill")
                     .foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            decisions
+
+            Button {
+                withAnimation(.snappy) { showsDetails.toggle() }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .rotationEffect(.degrees(showsDetails ? 90 : 0))
+                    Text("Details")
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help(showsDetails ? "Hide the counts and lists" : "Show every change, song by song")
         }
     }
 
-    /// One count. Zero counts stay (so "Remove: 0" still reassures) but
-    /// are greyed out, icon and text, so the non-zero ones stand out.
-    private func countCell(_ title: String, _ count: Int, _ symbol: String, _ color: Color) -> some View {
-        Label {
-            if count == 0 {
-                Text("\(title): 0").foregroundStyle(.tertiary)
-            } else {
-                Text("\(title): \(Text(count.formatted()).bold())")
+    /// e.g. "This sync will update 3 playlists. Everything else is already
+    /// on the card. About 158.38 GB will be free on the card."
+    private var summaryText: String {
+        var text = plan.summary(applyRemovals: sync.options.applyRemovals)
+        if !isUpToDate {
+            text += " About \(max(0, assessment.projectedFreeBytes).formatted(ByteCountFormatStyle(style: .file))) will be free on the card."
+        }
+        return text
+    }
+
+    /// Card-only groups that have files, in their usual order.
+    private var cardOnlyGroups: [CardOnlyGroup] {
+        CardOnlyGroup.allCases.filter { group in plan.cardOnly.contains { CardOnlyGroup($0) == group } }
+    }
+
+    /// A box for what needs a choice: songs you no longer sync, and music
+    /// only on the card (one pop-up per group). Shown only when there's
+    /// something to decide.
+    @ViewBuilder
+    private var decisions: some View {
+        if !plan.removals.isEmpty || !cardOnlyGroups.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                if !plan.removals.isEmpty {
+                    HStack {
+                        Image(systemName: "minus.circle").foregroundStyle(.red)
+                        Text("\(plan.removals.count.formatted()) songs you no longer sync are still on the card.")
+                        Spacer()
+                        Toggle("Remove Them", isOn: Binding(get: { sync.options.applyRemovals },
+                                                            set: { sync.options.applyRemovals = $0 }))
+                            .toggleStyle(.checkbox)
+                    }
+                    if assessment.needsLargeRemovalConfirmation {
+                        Label("That's \(removalPercent)% of the songs on this card. You'll be asked to confirm.",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    }
+                }
+                ForEach(cardOnlyGroups) { group in
+                    HStack {
+                        Image(systemName: "sdcard").foregroundStyle(.teal)
+                        Text(group.summary(count: plan.cardOnly.filter { CardOnlyGroup($0) == group }.count))
+                        Spacer()
+                        cardOnlyGroupPicker(group)
+                    }
+                }
+                Text("Nothing on the card changes unless you choose.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-        } icon: {
-            Image(systemName: symbol).foregroundStyle(count == 0 ? AnyShapeStyle(.tertiary) : AnyShapeStyle(color))
+            .padding(12)
+            .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    /// The counts, in one box per topic (Songs, Not Copied, Playlists,
+    /// Album Covers), each a short list with the numbers lined up on the
+    /// right. Boxes sit side by side; with all four, two by two.
+    private var counts: some View {
+        let playlists = plan.playlistPlan
+        let showsPlaylists = !playlists.writes.isEmpty || !playlists.removals.isEmpty || !playlists.leavingImport.isEmpty
+        let showsCovers = !plan.coverWrites.isEmpty || !plan.coverRemovals.isEmpty
+        let songs = countBox("Songs") {
+            countLine("Add", addCount, "plus.circle.fill", .green)
+            countLine("Update", plan.copies.count - addCount, "arrow.triangle.2.circlepath", .blue)
+            countLine("Rename", plan.moves.count, "pencil.circle.fill", .purple)
+            countLine("Remove", sync.options.applyRemovals ? plan.removals.count : 0, "minus.circle.fill", .red)
+        }
+        let notCopied = countBox("Not Copied") {
+            countLine("Already on card", plan.unchangedCount + plan.adoptions.count, "checkmark.circle.fill", .secondary)
+            countLine("On card only", plan.cardOnly.count, "sdcard", .teal)
+            countLine("Can't sync", plan.skipped.count, "exclamationmark.circle.fill", .orange)
+        }
+        let playlistBox = countBox("Playlists") {
+            countLine("Playlists", playlists.writes.count, "music.note.list", .pink)
+            countLine("Remove playlists", playlists.removals.count, "minus.circle", .red)
+            countLine("Already imported", playlists.leavingImport.count, "tray.and.arrow.up", .secondary)
+        }
+        let coverBox = countBox("Album Covers") {
+            countLine("Album covers", plan.coverWrites.count, "photo", .indigo)
+            countLine("Remove covers", plan.coverRemovals.count, "minus.circle", .red)
+        }
+        return VStack(alignment: .leading, spacing: 10) {
+            Group {
+                if showsPlaylists && showsCovers {
+                    Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                        GridRow { songs; notCopied }
+                        GridRow { playlistBox; coverBox }
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 10) {
+                        songs
+                        notCopied
+                        if showsPlaylists { playlistBox }
+                        if showsCovers { coverBox }
+                    }
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            Text(spaceSummary)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// One topic's counts in a light rounded box, its name on top.
+    private func countBox<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+            content()
+        }
+        .font(.callout)
+        .padding(10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// One count: icon, name, and the number on the right. Zero counts
+    /// stay (so "Remove 0" still reassures) but are greyed out.
+    private func countLine(_ title: String, _ count: Int, _ symbol: String, _ color: Color) -> some View {
+        let dimmed = count == 0
+        return HStack(spacing: 6) {
+            Image(systemName: symbol)
+                .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(color))
+                .frame(width: 16)
+            Text(title)
+                .lineLimit(1)
+                .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
+            Spacer(minLength: 8)
+            Text(count.formatted())
+                .monospacedDigit()
+                .fontWeight(dimmed ? .regular : .semibold)
+                .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
         }
     }
 
@@ -327,17 +444,16 @@ struct SyncPreviewView: View {
     }
 
     /// Every planned change, grouped, in a scrollable list. Sections that
-    /// need a decision or explain a problem come first; long lists of
-    /// routine copies come last and start collapsed when large.
+    /// need a choice come first, then the rest in the order of the counts
+    /// (songs, not copied, playlists, covers). Long lists start collapsed.
     private var details: some View {
         let lists = filteredLists()
         return List {
+            // Sections that need a choice first, then the order of the counts.
             removalSection(lists.removals)
             cardOnlySection(lists.cardOnly)
-            playlistSection(writes: lists.playlistWrites, removals: lists.playlistRemovals)
-            collapsibleSection("skipped", "Can't Sync", lists.skipped, alwaysOpen: true) { track in
-                row("\(track.displayArtist) — \(track.title)", detail: track.availability.reportDescription,
-                    symbol: track.availability.symbolName, color: .orange)
+            collapsibleSection("add", "Add", lists.adds) { copy in
+                row(copy.track.title, detail: copy.destination, symbol: "plus.circle", color: .green)
             }
             collapsibleSection("update", "Update", lists.updates) { copy in
                 row(copy.track.title, detail: "\(copy.destination) — \(copy.reason ?? "")",
@@ -346,17 +462,21 @@ struct SyncPreviewView: View {
             collapsibleSection("rename", "Rename", lists.moves) { move in
                 row(move.track.title, detail: "\(move.from) → \(move.to)", symbol: "pencil.circle", color: .purple)
             }
-            collapsibleSection("add", "Add", lists.adds) { copy in
-                row(copy.track.title, detail: copy.destination, symbol: "plus.circle", color: .green)
+            collapsibleSection("skipped", "Can't Sync", lists.skipped, alwaysOpen: true) { track in
+                row("\(track.displayArtist) — \(track.title)", detail: track.availability.reportDescription,
+                    symbol: track.availability.symbolName, color: .orange)
             }
-            collapsibleSection("adopt", "Already on the Card (Recorded, Not Copied)", lists.adoptions) { adoption in
+            collapsibleSection("adopt", "Already on Card — Newly Recorded", lists.adoptions,
+                               footer: "The card already had these songs; Q2 Sync now keeps track of them. Nothing is copied."
+                                   + (plan.unchangedCount > 0 ? " The other \(plan.unchangedCount.formatted()) were recorded before." : "")) { adoption in
                 row(adoption.track.title, detail: adoption.path, symbol: "checkmark.circle", color: .secondary)
             }
-            collapsibleSection("covers", "Album Covers (from Apple Music's artwork)", lists.covers) { cover in
+            playlistSection(writes: lists.playlistWrites, removals: lists.playlistRemovals)
+            collapsibleSection("covers", "Album Covers", lists.covers, footer: "From Apple Music's artwork.") { cover in
                 row(cover.albumName, detail: cover.path, symbol: "photo", color: .indigo)
             }
-            collapsibleSection("coverRemovals", "Remove Album Covers (turned off in Settings)",
-                               lists.coverRemovals.map(CoverRemovalRow.init)) { removal in
+            collapsibleSection("coverRemovals", "Remove Covers", lists.coverRemovals.map(CoverRemovalRow.init),
+                               footer: "Album covers are turned off in Settings.") { removal in
                 row((removal.path as NSString).deletingLastPathComponent, detail: removal.path,
                     symbol: "minus.circle", color: .red)
             }
@@ -376,10 +496,6 @@ struct SyncPreviewView: View {
                 Toggle("Remove the \(plan.removals.count.formatted()) songs you no longer sync",
                        isOn: Binding(get: { sync.options.applyRemovals },
                                      set: { sync.options.applyRemovals = $0 }))
-                Toggle("Move them to a trash folder on the card instead of deleting them",
-                       isOn: Binding(get: { sync.options.moveRemovalsToTrash },
-                                     set: { sync.options.moveRemovalsToTrash = $0 }))
-                    .disabled(!sync.options.applyRemovals)
                 if assessment.needsLargeRemovalConfirmation {
                     Label("That's \(removalPercent)% of the songs on this card. You'll be asked to confirm.",
                           systemImage: "exclamationmark.triangle.fill")
@@ -388,77 +504,228 @@ struct SyncPreviewView: View {
                 collapsibleRows(removals, expanded: expanded) { removal in
                     row(removal.entry.title, detail: removal.entry.path, symbol: "minus.circle", color: .red)
                 }
+                note("Removals are off unless you turn them on. Removed songs are deleted from the card; they're still in your library, so tick them again to put them back. Songs not put there by Q2 Sync are never removed here.")
             } header: {
                 sectionHeader("Remove", shown: removals.count, total: plan.removals.count, expanded: expanded)
-            } footer: {
-                Text("Removals are off unless you turn them on. Songs not put there by Q2 Sync are never removed here.")
             }
         }
     }
 
-    /// Music on the card that isn't in the Mac selection, each with a
-    /// choice: leave, copy to Mac, move to the card's trash, or delete.
+    /// Music on the card that isn't in the Mac selection, in three groups
+    /// (on card only, not put there by Q2 Sync, already in
+    /// your library). Each group has one choice; only "Choose Individually"
+    /// shows a pop-up on each album and song.
     @ViewBuilder
     private func cardOnlySection(_ items: [CardOnlyItem]) -> some View {
         if !plan.cardOnly.isEmpty {
-            let expanded = isExpanded("cardOnly", count: plan.cardOnly.count)
+            let expanded = isExpanded("cardOnly", count: plan.cardOnly.count, alwaysOpen: true)
             Section {
-                HStack {
-                    Text(isSearching ? "Set all \(items.count.formatted()) shown to:" : "Set all to:")
-                    ForEach(CardOnlyAction.allCases) { action in
-                        Button(action.title) {
-                            var actions = sync.options.cardOnlyActions
-                            for item in items { actions[item.path] = action }
-                            sync.options.cardOnlyActions = actions
-                        }
-                        .controlSize(.small)
-                    }
-                }
-                .disabled(items.isEmpty)
-                // Copies of songs Q2 Sync syncs from your library anyway
-                // (music copied to the card by hand): clear them in one go.
-                let duplicates = items.filter(\.isInLibrary)
-                if !duplicates.isEmpty {
-                    HStack {
-                        Text("\(duplicates.count.formatted()) already in your library:")
-                        ForEach([CardOnlyAction.moveToTrash, .delete]) { action in
-                            Button(action.title) {
-                                var actions = sync.options.cardOnlyActions
-                                for item in duplicates { actions[item.path] = action }
-                                sync.options.cardOnlyActions = actions
-                            }
-                            .controlSize(.small)
+                if expanded.wrappedValue {
+                    Text(cardOnlyTally)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    ForEach(CardOnlyGroup.allCases) { group in
+                        let all = plan.cardOnly.filter { CardOnlyGroup($0) == group }
+                        let shown = items.filter { CardOnlyGroup($0) == group }
+                        if !all.isEmpty {
+                            cardOnlyGroup(group, all: all, shown: shown)
                         }
                     }
-                    .help("These look like songs you sync from your library, copied to the card another way. Delete frees their space; the card trash keeps them on the card.")
-                }
-                collapsibleRows(items, expanded: expanded) { item in
-                    HStack(alignment: .firstTextBaseline) {
-                        Image(systemName: item.origin == .unmanaged ? "sdcard" : "music.note.house")
-                            .foregroundStyle(.teal)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(item.displayName).lineLimit(1)
-                            Text(cardOnlyDetail(item))
-                                .font(.caption).foregroundStyle(.secondary)
-                                .lineLimit(1).truncationMode(.middle)
-                        }
-                        Spacer()
-                        // A pop-up menu bound to this file's choice.
-                        Picker("Action", selection: Binding(
-                            get: { sync.options.cardOnlyActions[item.path] ?? .leave },
-                            set: { sync.options.cardOnlyActions[item.path] = $0 })) {
-                            ForEach(CardOnlyAction.allCases) { Text($0.title).tag($0) }
-                        }
-                        .labelsHidden()
-                        .fixedSize()
-                    }
+                    note("Music on the card that isn't part of what you sync. Nothing here changes unless you choose. “Move to Mac” puts the song in Downloads › Q2 Recovered for you to add to Music yourself (it never touches your Music library), then deletes it from the card once the copy is checked.")
+                } else {
+                    collapsibleRows(items, expanded: expanded) { _ in EmptyView() }
                 }
             } header: {
-                sectionHeader("On the Card Only", shown: items.count, total: plan.cardOnly.count, expanded: expanded)
-            } footer: {
-                Text("Music on the card that isn't part of what you sync. Nothing here changes unless you choose. “Copy to Mac” puts a copy in Downloads › Q2 Recovered for you to add to Music yourself; it never touches your Music library.")
+                sectionHeader("On Card Only", shown: items.count, total: plan.cardOnly.count, expanded: expanded)
             }
         }
+    }
+
+    /// e.g. "64 leave · 8 copy to Mac · 0 to card trash · 3 delete".
+    private var cardOnlyTally: AttributedString {
+        let actions = sync.options.cardOnlyActions
+        func count(_ action: CardOnlyAction) -> Int {
+            action == .leave ? plan.cardOnly.count - actions.count : actions.values.filter { $0 == action }.count
+        }
+        var text = AttributedString("\(count(.leave).formatted()) leave · \(count(.moveToMac).formatted()) move to Mac · ")
+        var deletes = AttributedString("\(count(.delete).formatted()) delete")
+        if count(.delete) > 0 { deletes.foregroundColor = .red }
+        text.append(deletes)
+        return text
+    }
+
+    /// One group: its title (left out when it's the only group, as the
+    /// section says it already), a line about it, then its albums. Its
+    /// choice is in the box at the top.
+    @ViewBuilder
+    private func cardOnlyGroup(_ group: CardOnlyGroup, all: [CardOnlyItem], shown: [CardOnlyItem]) -> some View {
+        let individually = sync.options.cardOnlyChoices.choice(for: group) == .individually
+        let single = cardOnlyGroups.count == 1
+        let expanded = single ? .constant(true)
+            : isExpanded("cardOnly.\(group.rawValue)", count: all.count, alwaysOpen: true)
+        if !single {
+            Button {
+                withAnimation(.snappy) { expanded.wrappedValue.toggle() }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .rotationEffect(.degrees(expanded.wrappedValue ? 90 : 0))
+                    Text(isSearching ? "\(group.title) (\(shown.count.formatted()) of \(all.count.formatted()))"
+                                     : "\(group.title) (\(all.count.formatted()))")
+                        .bold()
+                    Spacer()
+                    Text(groupChoiceTitle(group))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isSearching)
+        }
+        if expanded.wrappedValue {
+            Text(group.explanation)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            ForEach(CardOnlyAlbum.group(shown)) { album in
+                cardOnlyAlbum(album, group: group, individually: individually)
+            }
+        }
+    }
+
+    /// e.g. "Leave All on Card" or "Choose Individually".
+    private func groupChoiceTitle(_ group: CardOnlyGroup) -> String {
+        switch sync.options.cardOnlyChoices.choice(for: group) {
+        case .all(let action): return action.allTitle
+        case .individually: return "Choose Individually"
+        }
+    }
+
+    /// A group's one choice. "Choose Individually" opens Details, where
+    /// each album and song gets its own pop-up.
+    private func cardOnlyGroupPicker(_ group: CardOnlyGroup) -> some View {
+        let choice = sync.options.cardOnlyChoices.choice(for: group)
+        return Picker(group.title, selection: Binding(
+            get: { choice },
+            set: { newChoice in
+                var choices = sync.options.cardOnlyChoices
+                choices.setChoice(newChoice, for: group, items: plan.cardOnly)
+                sync.options.setCardOnlyChoices(choices, items: plan.cardOnly)
+                if newChoice == .individually { withAnimation(.snappy) { showsDetails = true } }
+            })) {
+            ForEach(group.actions) { Text($0.allTitle).tag(CardOnlyChoices.GroupChoice.all($0)) }
+            Divider()
+            Text("Choose Individually").tag(CardOnlyChoices.GroupChoice.individually)
+        }
+        .labelsHidden()
+        .fixedSize()
+    }
+
+    /// An album row (or a song row, for a lone song). Its songs show when
+    /// it's opened, or while filtering.
+    @ViewBuilder
+    private func cardOnlyAlbum(_ album: CardOnlyAlbum, group: CardOnlyGroup, individually: Bool) -> some View {
+        if album.items.count == 1, let item = album.items.first {
+            cardOnlySong(item, title: item.displayName, group: group, individually: individually, indent: 16)
+        } else {
+            let open = isSearching || expandedAlbums.contains(album.id)
+            HStack {
+                Button {
+                    withAnimation(.snappy) {
+                        if expandedAlbums.contains(album.id) { expandedAlbums.remove(album.id) }
+                        else { expandedAlbums.insert(album.id) }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(open ? 90 : 0))
+                        Text("\(album.displayName) · \(album.items.count.formatted()) songs")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .foregroundStyle(individually ? .primary : .secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help((album.items[0].path as NSString).deletingLastPathComponent)
+                Spacer()
+                sizeText(album.size)
+                if individually { albumPicker(album, group: group) }
+            }
+            .padding(.leading, 16)
+            if open {
+                ForEach(album.items) { item in
+                    cardOnlySong(item, title: album.artist == nil ? item.displayName : (item.title ?? item.displayName),
+                                 group: group, individually: individually, indent: 40)
+                }
+            }
+        }
+    }
+
+    /// One song: title and size, plus its own pop-up when choosing
+    /// individually. The path is in the tooltip and the right-click menu.
+    private func cardOnlySong(_ item: CardOnlyItem, title: String, group: CardOnlyGroup,
+                              individually: Bool, indent: CGFloat) -> some View {
+        HStack {
+            Text(title)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundStyle(individually ? .primary : .secondary)
+            Spacer()
+            sizeText(UInt64(item.size))
+            if individually {
+                Picker("Action", selection: Binding(
+                    get: { sync.options.cardOnlyChoices.action(for: item) },
+                    set: { action in
+                        var choices = sync.options.cardOnlyChoices
+                        choices.perFile[item.path] = action
+                        sync.options.setCardOnlyChoices(choices, items: plan.cardOnly)
+                    })) {
+                    ForEach(group.actions) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+        }
+        .padding(.leading, indent)
+        .help(item.path)
+        .contextMenu {
+            Button("Copy Path") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(item.path, forType: .string)
+            }
+        }
+    }
+
+    /// An album's pop-up: its songs' shared choice, or "Mixed".
+    private func albumPicker(_ album: CardOnlyAlbum, group: CardOnlyGroup) -> some View {
+        let choices = sync.options.cardOnlyChoices
+        let actions = Set(album.items.map(choices.action(for:)))
+        let current = actions.count == 1 ? actions.first : nil
+        return Picker("Album action", selection: Binding<CardOnlyAction?>(
+            get: { current },
+            set: { action in
+                guard let action else { return }
+                var choices = sync.options.cardOnlyChoices
+                for item in album.items { choices.perFile[item.path] = action }
+                sync.options.setCardOnlyChoices(choices, items: plan.cardOnly)
+            })) {
+            if current == nil { Text("Mixed").tag(CardOnlyAction?.none) }
+            ForEach(group.actions) { Text($0.title).tag(CardOnlyAction?.some($0)) }
+        }
+        .labelsHidden()
+        .fixedSize()
+    }
+
+    private func sizeText(_ size: UInt64) -> some View {
+        Text(Int64(size).formatted(ByteCountFormatStyle(style: .file)))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
     }
 
     // MARK: Collapsing
@@ -508,42 +775,30 @@ struct SyncPreviewView: View {
     /// A collapsible list section, shown only when it has items.
     @ViewBuilder
     private func collapsibleSection<Item: Identifiable, Row: View>(_ id: String, _ title: String, _ items: [Item],
-                                                                    alwaysOpen: Bool = false,
+                                                                    alwaysOpen: Bool = false, footer: String? = nil,
                                                                     @ViewBuilder row: @escaping (Item) -> Row) -> some View {
         if !items.isEmpty {
             let expanded = isExpanded(id, count: items.count, alwaysOpen: alwaysOpen)
             Section {
                 collapsibleRows(items, expanded: expanded, row: row)
+                if let footer, expanded.wrappedValue { note(footer) }
             } header: {
                 sectionHeader(title, shown: items.count, total: items.count, expanded: expanded)
             }
         }
     }
 
-    /// e.g. "Old Rips/song.mp3 · 4.2 MB · already in your library".
-    private func cardOnlyDetail(_ item: CardOnlyItem) -> String {
-        var parts = [item.path, Int64(item.size).formatted(ByteCountFormatStyle(style: .file))]
-        if case .removedFromLibrary = item.origin { parts.append("synced earlier, no longer in your library") }
-        if item.isInLibrary { parts.append("already in your library: Copy to Mac skips it") }
-        return parts.joined(separator: " · ")
-    }
-
     /// Playlist files to write and remove, with any limits or renames.
     @ViewBuilder
     private func playlistSection(writes: [PlannedPlaylist], removals: [PlaylistRemoval]) -> some View {
         let playlists = plan.playlistPlan
-        if !playlists.writes.isEmpty || !playlists.removals.isEmpty || !playlists.overLimit.isEmpty {
+        if !playlists.writes.isEmpty || !playlists.overLimit.isEmpty {
             Section {
                 ForEach(writes) { planned in
                     row(planned.playlist.name,
                         detail: planned.nameWasChanged ? "Saved as “\(planned.nameOnDevice)” (shortened or renamed for the Q2)"
                                                        : planned.path,
                         symbol: "music.note.list", color: .pink)
-                }
-                ForEach(removals) { removal in
-                    row((removal.path as NSString).lastPathComponent,
-                        detail: "No longer selected: its file is removed from the card",
-                        symbol: "minus.circle", color: .red)
                 }
                 if !playlists.overLimit.isEmpty {
                     Label("The Q2 holds up to \(preview.profile.maximumPlaylists) playlists. These \(playlists.overLimit.count) won't be written: "
@@ -556,12 +811,32 @@ struct SyncPreviewView: View {
                           systemImage: "info.circle")
                         .foregroundStyle(.secondary)
                 }
+                note("On the Q2, choose Library → Playlists → Import to bring these in. Songs that aren't on the card (for example, cloud-only songs) are left out of playlists.")
             } header: {
                 Text("Playlists (\(playlists.writes.count))")
-            } footer: {
-                Text("On the Q2, choose Library → Playlists → Import to bring these in. Removing a playlist's file doesn't remove a playlist you already imported; delete that on the Q2. Songs that aren't on the card (for example, cloud-only songs) are left out of playlists.")
             }
         }
+        if !playlists.removals.isEmpty {
+            Section {
+                ForEach(removals) { removal in
+                    row((removal.path as NSString).lastPathComponent,
+                        detail: "No longer selected: its file is removed from the card",
+                        symbol: "minus.circle", color: .red)
+                }
+                note("Removing a playlist's file doesn't remove a playlist you already imported; delete that on the Q2.")
+            } header: {
+                Text("Remove Playlists (\(playlists.removals.count))")
+            }
+        }
+    }
+
+    /// An explanation at the end of a section. A list row, not a section
+    /// footer: macOS cuts footers off at one line.
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func row(_ title: String, detail: String, symbol: String, color: Color) -> some View {
@@ -588,7 +863,9 @@ struct SyncPreviewView: View {
                     .keyboardShortcut(.cancelAction)
             }
             if !isUpToDate {
-                Button("Sync") { continueApplying() }
+                Button(cardOnlyDeleteCount > 0 ? "Sync (Deletes \(cardOnlyDeleteCount.formatted()))" : "Sync") {
+                    continueApplying()
+                }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!assessment.canApply || (plan.isEmpty && !hasCardOnlyWork))
             }
@@ -612,10 +889,12 @@ struct SyncProgressView: View {
     var body: some View {
         let progress = sync.progress
         VStack(alignment: .leading, spacing: 12) {
-            Text("Syncing…").font(.title2.bold())
+            // The album-cover step comes after the music and has its own
+            // bar and estimate, so the bar doesn't sit full while it runs.
+            Text(progress.isAddingCovers ? "Adding Album Covers…" : "Syncing…").font(.title2.bold())
             ProgressView(value: progress.fractionComplete)
             Text(sync.secondsRemaining.map(TimeRemainingEstimator.describe)
-                 ?? (progress.totalBytes > 0 ? "Estimating time remaining…" : " "))
+                 ?? (progress.totalBytes > 0 || progress.isAddingCovers ? "Estimating time remaining…" : " "))
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Text(progress.currentItem.isEmpty ? "Starting…" : progress.currentItem)
@@ -638,8 +917,12 @@ struct SyncProgressView: View {
         .frame(width: 460)
     }
 
-    /// e.g. "1.2 GB of 8.4 GB · 120 of 431 items".
+    /// e.g. "1.2 GB of 8.4 GB · 120 of 431 items", or "Cover 120 of 950"
+    /// during the album-cover step.
     private func detail(_ progress: SyncProgress) -> String {
+        if progress.isAddingCovers {
+            return "Cover \(min(progress.coversDone + 1, progress.coversTotal).formatted()) of \(progress.coversTotal.formatted())"
+        }
         let style = ByteCountFormatStyle(style: .file)
         var parts: [String] = []
         if progress.totalBytes > 0 {
@@ -647,6 +930,11 @@ struct SyncProgressView: View {
         }
         if progress.totalOperations > 0 {
             parts.append("\(progress.completedOperations.formatted()) of \(progress.totalOperations.formatted()) items")
+        }
+        // Covers come after the music; say so, as the estimate above is
+        // for the music only until they start.
+        if progress.coversTotal > 0 && progress.totalBytes > 0 {
+            parts.append("then \(progress.coversTotal.formatted()) album covers")
         }
         return parts.joined(separator: " · ")
     }
@@ -771,12 +1059,10 @@ struct SyncResultView: View {
     private var summary: String {
         var parts = ["Added \(report.added)", "updated \(report.updated)"]
         if report.moved > 0 { parts.append("renamed \(report.moved)") }
-        if report.removed + report.trashed > 0 { parts.append("removed \(report.removed + report.trashed)") }
+        if report.removed > 0 { parts.append("removed \(report.removed)") }
         if report.adopted > 0 { parts.append("recorded \(report.adopted) already on the card") }
-        if report.copiedBack > 0 { parts.append("\(report.copiedBack) copied to your Mac") }
-        if report.cardOnlyTrashed + report.cardOnlyRemoved > 0 {
-            parts.append("\(report.cardOnlyTrashed + report.cardOnlyRemoved) card-only files removed")
-        }
+        if report.cardOnlyMovedToMac > 0 { parts.append("\(report.cardOnlyMovedToMac) moved to your Mac") }
+        if report.cardOnlyRemoved > 0 { parts.append("\(report.cardOnlyRemoved) card-only files deleted") }
         if report.playlistsWritten > 0 { parts.append("\(report.playlistsWritten) playlists written") }
         if report.playlistsRemoved > 0 { parts.append("\(report.playlistsRemoved) playlists removed") }
         if report.playlistsToImport > 0 {

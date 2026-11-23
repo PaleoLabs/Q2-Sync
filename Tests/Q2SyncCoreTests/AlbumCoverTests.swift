@@ -157,7 +157,7 @@ struct AlbumCoverTests {
         plan = SyncPlanner.plan(selection: resolved([]), allSelectedIDs: [], manifest: manifest,
                                 cardFiles: CardScanner.scan(folder: "Music", on: card.fileSystem),
                                 layout: layout, albumCovers: true)
-        var options = SyncOptions(); options.applyRemovals = true; options.moveRemovalsToTrash = false
+        var options = SyncOptions(); options.applyRemovals = true
         options.largeRemovalConfirmed = true
         report = await executor.run(plan: plan, manifest: manifest, options: options) { _ in }
         #expect(report.succeeded && report.coversRemoved == 1)
@@ -267,6 +267,26 @@ struct TimeRemainingTests {
         _ = estimator.update(bytesCopied: 80_000_000, totalBytes: total, at: 105)
         #expect(estimator.update(bytesCopied: 20_000_000, totalBytes: total, at: 106) == nil)
         #expect(estimator.update(bytesCopied: 250_000_000, totalBytes: total, at: 120) != nil)
+    }
+
+    @Test("Album covers get their own estimate, counted in covers")
+    func covers() {
+        var estimator = TimeRemainingEstimator.forCovers()
+        #expect(estimator.update(bytesCopied: 1, totalBytes: 601, at: 0) == nil) // starts here
+        #expect(estimator.update(bytesCopied: 10, totalBytes: 601, at: 3) == nil) // too soon
+        // 2 covers a second: 600 left after 10 more seconds → about 5 minutes.
+        let remaining = estimator.update(bytesCopied: 21, totalBytes: 601, at: 10)
+        #expect(remaining.map { abs($0 - 290) < 1 } == true)
+    }
+
+    @Test("The progress bar follows the covers during the cover step")
+    func coverFraction() {
+        var progress = SyncProgress(totalOperations: 10, totalBytes: 100, coversTotal: 4)
+        progress.bytesCopied = 100
+        #expect(progress.fractionComplete == 1)
+        progress.isAddingCovers = true
+        progress.coversDone = 1
+        #expect(progress.fractionComplete == 0.25)
     }
 
     @Test("No copying, no estimate")

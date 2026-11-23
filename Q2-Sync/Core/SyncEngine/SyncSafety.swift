@@ -59,14 +59,12 @@ enum SyncSafety {
     ///   - isFirstSync: `true` if nothing has been synced to this device yet.
     ///   - availableBytes: Free space on the card now.
     ///   - includeRemovals: Whether removals will be applied.
-    ///   - removalsToTrash: Whether removals go to the card's trash. The
-    ///     trash is on the same card, so only permanent removals free space.
     ///   - cardOnlyActions: The user's choices for card-only files; those
-    ///     set to trash or delete count as removals too (only deletes free
-    ///     space).
+    ///     set to move to the Mac or delete count as removals too, and free
+    ///     their space.
     /// - Returns: The assessment.
     static func assess(plan: SyncPlan, health: LibraryHealth, isFirstSync: Bool,
-                       availableBytes: Int64, includeRemovals: Bool, removalsToTrash: Bool = true,
+                       availableBytes: Int64, includeRemovals: Bool,
                        cardOnlyActions: [CardPath: CardOnlyAction] = [:]) -> SafetyAssessment {
         var result = SafetyAssessment()
 
@@ -76,24 +74,16 @@ enum SyncSafety {
 
         result.isFirstSync = isFirstSync
 
-        // Files moved to the card's trash stay on the card, so they free
-        // nothing: count only permanent deletes as freed space.
         let cardOnlyFreed = plan.cardOnly
-            .filter { cardOnlyActions[$0.path] == .delete }
+            .filter { cardOnlyActions[$0.path]?.removesFromCard == true }
             .reduce(Int64(0)) { $0 + Int64($1.size) }
-        let removalsFreed = includeRemovals && !removalsToTrash ? Int64(plan.bytesFreedByRemovals) : 0
+        let removalsFreed = includeRemovals ? Int64(plan.bytesFreedByRemovals) : 0
         let freed = Int64(plan.bytesFreedByUpdates) + cardOnlyFreed + removalsFreed
         result.projectedFreeBytes = availableBytes + freed - Int64(plan.bytesToCopy)
         if result.projectedFreeBytes < reservedFreeBytes {
             let short = reservedFreeBytes - result.projectedFreeBytes
-            var message = "The selected music doesn't fit on the card. Deselect about "
+            let message = "The selected music doesn't fit on the card. Deselect about "
                 + "\(short.formatted(ByteCountFormatStyle(style: .file))) of music and try again."
-            let trashedBytes = (includeRemovals && removalsToTrash ? Int64(plan.bytesFreedByRemovals) : 0)
-                + plan.cardOnly.filter { cardOnlyActions[$0.path] == .moveToTrash }
-                    .reduce(Int64(0)) { $0 + Int64($1.size) }
-            if trashedBytes > 0 {
-                message += " Songs moved to the card's trash still take up space; deleting them instead frees it."
-            }
             result.blockers.append(message)
         }
 

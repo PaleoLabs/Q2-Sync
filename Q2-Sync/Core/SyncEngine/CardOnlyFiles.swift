@@ -14,10 +14,11 @@
 //     playlist folder.
 //  2. Songs Q2 Sync synced earlier whose track has since disappeared from
 //     your Mac library. The card might hold the only copy, so they're
-//     offered here (with "Copy to Mac") rather than as plain removals.
+//     offered here (with "Move to Mac") rather than as plain removals.
 //
 //  THE CHOICES
-//  Leave (the default) · Copy to Mac · Move to Card Trash · Delete.
+//  Leave (the default) · Move to Mac (copy to Downloads › Q2 Recovered,
+//  then delete from the card once the copy is checked) · Delete.
 //
 //  HOW IT FITS
 //      card scan + manifest ──▶ CardOnlyFinder ──▶ [CardOnlyItem]
@@ -31,8 +32,8 @@ import Foundation
 /// What to do with one card-only file.
 enum CardOnlyAction: String, Sendable, CaseIterable, Identifiable, Codable {
     case leave
-    case copyToMac
-    case moveToTrash
+    /// Copy to the Mac, then delete from the card if the copy worked.
+    case moveToMac
     case delete
 
     var id: String { rawValue }
@@ -41,14 +42,132 @@ enum CardOnlyAction: String, Sendable, CaseIterable, Identifiable, Codable {
     var title: String {
         switch self {
         case .leave:       return "Leave on Card"
-        case .copyToMac:   return "Copy to Mac"
-        case .moveToTrash: return "Move to Card Trash"
+        case .moveToMac:   return "Move to Mac"
         case .delete:      return "Delete from Card"
         }
     }
 
+    /// Label for a choice that covers a whole group.
+    var allTitle: String {
+        switch self {
+        case .leave:       return "Leave All on Card"
+        case .moveToMac:   return "Move All to Mac"
+        case .delete:      return "Delete All from Card"
+        }
+    }
+
     /// `true` if the file leaves the card's music.
-    var removesFromCard: Bool { self == .moveToTrash || self == .delete }
+    var removesFromCard: Bool { self == .moveToMac || self == .delete }
+
+}
+
+/// The three kinds of card-only music the preview lists separately, each
+/// with its own choice.
+enum CardOnlyGroup: String, Sendable, CaseIterable, Identifiable, Hashable {
+    /// Synced earlier; its track has left the library.
+    case removedFromLibrary
+    /// Not put there by Q2 Sync.
+    case unmanaged
+    /// A copy of a song the library has as a local file (either kind).
+    case inLibrary
+
+    var id: String { rawValue }
+
+    /// The group an item belongs in. "Already in your library" wins, since
+    /// that's what decides the sensible choice.
+    init(_ item: CardOnlyItem) {
+        if item.isInLibrary { self = .inLibrary }
+        else if item.origin == .unmanaged { self = .unmanaged }
+        else { self = .removedFromLibrary }
+    }
+
+    var title: String {
+        switch self {
+        case .removedFromLibrary: return "On Card Only"
+        case .unmanaged:          return "Not Put There by Q2 Sync"
+        case .inLibrary:          return "Already in Your Library"
+        }
+    }
+
+    var explanation: String {
+        switch self {
+        case .removedFromLibrary: return "Synced earlier. The card may have the only copy."
+        case .unmanaged:          return "Copied by hand or by another app."
+        case .inLibrary:          return "Copies of songs your library has, so there's nothing to move to your Mac. Delete frees their space."
+        }
+    }
+
+    /// The line in the preview's choice box, e.g. "67 songs on the card
+    /// are no longer in your library."
+    func summary(count: Int) -> String {
+        let songs = count == 1 ? "1 song on the card" : "\(count.formatted()) songs on the card"
+        let verb = count == 1 ? "is" : "are"
+        switch self {
+        case .removedFromLibrary: return "\(songs) \(verb) no longer in your library."
+        case .unmanaged:          return "\(songs) \(count == 1 ? "wasn't" : "weren't") put there by Q2 Sync."
+        case .inLibrary:          return "\(songs) \(verb) extra copies of songs in your library."
+        }
+    }
+
+    /// The choices that make sense here: copying a song your library
+    /// already has does nothing, so Move to Mac isn't offered.
+    var actions: [CardOnlyAction] {
+        self == .inLibrary ? [.leave, .delete] : CardOnlyAction.allCases
+    }
+}
+
+/// The user's card-only choices: one per group, which either covers every
+/// file in the group or hands over to per-file choices.
+struct CardOnlyChoices: Sendable, Equatable {
+
+    /// A group's choice.
+    enum GroupChoice: Sendable, Hashable {
+        /// Every file in the group gets this action.
+        case all(CardOnlyAction)
+        /// Each file has its own action.
+        case individually
+    }
+
+    /// Groups not listed are "Leave All on Card".
+    var groups: [CardOnlyGroup: GroupChoice] = [:]
+    /// Per-file choices. Kept while a group covers everything, so they come
+    /// back when the group returns to "Choose Individually".
+    var perFile: [CardPath: CardOnlyAction] = [:]
+
+    func choice(for group: CardOnlyGroup) -> GroupChoice { groups[group] ?? .all(.leave) }
+
+    /// What happens to one file.
+    func action(for item: CardOnlyItem) -> CardOnlyAction {
+        let group = CardOnlyGroup(item)
+        switch choice(for: group) {
+        case .all(let action): return action
+        case .individually:
+            let action = perFile[item.path] ?? .leave
+            return group.actions.contains(action) ? action : .leave
+        }
+    }
+
+    /// Every item's action, for `SyncOptions.cardOnlyActions` (Leave is
+    /// left out, as "missing" means leave).
+    func actions(for items: [CardOnlyItem]) -> [CardPath: CardOnlyAction] {
+        var result: [CardPath: CardOnlyAction] = [:]
+        for item in items {
+            let action = action(for: item)
+            if action != .leave { result[item.path] = action }
+        }
+        return result
+    }
+
+    /// Changes a group's choice. Switching to "Choose Individually" starts
+    /// files that have no choice of their own on the group's previous one.
+    mutating func setChoice(_ choice: GroupChoice, for group: CardOnlyGroup, items: [CardOnlyItem]) {
+        if choice == .individually, case .all(let previous) = self.choice(for: group) {
+            for item in items where CardOnlyGroup(item) == group && perFile[item.path] == nil {
+                perFile[item.path] = previous
+            }
+        }
+        groups[group] = choice
+    }
 }
 
 /// One card-only music file.
@@ -80,6 +199,43 @@ struct CardOnlyItem: Sendable, Hashable, Identifiable {
     var displayName: String {
         guard let title else { return (path as NSString).lastPathComponent }
         return [artist, title].compactMap { $0 }.joined(separator: " — ")
+    }
+}
+
+/// Card-only files from one album, for the preview's album rows.
+struct CardOnlyAlbum: Sendable, Identifiable {
+    /// Folder and album name, so two "Greatest Hits" stay apart.
+    let id: String
+    /// The album tag, or the folder name for untagged files.
+    let title: String
+    /// Set when every song has the same artist.
+    let artist: String?
+    let items: [CardOnlyItem]
+
+    var size: UInt64 { items.reduce(0) { $0 + $1.size } }
+
+    /// e.g. "The SteelDrivers — Hammer Down".
+    var displayName: String { [artist, title].compactMap { $0 }.joined(separator: " — ") }
+
+    /// Groups items by folder and album tag, keeping their order.
+    static func group(_ items: [CardOnlyItem]) -> [CardOnlyAlbum] {
+        var order: [String] = []
+        var byKey: [String: [CardOnlyItem]] = [:]
+        for item in items {
+            let folder = (item.path as NSString).deletingLastPathComponent
+            let key = "\(folder.lowercased())|\(item.album?.lowercased() ?? "")"
+            if byKey[key] == nil { order.append(key) }
+            byKey[key, default: []].append(item)
+        }
+        return order.map { key in
+            let songs = byKey[key] ?? []
+            let first = songs[0]
+            let folder = (first.path as NSString).deletingLastPathComponent
+            let title = first.album ?? (folder.isEmpty ? "Unknown Album" : (folder as NSString).lastPathComponent)
+            let artists = Set(songs.map { $0.artist ?? "" })
+            let artist = artists.count == 1 ? first.artist : nil
+            return CardOnlyAlbum(id: key, title: title, artist: artist, items: songs)
+        }
     }
 }
 

@@ -168,7 +168,7 @@ sequenceDiagram
 8. **Card-only music.** `CardOnlyFinder.find` lists audio files Q2 Sync doesn't
    manage plus orphaned songs. Files the plan adopts (library songs already on
    the card but not in the manifest, as after an interrupted sync) are not
-   card-only and are never offered for trashing. `AudioTagReader.fillTags` reads their tags;
+   card-only and are never offered for moving or deleting. `AudioTagReader.fillTags` reads their tags;
    `CardOnlyFinder.adoptIdenticalCopies` then turns new-song copies into an
    adoption plus a move when an unmanaged file in `Music/` is the same song
    (title, artist, length within 2 s) with exactly the Mac file's size, for
@@ -177,14 +177,20 @@ sequenceDiagram
 9. **First sync.** If nothing has been synced to the card yet, the preview
    says so and `AutoSyncPolicy` won't apply it automatically; a sync you
    start yourself can be applied straight from the preview.
-10. **Preview.** `SyncPreviewView` shows counts, lists and free space.
+10. **Preview.** `SyncPreviewView` shows `SyncPlan.summary(applyRemovals:)`
+    (one sentence) and free space, a box for choices (removals, one pop-up per
+    `CardOnlyGroup`), and a Details disclosure (`@AppStorage
+    "syncPreviewShowsDetails"`, closed by default) with the counts in one box
+    per topic (Songs, Not Copied, Playlists, Album Covers) and the lists in the same
+    order after the sections that need a choice.
     Removals are **off** until you tick them; card-only files default to
     **Leave**. `SyncSafety.assess` lists blockers (unsafe library, doesn't fit)
     and whether more than 20% would be removed.
 11. **Confirm.** Deleting card-only files asks once; removing more than 20% asks
     again.
 12. **Apply.** `SyncExecutor.run` (background) works in this order: copy
-    card-only files to the Mac → card-only trash/delete → removals → adoptions
+    card-only files to the Mac → card-only deletes (and moves, once their copy
+    worked) → removals → adoptions
     → moves → copies → playlists. Every change goes through `CardFileSystem`,
     which asks `PathGuard` first. The manifest is saved every 25 operations and
     at the end; a log line is written for every change.
@@ -291,13 +297,13 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `PathGuard.checkAppleDoubleCompanion(of:)` | managed file → its `._` companion URL | none |
 | `PathGuard.checkStrayAppleDouble(_:)` | `._` file in Music/ or the playlist folder → approved URL (AppleDouble signature required) | none |
 | `CardFileSystem.removeStrayAppleDoubleFiles()` | end-of-sync sweep of `._` files in Music/ and the playlist folder | deletes those files only |
-| `CardFileSystem` | `copyFromMac`, `move`, `removeFile`, `moveToTrash`, `writeAtomically`, `createDirectory`, `removeEmptyFolders`, `removeAppleDoubleCompanion`, `cleanTempFolder` | **the only card writes**, each guarded |
+| `CardFileSystem` | `copyFromMac`, `move`, `removeFile`, `writeAtomically`, `createDirectory`, `removeEmptyFolders`, `removeAppleDoubleCompanion`, `cleanTempFolder` | **the only card writes**, each guarded |
 | `SyncManifest.load` / `save` | card ↔ record of managed songs, playlist files, playlist fingerprints and covers (newer fields are optional, so older manifests load) | `save` writes `.q2sync/manifest.json` atomically |
 | `PlaylistNaming.disambiguate(_:folders:)` | selected playlists → same-named ones in a folder renamed "Folder - Name" | none |
 | `PlaylistImportRule.needsImport(...)` / `digest` | a playlist's bytes + its last fingerprint → whether it goes up for the Q2's Import (only changed playlists stay in `_explaylist_data`) | none |
 | `AlbumCovers.plan(tracks:finalPaths:manifest:cardFiles:)` | songs' final paths → `[CoverWrite]` (one `cover.jpg` per album folder; skips folders with the user's own cover/folder image; manifest `albumCovers` records Q2 Sync's) | none |
 | `CoverImage.makeJPEG(from:maxPixels:)` | artwork bytes → baseline RGB JPEG ≤ 1000 px (what the Q2 decodes cheaply) | none |
-| `TimeRemainingEstimator.update(bytesCopied:totalBytes:at:)` / `describe` | progress samples → seconds left, "About 12 minutes remaining" | none |
+| `TimeRemainingEstimator.update(bytesCopied:totalBytes:at:)` / `describe` | progress samples → seconds left, "About 12 minutes remaining". Counts bytes for music; `forCovers()` counts covers for the album-cover step (`SyncProgress.isAddingCovers`, `coversDone`/`coversTotal`), which has its own bar | none |
 | `CardVerifier.verify(manifest:tracks:fileSystem:onProgress:)` / `repairPlan` | managed songs → byte-for-byte comparison with the Mac → `VerifyResult`; failed songs → a copies-only `SyncPlan` | none (reads only) |
 | `CardScanner.scan(folder:on:)` | card folder → files keyed by case-insensitive path (reserved items skipped) | none |
 | `SyncPlanner.plan(...)` | selection + manifest + card listing → `SyncPlan` | none |
@@ -311,8 +317,14 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `SyncLog` | writes `Logs/Sync <date>.log` | writes in the app container |
 
 **`SyncOptions`** (the preview's choices): `applyRemovals` (default off),
-`moveRemovalsToTrash` (default on), `largeRemovalConfirmed`, `cardOnlyActions`
-(per file: leave, copy to Mac, move to card trash, delete).
+`largeRemovalConfirmed`, `cardOnlyActions`
+(per file: leave, move to Mac, delete; what the executor
+reads) and `cardOnlyChoices` (what the preview shows). `CardOnlyChoices` holds
+one `GroupChoice` per `CardOnlyGroup` (on card only / not put there by
+Q2 Sync / already in library): `.all(action)` or `.individually`, plus per-file
+picks kept while a group covers everything. `setCardOnlyChoices(_:items:)`
+stores them and recomputes `cardOnlyActions`. `CardOnlyAlbum.group` makes the
+preview's album rows (by folder and album tag).
 
 ### App (`Q2-Sync/App`)
 
@@ -404,7 +416,7 @@ Defence in depth: several independent layers, each enough on its own.
 | `assets.music.read-only` | **Read-only** access to `~/Music` for ITLibrary and copying. There is deliberately no read-write variant. |
 | `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
-| `files.downloads.read-write` | "Copy to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups` (the default backup folder). |
+| `files.downloads.read-write` | "Move to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups` (the default backup folder). |
 | `network.client` | The optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
 
 ### Layer 2 — The single PathGuard
@@ -436,13 +448,14 @@ staging folder, never inside `~/Music` or the media folder, never overwriting.
   rename.
 - "Mac looks empty" guard before planning; a damaged manifest stops planning.
 - A card's first sync is never applied automatically.
-- Nothing is removed unless you tick it; removed songs go to the card's
-  `.q2sync/Trash` by default (with a `database.ignore` marker for Q2 Pod).
+- Nothing is removed unless you tick it. Removals delete (there's no card
+  trash: removed songs are still in the library). Card-only "Move to Mac"
+  deletes only after its copy on the Mac is made and size-checked.
 - Removing more than 20% of the card's songs needs an extra confirmation, checked
   in the UI and again by the executor.
 - Files Q2 Sync didn't put on the card are never overwritten and never removed
   unless you choose so per file; songs gone from your library are offered
-  (with "Copy to Mac") rather than removed.
+  (with "Move to Mac") rather than removed.
 - Auto-sync never removes or ejects, and stops for anything needing review.
 
 ### Development safety
@@ -524,7 +537,6 @@ On the card:
 | Manifest | `.q2sync/manifest.json`: managed songs (`entries`), playlist files (`playlistFiles`), playlist fingerprints for quick imports (`playlistDigests`), Q2 Sync's album covers (`albumCovers`) |
 | Album covers (optional) | `Music/<Album Artist>/<Album>/cover.jpg` |
 | Firmware waiting to install | `update.tar` at the card root |
-| Card trash | `.q2sync/Trash/<date at time>/…` (safe to delete in Finder) |
 | Temp files | `.q2sync/tmp/` (cleaned every sync) |
 
 ---

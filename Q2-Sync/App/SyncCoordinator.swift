@@ -45,7 +45,6 @@ struct SyncPreview {
     func assessment(for options: SyncOptions) -> SafetyAssessment {
         SyncSafety.assess(plan: plan, health: health, isFirstSync: isFirstSync,
                           availableBytes: availableBytes, includeRemovals: options.applyRemovals,
-                          removalsToTrash: options.moveRemovalsToTrash,
                           cardOnlyActions: options.cardOnlyActions)
     }
 }
@@ -81,6 +80,8 @@ final class SyncCoordinator {
 
     /// Measures copying speed for `secondsRemaining`.
     @ObservationIgnored private var estimator = TimeRemainingEstimator()
+    /// Measures the album-cover step, which isn't counted in bytes.
+    @ObservationIgnored private var coverEstimator = TimeRemainingEstimator.forCovers()
 
     /// The result once finished.
     private(set) var report: SyncReport?
@@ -294,6 +295,7 @@ final class SyncCoordinator {
         progress = SyncProgress(totalOperations: 0, totalBytes: preview.plan.bytesToCopy)
         secondsRemaining = nil
         estimator = TimeRemainingEstimator()
+        coverEstimator = .forCovers()
         var executor = SyncExecutor(fileSystem: preview.fileSystem, deviceName: preview.deviceName)
         executor.artwork = preview.artwork
         executor.recoveryCopier = RecoveryCopier(stagingFolder: RecoveryCopier.defaultStagingFolder,
@@ -308,9 +310,14 @@ final class SyncCoordinator {
             guard let self else { return }
             Task { @MainActor in
                 self.progress = update
-                self.secondsRemaining = self.estimator.update(bytesCopied: update.bytesCopied,
-                                                              totalBytes: update.totalBytes,
-                                                              at: ProcessInfo.processInfo.systemUptime)
+                let now = ProcessInfo.processInfo.systemUptime
+                if update.isAddingCovers {
+                    self.secondsRemaining = self.coverEstimator.update(bytesCopied: UInt64(update.coversDone),
+                                                                       totalBytes: UInt64(update.coversTotal), at: now)
+                } else {
+                    self.secondsRemaining = self.estimator.update(bytesCopied: update.bytesCopied,
+                                                                  totalBytes: update.totalBytes, at: now)
+                }
             }
         }
 
