@@ -40,4 +40,8 @@ echo "→ Installing to $INSTALLED_APP…"
 rm -rf "$INSTALLED_APP"
 ditto "$BUILT_APP" "$INSTALLED_APP"
 
-echo "✓ Installed. Open Q2 Sync from Applications or Spotlight."
+PLIST="$INSTALLED_APP/Contents/Info.plist"
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || echo "?")
+BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PLIST" 2>/dev/null || echo "?")
+COMMIT=$(/usr/libexec/PlistBuddy -c "Print :Q2SyncBuildCommit" "$PLIST" 2>/dev/null || echo "?")
+echo "✓ Installed Q2 Sync $VERSION ($BUILD · $COMMIT). Open it from Applications or Spotlight."

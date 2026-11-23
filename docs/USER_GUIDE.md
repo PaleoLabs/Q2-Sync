@@ -510,6 +510,10 @@ the change straight away.
 
 ## 11. Frequently asked questions
 
+**Which version of Q2 Sync do I have?** Choose **Q2 Sync › About Q2 Sync**.
+It shows the version and build, for example `Version 0.1 (142 · 0e7d893)`.
+Mention it when you report a problem.
+
 **Can Q2 Sync damage my Apple Music library?**
 No. It only reads your library, and macOS itself prevents it from writing to
 your Music folder. It still makes sense to keep a backup of your Mac, as with

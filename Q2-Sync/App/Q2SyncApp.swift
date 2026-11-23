@@ -70,6 +70,7 @@ struct Q2SyncApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             DeviceCommands(controller: autoSync)
+            AboutCommand()
         }
 
         MenuBarExtra(isInserted: $showMenuBarItem) {
@@ -80,6 +81,24 @@ struct Q2SyncApp: App {
 
         Settings {
             AppSettingsView(devices: devices)
+        }
+    }
+}
+
+/// Replaces "About Q2 Sync" so the panel shows the build number and the git
+/// commit it was built from, e.g. "Version 0.1 (142 · 0e7d893)". Both are
+/// written into the built Info.plist by `Scripts/stamp-version.sh`.
+struct AboutCommand: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Q2 Sync") {
+                let info = Bundle.main.infoDictionary
+                let build = info?["CFBundleVersion"] as? String ?? "?"
+                let commit = info?["Q2SyncBuildCommit"] as? String ?? "unknown"
+                NSApp.orderFrontStandardAboutPanel(options: [
+                    .version: "\(build) · \(commit)"
+                ])
+            }
         }
     }
 }

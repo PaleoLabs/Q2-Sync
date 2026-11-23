@@ -180,6 +180,10 @@ There's no prebuilt release yet. To build and install it yourself:
    It builds the Release version and installs **Q2 Sync** in your
    Applications folder (replacing an older copy). Run it again after updating
    the code.
+   **Q2 Sync › About Q2 Sync** shows which build you have, e.g.
+   `Version 0.1 (142 · 0e7d893)`: the build number counts git commits, and
+   the hash says which one (`-dirty` means uncommitted changes). The script
+   prints the same line when it finishes.
 
 To work on the app instead, open `Q2-Sync.xcodeproj` in Xcode, select the
 **Q2-Sync** scheme and **My Mac**, and press **⌘R**.

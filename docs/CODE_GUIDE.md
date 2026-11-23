@@ -82,8 +82,20 @@ flowchart TB
 | `Q2-Sync/Views` | SwiftUI views |
 | `Tests/Q2SyncCoreTests` | Unit tests (Swift Testing) for Core |
 | `Config/Q2Sync.entitlements` | App Sandbox permissions, each one explained |
-| `Scripts/` | `install.sh` (build and install in /Applications), app icon generator |
+| `Scripts/` | `install.sh` (build and install in /Applications), `stamp-version.sh` (build number), app icon generator |
 | `docs/` | This guide, the user guide, and the on-device check list |
+
+### Version and build number
+
+`MARKETING_VERSION` (project build settings) is set by hand for releases.
+Every build also runs the **Stamp build number** script phase
+(`Scripts/stamp-version.sh`), which writes into the built Info.plist
+`CFBundleVersion` = `git rev-list --count HEAD` and `Q2SyncBuildCommit` =
+short hash (+ `-dirty` when `git status` isn't clean). Without git they fall
+back to `0` and `unknown`. `AboutCommand` (`Q2SyncApp.swift`) shows them in
+the About panel. The phase needs `ENABLE_USER_SCRIPT_SANDBOXING = NO` (it
+runs git and edits the Info.plist). The number goes up by one per commit, so
+it "auto-increments as you push" without anyone editing a file.
 
 ### Swift features you'll meet
 
