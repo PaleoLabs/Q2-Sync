@@ -117,8 +117,8 @@ your Mac, or delete it.
 | --- | --- |
 | ![Choosing what to sync](docs/images/device-music.png) | ![Sync preview](docs/images/sync-preview.png) |
 | *Choose artists, albums, genres and playlists* | *Preview every change before it happens* |
-| ![Capacity bar](docs/images/capacity-bar.png) | ![Menu bar](docs/images/menu-bar.png) |
-| *Finder-style capacity bar* | *Menu bar item and auto-sync* |
+| ![Capacity bar](docs/images/capacity-bar.png) | ![Q2 Sync settings](docs/images/app-settings.png) |
+| *Finder-style capacity bar* | *Menu bar item and open at login* |
 
 ## Safe by design
 
