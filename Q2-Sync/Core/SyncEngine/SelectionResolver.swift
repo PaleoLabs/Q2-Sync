@@ -73,14 +73,13 @@ enum SelectionResolver {
 
         case .selectedItems:
             // Artists, albums and genres share the same lookup approach.
-            let sections: [(ids: Set<String>, groups: [TrackGroup])] = [
-                (selection.artistIDs, snapshot.artistGroups),
-                (selection.albumIDs, snapshot.albumGroups),
-                (selection.genreIDs, snapshot.genreGroups),
+            let sections: [(ids: Set<String>, prefix: String)] = [
+                (selection.artistIDs, "artist"),
+                (selection.albumIDs, "album"),
+                (selection.genreIDs, "genre"),
             ]
             for section in sections where !section.ids.isEmpty {
-                let groupsByID = Dictionary(section.groups.map { ($0.id, $0) },
-                                            uniquingKeysWith: { first, _ in first })
+                let groupsByID = snapshot.groupsByID(section.prefix) // kept by the snapshot
                 for id in section.ids {
                     if let group = groupsByID[id] {
                         selectedIDs.formUnion(group.trackIDs)
@@ -104,10 +103,11 @@ enum SelectionResolver {
         }
         playlists = PlaylistNaming.disambiguate(playlists, folders: snapshot.playlists.filter { $0.kind == .folder })
 
-        // Step 2: split into copyable and skipped, in a stable order.
-        let selectedTracks = snapshot.tracks
-            .filter { selectedIDs.contains($0.id) }
-            .sorted(by: libraryOrder)
+        // Step 2: split into copyable and skipped, in a stable order. The
+        // whole library is sorted once per snapshot and kept; filtering it
+        // keeps that order (`libraryOrder` is a total order), so a click
+        // on the Music tab doesn't re-sort ~10,000 songs.
+        let selectedTracks = tracksInLibraryOrder(snapshot).filter { selectedIDs.contains($0.id) }
 
         return ResolvedSelection(
             tracksToSync: selectedTracks.filter(\.isCopyable),
@@ -115,6 +115,19 @@ enum SelectionResolver {
             playlists: playlists,
             missingSelectionCount: missing
         )
+    }
+
+    /// Every track in `libraryOrder`, sorted once per snapshot.
+    static func tracksInLibraryOrder(_ snapshot: LibrarySnapshot) -> [Track] {
+        snapshot.memoized("tracksInLibraryOrder") { snapshot.tracks.sorted(by: libraryOrder) }
+    }
+
+    /// Works out the groupings and orderings the Music tab and the
+    /// resolver use, so the first click doesn't. Call off the main thread
+    /// right after reading the library.
+    static func prepare(_ snapshot: LibrarySnapshot) {
+        for prefix in ["artist", "album", "genre"] { _ = snapshot.groupsByID(prefix) }
+        _ = tracksInLibraryOrder(snapshot)
     }
 
     /// Orders tracks by album artist, album, disc, track, then title, so the

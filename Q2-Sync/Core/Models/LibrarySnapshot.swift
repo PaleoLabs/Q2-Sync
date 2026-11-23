@@ -14,6 +14,11 @@
 //  Because a snapshot is an immutable value, the UI can display it while
 //  the sync engine plans from it on another thread, with no locking.
 //
+//  PERFORMANCE
+//  Groupings and orderings are worked out once per snapshot and kept
+//  (`memoized`): the Music tab redraws on every checkbox click, and
+//  regrouping and re-sorting ~10,000 songs each time made clicks lag.
+//
 
 import Foundation
 
@@ -53,6 +58,15 @@ struct LibrarySnapshot: Sendable {
     /// Fast lookup from track ID to track, built once in `init`.
     let tracksByID: [PersistentID: Track]
 
+    /// Results worked out once and kept, shared by copies of this snapshot.
+    private let memo = SnapshotMemo()
+
+    /// Returns the value stored under `key`, working it out with `make`
+    /// the first time. Only for values that depend on this snapshot alone.
+    func memoized<T>(_ key: String, _ make: () -> T) -> T {
+        memo.value(key, make)
+    }
+
     /// Creates a snapshot and builds the ID lookup table.
     ///
     /// - Parameters:
@@ -83,35 +97,49 @@ struct LibrarySnapshot: Sendable {
     /// One group per track artist, sorted like the Q2 sorts (ignoring a
     /// leading "The", "A" or "An").
     var artistGroups: [TrackGroup] {
-        makeGroups(
+        memoized("artistGroups") { makeGroups(
             key: { $0.displayArtist },
             title: { $0.displayArtist },
             subtitle: { _ in nil },
             prefix: "artist",
             order: Self.albumThenPlayOrder
-        )
+        ) }
     }
 
     /// One group per album, keyed by album name plus album artist (the
     /// same rule Q2 Pod uses), sorted by album title.
     var albumGroups: [TrackGroup] {
-        makeGroups(
+        memoized("albumGroups") { makeGroups(
             key: { "\($0.effectiveAlbumArtist)|\($0.displayAlbum)" },
             title: { $0.displayAlbum },
             subtitle: { $0.effectiveAlbumArtist },
             prefix: "album"
-        )
+        ) }
     }
 
     /// One group per genre, sorted alphabetically.
     var genreGroups: [TrackGroup] {
-        makeGroups(
+        memoized("genreGroups") { makeGroups(
             key: { $0.displayGenre },
             title: { $0.displayGenre },
             subtitle: { _ in nil },
             prefix: "genre",
             order: Self.artistThenAlbumOrder
-        )
+        ) }
+    }
+
+    /// Groups by ID, for looking up ticked rows (`prefix` is "artist",
+    /// "album" or "genre").
+    func groupsByID(_ prefix: String) -> [String: TrackGroup] {
+        memoized("\(prefix)GroupsByID") {
+            let groups: [TrackGroup]
+            switch prefix {
+            case "artist": groups = artistGroups
+            case "album":  groups = albumGroups
+            default:       groups = genreGroups
+            }
+            return Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        }
     }
 
     /// Looks up the tracks for a list of IDs, skipping unknown IDs.
@@ -182,6 +210,23 @@ struct LibrarySnapshot: Sendable {
         if a.discNumber != b.discNumber { return a.discNumber < b.discNumber }
         if a.trackNumber != b.trackNumber { return a.trackNumber < b.trackNumber }
         return a.title.localizedStandardCompare(b.title) == .orderedAscending
+    }
+}
+
+/// Values a snapshot works out once (see `LibrarySnapshot.memoized`).
+/// A class so every copy of the snapshot shares it; a lock because the UI
+/// and the sync engine may read the same snapshot on different threads.
+final class SnapshotMemo: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: Any] = [:]
+
+    func value<T>(_ key: String, _ make: () -> T) -> T {
+        if let stored = lock.withLock({ values[key] }) as? T { return stored }
+        // Worked out outside the lock, so `make` may use other memoized
+        // values. Two threads may both work it out once; same result.
+        let made = make()
+        lock.withLock { values[key] = made }
+        return made
     }
 }
 

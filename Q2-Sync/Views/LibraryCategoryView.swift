@@ -318,12 +318,14 @@ extension LibrarySnapshot {
     /// Playlists presented as `TrackGroup`s, so the browser can treat them
     /// like artists or albums. Folders are left out (they hold no tracks).
     var playlistGroups: [TrackGroup] {
-        playlists
-            .filter { $0.kind != .folder }
-            .map { TrackGroup(id: "playlist:\($0.id)", title: $0.name,
-                              subtitle: $0.kind == .smart ? "Smart Playlist" : nil,
-                              trackIDs: $0.trackIDs) }
-            .sorted { SortKey.compare($0.title, $1.title) }
+        memoized("playlistGroups") {
+            playlists
+                .filter { $0.kind != .folder }
+                .map { TrackGroup(id: "playlist:\($0.id)", title: $0.name,
+                                  subtitle: $0.kind == .smart ? "Smart Playlist" : nil,
+                                  trackIDs: $0.trackIDs) }
+                .sorted { SortKey.compare($0.title, $1.title) }
+        }
     }
 }
 

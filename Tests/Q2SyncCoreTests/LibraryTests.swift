@@ -200,3 +200,54 @@ struct LibraryHealthTests {
         #expect(LibraryHealthCheck.evaluate(snapshot).isHealthy)
     }
 }
+
+@Suite("Snapshot caching")
+struct SnapshotCachingTests {
+
+    /// ~10,000 songs over 800 artists, 1,000 albums and 25 genres.
+    static func bigSnapshot() -> LibrarySnapshot {
+        let tracks = (0..<10_000).map { i in
+            makeTrack(id: String(format: "%016X", i), title: "Song \(i % 13)", artist: "Artist \(i % 800)",
+                      album: "Album \(i % 1_000)", genre: "Genre \(i % 25)", track: i % 12 + 1)
+        }
+        return LibrarySnapshot(tracks: tracks, playlists: [], mediaFolderURL: nil)
+    }
+
+    @Test("Groups are worked out once and shared by copies of the snapshot")
+    func cached() {
+        let snapshot = Self.bigSnapshot()
+        let copy = snapshot
+        #expect(snapshot.artistGroups == copy.artistGroups)
+        #expect(snapshot.groupsByID("album").count == snapshot.albumGroups.count)
+        #expect(snapshot.memoized("x") { 1 } == 1)
+        #expect(copy.memoized("x") { 2 } == 1, "A copy sees the value the original stored")
+    }
+
+    @Test("Resolving a selection gives the same songs, in library order, with the cache")
+    func resolveUnchanged() {
+        let snapshot = Self.bigSnapshot()
+        var selection = SyncSelection()
+        selection.mode = .selectedItems
+        selection.artistIDs = Set(snapshot.artistGroups.prefix(50).map(\.id))
+        selection.genreIDs = [snapshot.genreGroups[3].id]
+        let first = SelectionResolver.resolve(selection, in: snapshot)
+        let second = SelectionResolver.resolve(selection, in: snapshot)
+        #expect(first.tracksToSync.map(\.id) == second.tracksToSync.map(\.id))
+        let expected = Set(snapshot.artistGroups.prefix(50).flatMap(\.trackIDs) + snapshot.genreGroups[3].trackIDs)
+        #expect(Set(first.tracksToSync.map(\.id)) == expected)
+    }
+
+    @Test("A click's work (resolve after the first time) is fast", .timeLimit(.minutes(1)))
+    func timing() {
+        let snapshot = Self.bigSnapshot()
+        var selection = SyncSelection()
+        selection.mode = .selectedItems
+        selection.artistIDs = Set(snapshot.artistGroups.prefix(200).map(\.id))
+        let clock = ContinuousClock()
+        let cold = clock.measure { _ = SelectionResolver.resolve(selection, in: snapshot) }
+        selection.artistIDs.insert(snapshot.artistGroups[300].id)
+        let warm = clock.measure { _ = SelectionResolver.resolve(selection, in: snapshot) }
+        print("Resolve on 10,000 songs: first \(cold), after caching \(warm)")
+        #expect(warm < cold)
+    }
+}

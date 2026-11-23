@@ -131,7 +131,13 @@ final class LibraryModel {
         let clock = ContinuousClock()
         let start = clock.now
         let source = self.source
-        let read = slowRead ?? Task { try await source.loadSnapshot() }
+        // Groupings and orderings are worked out here too, off the main
+        // thread, so the Music tab's first clicks don't pay for them.
+        let read = slowRead ?? Task.detached(priority: .userInitiated) {
+            let snapshot = try await source.loadSnapshot()
+            SelectionResolver.prepare(snapshot)
+            return snapshot
+        }
         slowRead = nil
 
         switch await TimeLimit.result(of: read, within: Self.readTimeLimit) {

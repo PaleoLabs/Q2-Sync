@@ -157,11 +157,13 @@ struct DeviceMusicView: View {
     @ViewBuilder
     private func checklist(snapshot: LibrarySnapshot) -> some View {
         let rows = filteredRows(snapshot: snapshot)
+        // Worked out once per redraw, not once per checkbox.
+        let ticked = tickedIDs(for: section)
         if rows.isEmpty {
             ContentUnavailableView.search(text: filterText)
         } else {
             List(rows) { row in
-                Toggle(isOn: binding(for: row.id)) {
+                Toggle(isOn: binding(for: row.id, ticked: ticked)) {
                     HStack {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(row.title)
@@ -217,9 +219,13 @@ struct DeviceMusicView: View {
 
     /// A checkbox binding: reads whether `rowID` is ticked, and saves
     /// the change through `DeviceMonitor` when clicked.
-    private func binding(for rowID: String) -> Binding<Bool> {
+    ///
+    /// - Parameters:
+    ///   - rowID: The row's group ID.
+    ///   - ticked: The section's ticked IDs, from `tickedIDs(for:)`.
+    private func binding(for rowID: String, ticked: Set<String>) -> Binding<Bool> {
         Binding(
-            get: { tickedIDs(for: section).contains(rowID) },
+            get: { ticked.contains(rowID) },
             set: { isOn in
                 let category = section
                 update { selection in
