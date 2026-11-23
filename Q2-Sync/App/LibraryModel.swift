@@ -112,12 +112,15 @@ final class LibraryModel {
     /// Reads the library once and updates `state`, `snapshot` and `health`.
     private func performLoad() async {
         state = .loading
+        // Close the Song Info artwork reader's library connection before
+        // opening a new one: two open at once may upset macOS's library
+        // service (AMPLibraryAgent). It reopens on demand.
+        browserArtwork = nil
         let clock = ContinuousClock()
         let start = clock.now
         do {
             let loaded = try await source.loadSnapshot()
             snapshot = loaded
-            browserArtwork = nil // Re-opened on demand for the new read.
             loadCount += 1
             health = LibraryHealthCheck.evaluate(loaded)
             lastLoadDuration = clock.now - start

@@ -140,7 +140,10 @@ sequenceDiagram
    auto-sync starts it (`AutoSyncController.startSync`).
 2. **Re-read the library.** `SyncCoordinator.prepare` calls `LibraryModel.load`,
    which uses `ITunesLibrarySource` to take a fresh, read-only
-   `LibrarySnapshot`.
+   `LibrarySnapshot`. Song file locations (`ITLibMediaItem.location`, a slow
+   round trip to the library service per song, which got far slower on each
+   re-read in the same run) are remembered across reads by
+   `SongLocationCache` while a song's size and date are unchanged.
 3. **"Mac looks empty" check.** `LibraryHealthCheck.evaluate` stops the sync if
    the library has no songs, the media folder is missing (e.g. an external drive
    is disconnected), or more than 10% of local files can't be found. Nothing on
@@ -229,7 +232,9 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   isn't on a Master Boot Record partition table, with Disk Utility steps.
   exFAT and FAT32 are both fine (Shanling supports both). `PartitionScheme` comes from
   `DriveIdentityReader.partitionScheme` (the whole disk's Disk Arbitration
-  media content), read once per mount by `DeviceMonitor`. Unknown never warns.
+  media content), read once per mount by `DeviceMonitor`, except through the
+  Q2's USB cable: its storage gadget exposes only the volume, as a whole
+  disk, so the scheme isn't read there. Unknown never warns.
 - **`DeviceStore`** · saves `KnownDevice` records (UUID, name, firmware,
   security-scoped bookmark, selection, auto-sync mode, firmware version,
   first-sync state) and ignored drives to `devices.json` in the app container.

@@ -239,7 +239,11 @@ final class DeviceMonitor {
             let connection = CardConnection.classify(DriveIdentityReader.identity(forVolumeAt: volume.url))
             connections[uuid] = connection
             Self.logger.notice("Drive connection: \(connection.rawValue, privacy: .public)")
-            if let scheme = DriveIdentityReader.partitionScheme(forVolumeAt: volume.url) {
+            // Through the Q2 (USB Storage), its Linux storage gadget shows
+            // the Mac only the card's volume, as a whole disk: the card's
+            // partition table can't be seen, so it isn't judged. A card
+            // reader shows the real scheme.
+            if connection != .q2, let scheme = DriveIdentityReader.partitionScheme(forVolumeAt: volume.url) {
                 partitionSchemes[uuid] = scheme
                 Self.logger.notice("Partition scheme: \(scheme.displayName, privacy: .public)")
             }

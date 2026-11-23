@@ -231,7 +231,8 @@ struct DeviceSettingsView: View {
             Section {
                 LabeledContent("Format", value: connected.volume.formatDescription ?? "Unknown")
                 LabeledContent("Partition Scheme",
-                               value: devices.partitionScheme(for: connected.volume)?.displayName ?? "Unknown")
+                               value: devices.partitionScheme(for: connected.volume)?.displayName
+                                   ?? (connected.connection == .q2 ? "Not visible over USB (check in a card reader)" : "Unknown"))
                 LabeledContent("Card ID", value: connected.device.volumeUUID)
                     .textSelection(.enabled)
                 LabeledContent("Remembered Since",

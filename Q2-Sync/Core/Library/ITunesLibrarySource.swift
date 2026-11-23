@@ -64,12 +64,50 @@ final class LibraryArtworkReader: AlbumArtworkProviding, @unchecked Sendable {
     }
 }
 
+/// Song file locations from earlier reads, so a re-read doesn't ask the
+/// library service for every song's file again.
+///
+/// WHY
+/// `ITLibMediaItem.location` is a synchronous round trip to macOS's library
+/// service (AMPLibraryAgent), which also attaches sandbox access to the URL.
+/// The first read of ~10,000 songs takes seconds; every later read in the
+/// same run got far slower (83 s, then minutes: "Reading your library…"
+/// never finished). A song whose size and modification date haven't changed
+/// is in the same file, so its earlier URL (with its access) is reused.
+final class SongLocationCache: @unchecked Sendable {
+
+    private struct Entry {
+        let size: UInt64
+        let modified: Date?
+        let url: URL
+    }
+
+    private let lock = NSLock()
+    private var entries: [PersistentID: Entry] = [:]
+
+    /// The remembered URL, if the song's size and date still match and the
+    /// file is still there.
+    func url(for id: PersistentID, size: UInt64, modified: Date?) -> URL? {
+        let entry = lock.withLock { entries[id] }
+        guard let entry, entry.size == size, entry.modified == modified,
+              FileManager.default.fileExists(atPath: entry.url.path) else { return nil }
+        return entry.url
+    }
+
+    func remember(_ url: URL, for id: PersistentID, size: UInt64, modified: Date?) {
+        lock.withLock { entries[id] = Entry(size: size, modified: modified, url: url) }
+    }
+}
+
 /// The real Apple Music library, read through `ITLibrary`.
 struct ITunesLibrarySource: LibrarySource {
 
     /// The ITLibrary API version we ask for. "1.1" is the newest version
     /// Apple documents; it includes `mediaFolderLocation`.
     private let apiVersion = "1.1"
+
+    /// File locations remembered across reads (see `SongLocationCache`).
+    private let locations = SongLocationCache()
 
     /// Creates the source. Nothing is read until `loadSnapshot()` runs.
     init() {}
@@ -98,7 +136,7 @@ struct ITunesLibrarySource: LibrarySource {
         // which older imports sometimes have). Videos, podcasts, audiobooks,
         // ringtones, etc. are excluded per the app's requirements.
         let musicItems = library.allMediaItems.filter(Self.isMusic)
-        let tracks = musicItems.map(Self.makeTrack)
+        let tracks = musicItems.map { Self.makeTrack($0, locations: locations) }
 
         // Only playlists that contain music we know about are useful.
         // Apple's built-in "distinguished" playlists are skipped when they
@@ -157,8 +195,19 @@ struct ITunesLibrarySource: LibrarySource {
     ///
     /// - Parameter item: The Apple object (only read, never modified).
     /// - Returns: A plain, `Sendable` copy of the fields we need.
-    private static func makeTrack(_ item: ITLibMediaItem) -> Track {
-        let fileURL = item.locationType == .file ? item.location : nil
+    private static func makeTrack(_ item: ITLibMediaItem, locations: SongLocationCache) -> Track {
+        let id = hexID(item.persistentID)
+        var fileURL: URL?
+        if item.locationType == .file {
+            // `location` is slow (see `SongLocationCache`): reuse it when the
+            // song hasn't changed since the last read.
+            if let known = locations.url(for: id, size: item.fileSize, modified: item.modifiedDate) {
+                fileURL = known
+            } else if let url = item.location {
+                locations.remember(url, for: id, size: item.fileSize, modified: item.modifiedDate)
+                fileURL = url
+            }
+        }
 
         // Titles are almost always set, but fall back to the file name
         // so the UI never shows an empty row.
@@ -167,7 +216,7 @@ struct ITunesLibrarySource: LibrarySource {
             ?? "Untitled"
 
         return Track(
-            id: hexID(item.persistentID),
+            id: id,
             title: title,
             artist: item.artist?.name?.nonEmpty,
             albumArtist: item.album.albumArtist?.nonEmpty,
