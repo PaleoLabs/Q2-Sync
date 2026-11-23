@@ -63,8 +63,8 @@ partition (often named **bootfs**), and the rest of the card is a Linux
 partition neither your Mac nor the Q2 can use. If a card has any other
 partition, of any format or size, or its volume leaves part of the card
 unused, the "Is this your Shanling Q2?" window says so ("This card has
-another partition (124.4 GB) besides this volume… Only 534.8 MB of its
-124.95 GB can hold music."), with the same Disk Utility steps under **How to
+another partition (124.4 GB) that the Q2 can't use. Only 534.8 MB of the
+card's 124.95 GB can hold music."), with the same Disk Utility steps under **How to
 Erase It**. Pressing Return then chooses **Later**; **Continue Anyway** is
 still there if you mean to use the card as it is.
 

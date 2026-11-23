@@ -167,14 +167,14 @@ struct CardFormatAdvice: Equatable, Sendable {
             : ""
         let summary = (layout.volumeShare ?? 1) < 0.5 ? "Most of this card can't be used" : "Part of this card can't be used"
         let usable = layout.volumeBytes.map { volume in
-            layout.cardBytes.map { " Only \(volume.formatted(style)) of its \($0.formatted(style)) can hold music." } ?? ""
+            layout.cardBytes.map { " Only \(volume.formatted(style)) of the card's \($0.formatted(style)) can hold music." } ?? ""
         } ?? ""
 
         let problem: String
         if let others = layout.otherPartitionBytes, !others.isEmpty {
             let total = others.reduce(0, +).formatted(style)
             let what = others.count == 1 ? "another partition (\(total))" : "\(others.count) other partitions (\(total) in all)"
-            problem = "\(origin)This card has \(what) besides this volume, which the Q2 can't use.\(usable)"
+            problem = "\(origin)This card has \(what) that the Q2 can't use.\(usable)"
         } else {
             problem = "\(origin)This volume doesn't fill the card: the rest is unused, and the Q2 can't use it.\(usable)"
         }
