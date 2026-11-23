@@ -170,8 +170,10 @@ next time you connect it.
    copying speed (after about 10 seconds). You can click
    **Cancel** at any time; songs already copied stay, and the next sync carries
    on where it stopped.
-6. When it's done, you'll see **Sync Complete** and the option to **Eject** the
-   card or keep it connected (**Not Now**).
+6. When it's done, you'll see **Sync Complete** with three choices:
+   **Eject** the card, **Verify Card…** to check every song on it first (see
+   "Verify the card" below; eject when it's done), or keep it connected
+   (**Not Now**).
 
 Every sync is recorded in a log. Click **Show Log** on the result, or go to
 your Q2's **Settings** tab → **Show Sync Logs**.
@@ -373,7 +375,8 @@ Setting → System Update → Network update**.
 ### Verify the card
 
 microSD cards can damage files without warning. On your Q2's **Settings**
-tab, under **Card**, click **Verify Card…** (or **Device → Verify Card…**).
+tab, under **Card**, click **Verify Card…** (or **Device → Verify Card…**, or
+**Verify Card…** on the Sync Complete window).
 Q2 Sync reads every song it put on the card and compares it, byte for byte,
 with the song on your Mac. Nothing changes while it checks.
 

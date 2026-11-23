@@ -639,6 +639,9 @@ struct SyncResultView: View {
     let sync: SyncCoordinator
     let devices: DeviceMonitor
 
+    /// For Verify Card.
+    @Environment(AutoSyncController.self) private var autoSync
+
     /// Errors listed on screen; the rest are in the log.
     private static let maxErrorsShown = 100
 
@@ -692,7 +695,8 @@ struct SyncResultView: View {
             }
 
             if report.succeeded && !sync.didEject {
-                Text("Eject the card now? You can also keep it connected to sync again.")
+                Text("Eject the card now? You can also verify every song on it first, or keep it connected to sync again.")
+                    .fixedSize(horizontal: false, vertical: true)
                     .fontWeight(.medium)
             } else if report.succeeded {
                 Text("The card has been ejected. Next, on your Q2:")
@@ -716,6 +720,14 @@ struct SyncResultView: View {
                 if report.succeeded && !sync.didEject {
                     Button("Not Now") { sync.close() }
                         .keyboardShortcut(.cancelAction)
+                    Button("Verify Card…") {
+                        // The Verify Card sheet opens once this one closes
+                        // (RootView shows it only while no sync sheet is up).
+                        autoSync.verifier.present()
+                        sync.close()
+                    }
+                    .disabled(sync.isEjecting)
+                    .help("Compare every song on the card with your Mac's copy and fix damaged ones")
                     Button("Eject") { Task { await sync.ejectAfterSync(devices: devices) } }
                         .keyboardShortcut(.defaultAction)
                         .disabled(sync.isEjecting)
