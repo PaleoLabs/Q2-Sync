@@ -502,6 +502,10 @@ Always eject before unplugging:
 If ejecting fails, Q2 Sync says so and the card stays connected. Close any
 Finder windows showing the card and try again.
 
+Ejecting or plugging in a different drive (another card, a USB stick)
+while a sync runs doesn't affect the Q2 being synced, and the sidebar shows
+the change straight away.
+
 ---
 
 ## 11. Frequently asked questions

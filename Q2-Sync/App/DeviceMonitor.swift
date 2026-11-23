@@ -189,7 +189,18 @@ final class DeviceMonitor {
     func refresh() {
         let urls = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
-        let eligible = urls.compactMap(VolumeInfo.read).filter(VolumeEligibility.isEligible)
+        var eligible = urls.compactMap(VolumeInfo.read).filter(VolumeEligibility.isEligible)
+        // A card busy with a sync can fail a metadata read (or briefly drop
+        // out of the mounted list) when another drive is ejected. Before,
+        // that disconnected it mid-sync and the sidebar went empty. Only a
+        // card whose mount point is really gone counts as unplugged; until
+        // then it keeps its last known facts.
+        if let current = connected, !eligible.contains(where: { $0.uuid == current.device.volumeUUID }),
+           Self.isStillMounted(current.volume.url) {
+            Self.logger.notice("Connected card didn't answer a volume read; still mounted, keeping it")
+            eligible.append(VolumeInfo.read(at: current.volume.url)
+                .flatMap { $0.uuid == current.device.volumeUUID ? $0 : nil } ?? current.volume)
+        }
         updateConnections(for: eligible)
 
         // 1. Is the connected Q2 still mounted?
@@ -228,6 +239,20 @@ final class DeviceMonitor {
             postponedVolumes.removeAll { $0 == pendingVolume }
             if let pendingVolume { onNewDriveNeedsSetUp?(pendingVolume) }
         }
+    }
+
+    /// `true` if a file system is still mounted at exactly this path.
+    ///
+    /// Asks the kernel (`statfs`) rather than trusting the volume list:
+    /// once a drive is unmounted its mount point is either gone or belongs
+    /// to the startup disk, so the mount path no longer matches.
+    nonisolated static func isStillMounted(_ url: URL) -> Bool {
+        var info = statfs()
+        guard statfs(url.path, &info) == 0 else { return false }
+        let mountedOn = withUnsafePointer(to: &info.f_mntonname) {
+            $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) }
+        }
+        return URL(fileURLWithPath: mountedOn).standardizedFileURL.path == url.standardizedFileURL.path
     }
 
     /// How a mounted drive is connected (through the Q2 or otherwise).

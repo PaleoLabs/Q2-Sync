@@ -156,48 +156,15 @@ struct RootView: View {
                         .foregroundStyle(.secondary)
                         .tag(SidebarItem.connectQ2)
                 }
-                // Other mounted cards already set up as a Q2. One card is
-                // shown at a time; clicking another switches to it (not
-                // while a sync or check is using the current card).
-                ForEach(devices.otherKnownVolumes) { volume in
-                    Button {
-                        devices.switchTo(volume)
-                    } label: {
-                        Label(volume.name, systemImage: "ipod")
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(autoSync.isCardBusy)
-                    .help("Show “\(volume.name)”")
+                // Other set-up cards and drives waiting to be set up, all in
+                // ONE row that is always there (zero height when empty).
+                // Adding a row to the sidebar while a sync sheet was open
+                // blanked the whole list until the sheet closed; changing
+                // what's inside an existing row doesn't, so plugging in or
+                // ejecting another drive mid-sync shows up at once.
+                OtherDrivesSidebarRow(devices: devices, isCardBusy: autoSync.isCardBusy)
+                    .listRowInsets(EdgeInsets())
                     .selectionDisabled()
-                }
-                // A drive waiting to be set up: the whole row is the button
-                // (a small "Set Up…" alone was hard to hit), and "Set Up…"
-                // never shrinks, so it isn't cut off.
-                ForEach(devices.postponedVolumes) { volume in
-                    Button {
-                        devices.setUp(volume)
-                    } label: {
-                        HStack {
-                            Label(volume.name, systemImage: "externaldrive.badge.questionmark")
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                            Spacer(minLength: 6)
-                            Text("Set Up…")
-                                .font(.callout)
-                                .foregroundStyle(.tint)
-                                .fixedSize()
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Set up “\(volume.name)” as your Q2's card")
-                    .selectionDisabled()
-                }
             }
 
             Section("Music Library") {
@@ -207,6 +174,8 @@ struct RootView: View {
                 }
             }
         }
+        // Lets the other-drives row shrink to nothing when it's empty.
+        .environment(\.defaultMinListRowHeight, 0)
         .navigationSplitViewColumnWidth(min: 190, ideal: 220)
         .safeAreaInset(edge: .bottom) {
             LibraryStatusView(library: library)
@@ -234,6 +203,66 @@ struct RootView: View {
         case nil:
             ContentUnavailableView("Nothing Selected", systemImage: "sidebar.left")
         }
+    }
+}
+
+/// The sidebar lines for other mounted Q2 cards (click to switch) and
+/// drives waiting to be set up (click to set up), stacked inside a single
+/// list row. See the note where it's used for why it's one row.
+private struct OtherDrivesSidebarRow: View {
+    let devices: DeviceMonitor
+    /// Switching cards isn't allowed while a sync or check uses the card.
+    let isCardBusy: Bool
+
+    /// Roughly a sidebar row's height, so the lines line up with real rows.
+    private let lineHeight: CGFloat = 28
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Other mounted cards already set up as a Q2. One card is
+            // shown at a time; clicking another switches to it.
+            ForEach(devices.otherKnownVolumes) { volume in
+                Button {
+                    devices.switchTo(volume)
+                } label: {
+                    Label(volume.name, systemImage: "ipod")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, minHeight: lineHeight, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(isCardBusy)
+                .help("Show “\(volume.name)”")
+            }
+            // A drive waiting to be set up: the whole line is the button
+            // (a small "Set Up…" alone was hard to hit), and "Set Up…"
+            // never shrinks, so it isn't cut off.
+            ForEach(devices.postponedVolumes) { volume in
+                Button {
+                    devices.setUp(volume)
+                } label: {
+                    HStack {
+                        Label(volume.name, systemImage: "externaldrive.badge.questionmark")
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer(minLength: 6)
+                        Text("Set Up…")
+                            .font(.callout)
+                            .foregroundStyle(.tint)
+                            .fixedSize()
+                    }
+                    .frame(minHeight: lineHeight)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Set up “\(volume.name)” as your Q2's card")
+            }
+        }
+        // No extra padding: with the row's insets removed (so an empty
+        // row takes no space), the sidebar already lines these up with
+        // the rows above and below.
     }
 }
 
