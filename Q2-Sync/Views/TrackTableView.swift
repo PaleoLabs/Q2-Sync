@@ -3,14 +3,16 @@
 //  Q2-Sync › Views
 //
 //  PURPOSE
-//  A sortable, Finder-style table of tracks showing tags, duration,
-//  availability and the source file path on your Mac (handy for checking
-//  what ITLibrary reports).
+//  A sortable, Finder-style table of tracks showing tags, duration and
+//  availability. The source file path on your Mac is in each title's
+//  tooltip, the right-click menu (Show in Finder, Copy Path) and an
+//  optional File column, hidden by default (right-click the header).
 //
 //  HOW IT FITS
 //  Shown on the right of `LibraryCategoryView`.
 //
 
+import AppKit
 import SwiftUI
 
 /// A table of tracks.
@@ -37,6 +39,14 @@ struct TrackTableView: View {
     /// Empty means "keep the natural order".
     @State private var sortOrder: [KeyPathComparator<Row>] = []
 
+    /// Selected rows, so the right-click menu knows what it acts on.
+    @State private var selection: Set<Row.ID> = []
+
+    /// Which columns are shown, in what order and width (the header's
+    /// right-click menu). Kept across launches as JSON in `columnsData`.
+    @State private var columns = TableColumnCustomization<Row>()
+    @AppStorage("trackTableColumns") private var columnsData = Data()
+
     /// Rows in the order the user asked for.
     private var rows: [Row] {
         let rows = tracks.enumerated().map { Row(position: $0.offset, track: $0.element,
@@ -45,19 +55,27 @@ struct TrackTableView: View {
     }
 
     var body: some View {
-        Table(rows, sortOrder: $sortOrder) {
+        let rows = rows
+        Table(rows, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
             TableColumn("#") { row in let track = row.track
                 Text(track.trackNumber > 0 ? "\(track.trackNumber)" : "")
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
             .width(28)
+            .customizationID("number")
 
-            TableColumn("Title", value: \.track.title)
+            TableColumn("Title", value: \.track.title) { row in
+                Text(row.track.title)
+                    .help(row.track.fileURL?.path ?? "No file on this Mac")
+            }
+            .customizationID("title")
 
             TableColumn("Artist", value: \.track.displayArtist)
+                .customizationID("artist")
 
             TableColumn("Album", value: \.track.displayAlbum)
+                .customizationID("album")
 
             TableColumn("Time", value: \.track.durationSeconds) { row in let track = row.track
                 Text(Duration.seconds(track.durationSeconds)
@@ -65,6 +83,7 @@ struct TrackTableView: View {
                     .monospacedDigit()
             }
             .width(50)
+            .customizationID("time")
 
             TableColumn("Status") { row in let track = row.track
                 Label(track.availability.shortName, systemImage: track.availability.symbolName)
@@ -73,6 +92,7 @@ struct TrackTableView: View {
                     .help(track.availability.explanation)
             }
             .width(44)
+            .customizationID("status")
 
             TableColumn("Q2") { row in
                 if let placement = row.placement {
@@ -81,16 +101,42 @@ struct TrackTableView: View {
                 }
             }
             .width(32)
+            .customizationID("q2")
 
+            // Too long to read in a column, so off unless asked for.
             TableColumn("File") { row in let track = row.track
                 Text(track.fileURL?.path ?? "—")
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.head)
-                    .help(track.fileURL?.path ?? "No local file")
+                    .help(track.fileURL?.path ?? "No file on this Mac")
                     .textSelection(.enabled)
             }
+            .customizationID("file")
+            .defaultVisibility(.hidden)
+        }
+        .contextMenu(forSelectionType: Row.ID.self) { ids in
+            let urls = rows.filter { ids.contains($0.id) }.compactMap(\.track.fileURL)
+            Button("Show in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting(urls)
+            }
+            .disabled(urls.isEmpty)
+            Button(urls.count > 1 ? "Copy Paths" : "Copy Path") {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(urls.map(\.path).joined(separator: "\n"), forType: .string)
+            }
+            .disabled(urls.isEmpty)
+        }
+        .onChange(of: tracks.map(\.id)) { selection = [] }
+        .onAppear {
+            if let saved = try? JSONDecoder().decode(TableColumnCustomization<Row>.self, from: columnsData) {
+                columns = saved
+            }
+        }
+        .onChange(of: columns) {
+            if let data = try? JSONEncoder().encode(columns) { columnsData = data }
         }
     }
 }

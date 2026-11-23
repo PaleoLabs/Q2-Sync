@@ -79,6 +79,13 @@ struct LibraryCategoryView: View {
     /// Group counts for this category, by group ID (built with `marks`).
     @State private var groupMarks: [String: GroupMarks] = [:]
 
+    /// Width of the group list. `HSplitView` halves the space when it first
+    /// appears and ignores the ideal width, so the split is drawn by hand:
+    /// it opens at the narrow width, drags like a divider, and is remembered.
+    @AppStorage("libraryListWidth") private var listWidth: Double = Self.listWidthRange.lowerBound
+    @State private var dragStartWidth: Double?
+    private static let listWidthRange: ClosedRange<Double> = 360...560
+
     /// What the marks depend on; a change rebuilds them.
     private struct MarksKey: Equatable {
         var loadCount: Int
@@ -97,8 +104,7 @@ struct LibraryCategoryView: View {
         Group {
             if let snapshot = library.snapshot {
                 let groups = category.groups(in: snapshot)
-                // `HSplitView` gives a user-resizable divider, as in Music.
-                HSplitView {
+                HStack(spacing: 0) {
                     // A table, not a list, so the marks and counts sit in
                     // aligned columns under headers. The marks travel inside
                     // each row value: `Table` only redraws a row when its
@@ -140,18 +146,19 @@ struct LibraryCategoryView: View {
                         }
                         .width(44)
                     }
-                    // HSplitView honours the minimum, not the ideal, once
-                    // the song table appears, so the minimum is what you get.
-                    .frame(minWidth: 360, maxWidth: 560)
+                    .frame(width: listWidth.clamped(to: Self.listWidthRange))
 
-                    if let group = groups.first(where: { $0.id == groupID }) {
-                        TrackTableView(tracks: snapshot.tracks(for: group.trackIDs), marks: marks)
-                            .frame(minWidth: 400)
-                    } else {
-                        ContentUnavailableView("Select an Item", systemImage: "music.note",
-                                               description: Text("Choose one on the left to see its songs."))
-                            .frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
+                    splitDivider
+
+                    ZStack {
+                        if let group = groups.first(where: { $0.id == groupID }) {
+                            TrackTableView(tracks: snapshot.tracks(for: group.trackIDs), marks: marks)
+                        } else {
+                            ContentUnavailableView("Select an Item", systemImage: "music.note",
+                                                   description: Text("Choose one on the left to see its songs."))
+                        }
                     }
+                    .frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else {
                 LibraryNotReadView(library: library)
@@ -161,6 +168,28 @@ struct LibraryCategoryView: View {
         .navigationSubtitle(comparisonSubtitle)
         .onChange(of: category) { groupID = nil }
         .task(id: marksKey) { await rebuildMarks(for: marksKey) }
+    }
+
+    /// A thin line with a wider grab area that resizes the group list.
+    private var splitDivider: some View {
+        Rectangle()
+            .fill(Color(nsColor: .separatorColor))
+            .frame(width: 1)
+            .padding(.horizontal, 3)
+            .contentShape(Rectangle())
+            .onHover { inside in
+                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                    .onChanged { drag in
+                        let start = dragStartWidth ?? listWidth
+                        dragStartWidth = start
+                        listWidth = (start + drag.translation.width).clamped(to: Self.listWidthRange)
+                    }
+                    .onEnded { _ in dragStartWidth = nil }
+            )
+            .padding(.horizontal, -3)
     }
 
     /// "Compared with Shanling-Q2 · as of Nov 22, 10:14", or a hint.
@@ -268,5 +297,11 @@ extension LibrarySnapshot {
                               subtitle: $0.kind == .smart ? "Smart Playlist" : nil,
                               trackIDs: $0.trackIDs) }
             .sorted { SortKey.compare($0.title, $1.title) }
+    }
+}
+
+private extension Double {
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
