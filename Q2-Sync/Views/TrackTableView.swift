@@ -169,8 +169,10 @@ struct PlacementLabel: View {
     var body: some View {
         switch placement {
         case .onQ2:
+            // Grey, like the category list: the usual case stays quiet,
+            // and colour means "look at this".
             Label("On Q2", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(.secondary)
                 .help("On your Q2, as of Q2 Sync's record of the card.")
         case .nextSync:
             Label("Next sync", systemImage: "arrow.down.circle")

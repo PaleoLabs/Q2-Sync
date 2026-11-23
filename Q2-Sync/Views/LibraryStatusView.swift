@@ -126,10 +126,11 @@ extension TrackAvailability {
         }
     }
 
-    /// Accent colour for the symbol.
+    /// Colour for the symbol. The normal state is grey; colour is kept
+    /// for what needs attention.
     var tint: Color {
         switch self {
-        case .available:    return .green
+        case .available:    return .secondary
         case .cloudOnly:    return .blue
         case .drmProtected: return .orange
         case .fileMissing:  return .red

@@ -156,15 +156,28 @@ struct RootView: View {
                         .foregroundStyle(.secondary)
                         .tag(SidebarItem.connectQ2)
                 }
+                // A drive waiting to be set up: the whole row is the button
+                // (a small "Set Up…" alone was hard to hit), and "Set Up…"
+                // never shrinks, so it isn't cut off.
                 ForEach(devices.postponedVolumes) { volume in
-                    HStack {
-                        Label(volume.name, systemImage: "externaldrive.badge.questionmark")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Set Up…") { devices.setUp(volume) }
-                            .buttonStyle(.borderless)
-                            .font(.caption)
+                    Button {
+                        devices.setUp(volume)
+                    } label: {
+                        HStack {
+                            Label(volume.name, systemImage: "externaldrive.badge.questionmark")
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer(minLength: 6)
+                            Text("Set Up…")
+                                .font(.callout)
+                                .foregroundStyle(.tint)
+                                .fixedSize()
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .help("Set up “\(volume.name)” as your Q2's card")
                     .selectionDisabled()
                 }
             }

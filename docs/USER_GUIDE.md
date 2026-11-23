@@ -154,7 +154,7 @@ unplugged:
 - an orange **lock**: some (outline) or all (filled) of these songs can't be
   copied.
 - Hover over an icon for the numbers, or select the row: each song's
-  **On Mac** column shows whether its file can be copied (a green check: the
+  **On Mac** column shows whether its file can be copied (a grey check: the
   file is on this Mac; hover over any other icon for why not), and its
   **On Q2** column shows whether it's on your Q2 or comes at the next sync.
 - An artist's songs are listed album by album (albums in A–Z order, as on
