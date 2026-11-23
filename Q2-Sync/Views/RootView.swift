@@ -95,8 +95,10 @@ struct RootView: View {
                 Button {
                     Task { await library.load() }
                 } label: {
-                    Label("Refresh Music Library", systemImage: "arrow.clockwise")
+                    Label("Refresh Library", systemImage: "arrow.clockwise")
                 }
+                // Text beside the icon: a bare circle arrow was ambiguous.
+                .labelStyle(.titleAndIcon)
                 .disabled(library.state == .loading)
                 .help(LibraryWording.refreshHelp)
             }
