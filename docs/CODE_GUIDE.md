@@ -143,7 +143,11 @@ sequenceDiagram
    `LibrarySnapshot`. Song file locations (`ITLibMediaItem.location`, a slow
    round trip to the library service per song, which got far slower on each
    re-read in the same run) are remembered across reads by
-   `SongLocationCache` while a song's size and date are unchanged.
+   `SongLocationCache` while a song's size and date are unchanged. A read
+   that takes longer than `LibraryModel.readTimeLimit` (60 s) fails with "isn't
+   responding" (`TimeLimit.result` races it; `ITLibrary` can't be cancelled),
+   and the sync stops rather than using the previous snapshot. Try Again waits
+   on that same read, and if it finishes on its own its result is used.
 3. **"Mac looks empty" check.** `LibraryHealthCheck.evaluate` stops the sync if
    the library has no songs, the media folder is missing (e.g. an external drive
    is disconnected), or more than 10% of local files can't be found. Nothing on

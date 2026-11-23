@@ -444,6 +444,18 @@ No. It only reads your library, and macOS itself prevents it from writing to
 your Music folder. It still makes sense to keep a backup of your Mac, as with
 any app.
 
+**Does the Music app need to be open?**
+No. Q2 Sync reads your library through a macOS service that starts by itself
+when it's needed. Music you add or change shows up after **Refresh Library**,
+or at your next sync.
+
+**It says "The Music library isn't responding".**
+Reading your library normally takes a few seconds; after a minute, Q2 Sync
+stops waiting and says so, and nothing is synced. Click **Try Again** (at the
+bottom of the sidebar). If it keeps happening, open the Music app, or restart
+your Mac. To restart just the library service instead, run
+`killall AMPLibraryAgent` in Terminal (macOS starts it again by itself).
+
 **Why are some songs "can't be synced"?**
 They're either protected by DRM or only in iCloud (not downloaded to your Mac).
 

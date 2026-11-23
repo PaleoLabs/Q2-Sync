@@ -109,6 +109,18 @@ final class LibraryModel {
     /// The load in progress, shared by everyone who asks for one meanwhile.
     @ObservationIgnored private var loadTask: Task<Void, Never>?
 
+    /// How long to wait for the library before saying it isn't responding.
+    /// A normal read of ~10,000 songs takes a few seconds.
+    static let readTimeLimit: Duration = .seconds(60)
+
+    /// Shown when the read takes longer than `readTimeLimit`.
+    static let notRespondingMessage = "The Music library isn't responding. Try again in a moment. If it keeps happening, open the Music app, or restart your Mac."
+
+    /// A read that outlived its time limit and may still finish. `ITLibrary`
+    /// can't be cancelled, so Try Again waits for this one instead of
+    /// starting another, and if it finishes on its own, its result is used.
+    @ObservationIgnored private var slowRead: Task<LibrarySnapshot, any Error>?
+
     /// Reads the library once and updates `state`, `snapshot` and `health`.
     private func performLoad() async {
         state = .loading
@@ -118,18 +130,39 @@ final class LibraryModel {
         browserArtwork = nil
         let clock = ContinuousClock()
         let start = clock.now
-        do {
-            let loaded = try await source.loadSnapshot()
-            snapshot = loaded
-            loadCount += 1
-            health = LibraryHealthCheck.evaluate(loaded)
-            lastLoadDuration = clock.now - start
-            state = .loaded
-            logSummary(loaded)
-        } catch {
+        let source = self.source
+        let read = slowRead ?? Task { try await source.loadSnapshot() }
+        slowRead = nil
+
+        switch await TimeLimit.result(of: read, within: Self.readTimeLimit) {
+        case .success(let loaded)?:
+            apply(loaded, duration: clock.now - start)
+        case .failure(let error)?:
             state = .failed(error.localizedDescription)
             Self.logger.error("Library load failed: \(error.localizedDescription, privacy: .public)")
+        case nil:
+            slowRead = read
+            state = .failed(Self.notRespondingMessage)
+            Self.logger.error("Library load timed out after \(Self.readTimeLimit, privacy: .public)")
+            // If it does finish later (and nobody is waiting on it again),
+            // use it.
+            Task { [weak self] in
+                guard let loaded = try? await read.value, let self,
+                      self.slowRead == read, case .failed = self.state else { return }
+                self.slowRead = nil
+                self.apply(loaded, duration: clock.now - start)
+            }
         }
+    }
+
+    /// Publishes a freshly read snapshot.
+    private func apply(_ loaded: LibrarySnapshot, duration: Duration) {
+        snapshot = loaded
+        loadCount += 1
+        health = LibraryHealthCheck.evaluate(loaded)
+        lastLoadDuration = duration
+        state = .loaded
+        logSummary(loaded)
     }
 
     // MARK: - Diagnostics

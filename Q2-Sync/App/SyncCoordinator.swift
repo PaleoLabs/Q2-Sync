@@ -149,6 +149,12 @@ final class SyncCoordinator {
         phase = .planning("Reading your library…")
         await library.load()
         guard isCurrentPlanning(generation) else { return }
+        // A failed (or timed-out) read leaves the previous snapshot in place;
+        // never sync from that stale copy.
+        if case .failed(let message) = library.state {
+            fail(message + " Nothing was synced.")
+            return
+        }
         guard let snapshot = library.snapshot, let health = library.health else {
             fail("Your Apple Music library couldn't be read, so nothing was synced.")
             return

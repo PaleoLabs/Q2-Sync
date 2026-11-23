@@ -33,6 +33,9 @@ struct LibraryStatusView: View {
             case .failed(let message):
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Try Again") { Task { await library.load() } }
+                    .controlSize(.small)
             case .loaded:
                 loadedSummary
             }
