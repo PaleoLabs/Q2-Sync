@@ -338,7 +338,9 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 browser with "can sync" and "On Q2 / next sync" marks, compared with the
 connected Q2 or the one read most recently), `ConnectQ2View` (the sidebar's
 "Connect Your Q2" page while no Q2 is connected; selected on first launch),
-`OpenAtLoginOffer` (in `SyncSheet`: offered once after a successful sync),
+`OpenAtLoginPrompt` (one line under a Q2's Auto-Sync picker while auto-sync
+is on and the app doesn't open at login; `LoginItem` wraps `SMAppService`
+for it and `AppSettingsView`'s toggle, the real control),
 `SongInspectorView` (the
 browser's song inspector; artwork via `LibraryModel.artworkData(for:)`, one
 whole-library `LibraryArtworkReader` opened on first use), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.

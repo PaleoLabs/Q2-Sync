@@ -87,7 +87,7 @@ a warning when your selection won't fit.
 ### 🔌 Plug in and forget
 **Auto-sync** when your Q2 connects (or ask first), notifications when it's
 done (with Eject and Verify Card), a menu bar item, and an option to open at
-login, offered after your first sync.
+login (in Settings, and suggested when you turn on auto-sync).
 
 ### 👋 Easy to start
 A **Connect Your Q2** page walks you through USB Storage mode, and music you

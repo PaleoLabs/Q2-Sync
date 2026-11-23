@@ -172,10 +172,13 @@ struct DeviceSettingsView: View {
                     })) {
                     ForEach(AutoSyncMode.allCases) { Text($0.title).tag($0) }
                 }
+                if connected.device.effectiveAutoSync != .off {
+                    OpenAtLoginPrompt()
+                }
             } header: {
                 Text("Auto-Sync")
             } footer: {
-                Text("Automatic syncs follow every safety rule. They never remove songs and never eject; if anything needs your review (the first sync, removals, songs gone from your library, a failed check), they stop, open the preview here, and notify you. Q2 Sync must be running, so turn on “Open at login” in Settings.")
+                Text("Automatic syncs follow every safety rule. They never remove songs and never eject; if anything needs your review (the first sync, removals, songs gone from your library, a failed check), they stop, open the preview here, and notify you. Q2 Sync must be running; it stays in the menu bar when its window is closed.")
             }
 
             Section {

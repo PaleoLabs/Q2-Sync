@@ -5,7 +5,8 @@
 //  PURPOSE
 //  The app's Settings window (Q2 Sync › Settings…, or ⌘,): show the menu
 //  bar item, and open Q2 Sync at login so auto-sync works without opening
-//  the app yourself.
+//  the app yourself. This toggle is the real control; the only other place
+//  that offers it is `OpenAtLoginPrompt`, under a Q2's Auto-Sync picker.
 //
 //  HOW IT FITS
 //  Declared as the `Settings` scene in `Q2SyncApp`. Per-card settings
@@ -31,7 +32,7 @@ struct AppSettingsView: View {
     @AppStorage(Q2SyncApp.showMenuBarKey) private var showMenuBarItem = true
 
     /// Whether Q2 Sync opens at login (read from macOS).
-    @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var opensAtLogin = LoginItem.isOn
 
     /// A problem changing the login item, if any.
     @State private var loginItemMessage: String?
@@ -64,13 +65,7 @@ struct AppSettingsView: View {
 
     /// Registers or unregisters the login item.
     private func setOpensAtLogin(_ enabled: Bool) {
-        do {
-            if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            loginItemMessage = SMAppService.mainApp.status == .requiresApproval
-                ? "Approve Q2 Sync in System Settings › General › Login Items." : nil
-        } catch {
-            loginItemMessage = "Couldn't change this: \(error.localizedDescription)"
-        }
-        opensAtLogin = SMAppService.mainApp.status == .enabled
+        loginItemMessage = LoginItem.set(enabled)
+        opensAtLogin = LoginItem.isOn
     }
 }

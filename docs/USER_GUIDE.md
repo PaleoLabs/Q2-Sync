@@ -343,9 +343,11 @@ open the preview in Q2 Sync, and notify you. When an automatic sync finishes,
 a notification has **Eject** and **Verify Card** buttons.
 
 For auto-sync to work, Q2 Sync must be running. It stays in the **menu bar**
-when you close its window. To start it automatically, click **Open at Login**
-when Q2 Sync offers it after your first sync, or open **Q2 Sync › Settings**
-and turn on **Open Q2 Sync at login**.
+when you close its window. To start it automatically, open **Q2 Sync ›
+Settings** and turn on **Open Q2 Sync at login**. While auto-sync is on and
+Q2 Sync doesn't open at login, the Q2's Settings tab also shows an **Open at
+Login** button under **When this Q2 connects**. Q2 Sync doesn't ask anywhere
+else.
 
 The **menu bar item** shows whether your Q2 is connected and lets you **Sync
 Now**, **Eject**, **Open Q2 Sync**, open **Settings** or **Quit**. You can hide
