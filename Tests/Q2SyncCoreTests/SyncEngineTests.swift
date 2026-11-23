@@ -243,6 +243,28 @@ struct SyncExecutorTests {
         return (plan, manifest)
     }
 
+    @Test("Songs copied after the last manifest save are adopted next time, not copied again")
+    func unsavedCopiesAdopted() async throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let mac = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: mac) }
+        let logs = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: logs) }
+        let tracks = [try track("A", "Alpha", try makeSource(mac, "a.mp3", bytes: 100)),
+                      try track("B", "Beta", try makeSource(mac, "b.mp3", bytes: 120), number: 2)]
+        let executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
+        let (plan, manifest) = try planOnCard(tracks, card: card)
+        _ = await executor.run(plan: plan, manifest: manifest, options: SyncOptions()) { _ in }
+
+        // As if the app had been killed before saving B: B's file is on the
+        // card, but the manifest doesn't know it.
+        var saved = try SyncManifest.load(from: card.fileSystem)
+        saved.entries["B"] = nil
+        try saved.save(to: card.fileSystem)
+
+        let (next, _) = try planOnCard(tracks, card: card)
+        #expect(next.copies.isEmpty)
+        #expect(next.adoptions.map(\.track.id) == ["B"])
+    }
+
     @Test("A full sync copies, verifies, records, then a repeat sync does nothing")
     func fullSync() async throws {
         let card = try TestCard(); defer { card.cleanUp() }
@@ -405,6 +427,14 @@ struct SyncSummaryTests {
         let summary = plan.summary(applyRemovals: false)
         #expect(summary.hasPrefix("This sync will add 1 song ("))
         #expect(summary.hasSuffix(" Everything else is already on the card."))
+    }
+
+    @Test("Work that copies nothing is still named, never \"already on the card\"")
+    func housekeeping() {
+        var plan = SyncPlan()
+        plan.forgottenEntries = ["X"]
+        #expect(!plan.isEmpty)
+        #expect(plan.summary(applyRemovals: false) == "This sync will forget 1 song no longer on the card.")
     }
 
     @Test("Removals are mentioned only when chosen")

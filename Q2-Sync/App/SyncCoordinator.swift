@@ -140,6 +140,7 @@ final class SyncCoordinator {
     func prepare(connected: ConnectedDevice, library: LibraryModel, devices: DeviceMonitor,
                  automatic: Bool = false) async {
         guard phase == .idle else { return }
+        devices.flushPendingSave() // The selection on disk matches what's synced.
         planningGeneration += 1
         let generation = planningGeneration
         options = SyncOptions()
@@ -255,8 +256,11 @@ final class SyncCoordinator {
                                   reimportAllPlaylists: Bool) async throws
         -> (SyncManifest, SyncPlan) {
         let manifest = try SyncManifest.load(from: fileSystem)
-        let cardFiles = CardScanner.scan(folder: profile.musicFolderName, on: fileSystem)
-        let playlistFiles = CardScanner.scan(folder: profile.playlistFolderName, on: fileSystem)
+        // The card is listed once (slow over the Q2's USB); the music and
+        // playlist folders are taken from that listing.
+        let wholeCard = CardScanner.scan(folder: "", on: fileSystem)
+        let cardFiles = CardScanner.files(in: profile.musicFolderName, from: wholeCard)
+        let playlistFiles = CardScanner.files(in: profile.playlistFolderName, from: wholeCard)
         let plan = SyncPlanner.plan(selection: selection, allSelectedIDs: allSelectedIDs, manifest: manifest,
                                     cardFiles: cardFiles, playlistFolderFiles: playlistFiles,
                                     libraryIDs: Set(snapshot.tracks.map(\.id)),
@@ -264,7 +268,6 @@ final class SyncCoordinator {
         var adjusted = plan
 
         // Card-only music anywhere on the card (reserved items excluded).
-        let wholeCard = CardScanner.scan(folder: "", on: fileSystem)
         var cardOnly = CardOnlyFinder.find(allCardFiles: wholeCard, manifest: manifest,
                                            orphanedEntries: plan.orphanedEntries,
                                            adoptedPaths: plan.adoptions.map(\.path), profile: profile)

@@ -45,10 +45,25 @@ struct ReservedItemRules: Hashable, Sendable {
     /// Hidden names the app itself owns and may write to (its state folder).
     let appOwnedHiddenNames: Set<String>
 
-    /// Lowercased copies, computed once for fast comparisons.
-    private var lowerRoot: Set<String> { Set(reservedRootNames.map { $0.lowercased() }) }
-    private var lowerAnywhere: Set<String> { Set(reservedAnywhereNames.map { $0.lowercased() }) }
-    private var lowerOwned: Set<String> { Set(appOwnedHiddenNames.map { $0.lowercased() }) }
+    /// Lowercased copies, made once in `init` (this is checked for every
+    /// file in a card scan; rebuilding them per check was ~30,000 sets
+    /// for a 10,000-song card).
+    private let lowerRoot: Set<String>
+    private let lowerAnywhere: Set<String>
+    private let lowerOwned: Set<String>
+    private let lowerFragments: [String]
+
+    init(reservedRootNames: Set<String>, reservedAnywhereNames: Set<String>,
+         reservedNameFragments: Set<String>, appOwnedHiddenNames: Set<String>) {
+        self.reservedRootNames = reservedRootNames
+        self.reservedAnywhereNames = reservedAnywhereNames
+        self.reservedNameFragments = reservedNameFragments
+        self.appOwnedHiddenNames = appOwnedHiddenNames
+        lowerRoot = Set(reservedRootNames.map { $0.lowercased() })
+        lowerAnywhere = Set(reservedAnywhereNames.map { $0.lowercased() })
+        lowerOwned = Set(appOwnedHiddenNames.map { $0.lowercased() })
+        lowerFragments = reservedNameFragments.map { $0.lowercased() }
+    }
 
     /// Checks whether a card path is reserved.
     ///
@@ -81,7 +96,7 @@ struct ReservedItemRules: Hashable, Sendable {
             if lowerAnywhere.contains(lower) { return true }
 
             // Rule 3: name fragments.
-            if reservedNameFragments.contains(where: { lower.contains($0.lowercased()) }) { return true }
+            if lowerFragments.contains(where: { lower.contains($0) }) { return true }
         }
         return false
     }

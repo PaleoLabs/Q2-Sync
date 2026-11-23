@@ -115,7 +115,9 @@ struct SyncManifest: Codable, Sendable, Equatable {
     mutating func save(to fileSystem: CardFileSystem) throws {
         updatedAt = .now
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        // Compact (no indentation): it's read only by Q2 Sync, and is
+        // rewritten during big syncs, so size matters.
+        encoder.outputFormatting = [.sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         try fileSystem.writeAtomically(try encoder.encode(self), to: Self.path(for: fileSystem.pathGuard.profile))
     }

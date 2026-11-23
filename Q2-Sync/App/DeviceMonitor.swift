@@ -173,6 +173,11 @@ final class DeviceMonitor {
             }
             observers.append(observer)
         }
+        // Save a selection change still waiting when the app quits.
+        observers.append(NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.flushPendingSave() }
+        })
         refresh()
     }
 
@@ -327,23 +332,50 @@ final class DeviceMonitor {
 
     /// Clears the connected device and releases sandbox access.
     private func disconnect() {
+        flushPendingSave()
         connected?.accessURL?.stopAccessingSecurityScopedResource()
         connected = nil
         cardManifest = nil
+        manifestReadGeneration += 1 // Drop a read still in flight.
     }
 
     /// Re-reads the card's manifest (read-only), e.g. after a sync.
+    ///
+    /// Read and decoded in the background: the manifest is several MB on a
+    /// big card, and reading it on the main thread over the Q2's USB froze
+    /// the window. Until it arrives, the previous value stays (or `nil`
+    /// on a new connection: the capacity bar shows the card as unknown).
+    /// A read that finishes after the card changed is dropped.
     func reloadManifest() {
-        guard let current = connected, let root = current.accessURL else { cardManifest = nil; return }
-        cardManifest = try? SyncManifest.load(cardRoot: root, profile: current.device.profile)
-        // Keep the Mac-side note in step. A manifest that couldn't be read
-        // leaves the old note alone rather than claiming the card is empty.
-        if let manifest = cardManifest {
-            let record = CardContentsRecord(volumeUUID: current.device.volumeUUID, manifest: manifest)
-            contentsStore.save(record)
-            cardContents[record.volumeUUID] = record
+        guard let current = connected, let root = current.accessURL else {
+            manifestReadGeneration += 1
+            cardManifest = nil
+            return
+        }
+        manifestReadGeneration += 1
+        let generation = manifestReadGeneration
+        let uuid = current.device.volumeUUID
+        let profile = current.device.profile
+        let contentsStore = contentsStore
+        Task { [weak self] in
+            let read = await Task.detached(priority: .userInitiated) { () -> (SyncManifest, CardContentsRecord)? in
+                guard let manifest = try? SyncManifest.load(cardRoot: root, profile: profile) else { return nil }
+                // Keep the Mac-side note in step. A manifest that couldn't be
+                // read leaves the old note alone rather than claiming the
+                // card is empty.
+                let record = CardContentsRecord(volumeUUID: uuid, manifest: manifest)
+                contentsStore.save(record)
+                return (manifest, record)
+            }.value
+            guard let self, generation == self.manifestReadGeneration,
+                  self.connected?.device.volumeUUID == uuid else { return }
+            self.cardManifest = read?.0
+            if let record = read?.1 { self.cardContents[record.volumeUUID] = record }
         }
     }
+
+    /// Counts manifest reads, so only the latest one is used.
+    @ObservationIgnored private var manifestReadGeneration = 0
 
     /// Updates free space and the manifest after the card's contents changed.
     func reloadCardInfo() {
@@ -466,9 +498,34 @@ final class DeviceMonitor {
     func setSelection(_ selection: SyncSelection) {
         guard var device = connected?.device, device.selection != selection else { return }
         device.selection = selection
+        connected?.device = device
+        // Saved to disk half a second after the last click, not on every
+        // click (each save rewrites every Q2's settings). `flushPendingSave`
+        // saves at once before a sync, on disconnect and when quitting.
+        pendingSelection = (device.volumeUUID, selection)
+        pendingSelectionSave?.cancel()
+        pendingSelectionSave = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            self?.flushPendingSave()
+        }
+    }
+
+    /// A selection change not saved to disk yet, and its timer.
+    @ObservationIgnored private var pendingSelection: (uuid: String, selection: SyncSelection)?
+    @ObservationIgnored private var pendingSelectionSave: Task<Void, Never>?
+
+    /// Saves a pending selection change now, if there is one. Merged into
+    /// the stored record, so other settings saved meanwhile aren't undone.
+    func flushPendingSave() {
+        pendingSelectionSave?.cancel()
+        pendingSelectionSave = nil
+        guard let pending = pendingSelection else { return }
+        pendingSelection = nil
+        guard var device = store.device(withUUID: pending.uuid) else { return }
+        device.selection = pending.selection
         do {
             try store.upsert(device)
-            connected?.device = device
         } catch {
             errorMessage = "Couldn't save your selection: \(error.localizedDescription)"
         }

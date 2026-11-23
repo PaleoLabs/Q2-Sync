@@ -33,6 +33,9 @@ struct DeviceMusicView: View {
     /// Controls the skipped-songs popover.
     @State private var showingSkipped = false
 
+    /// The last resolved selection and space numbers (see `MusicTabCache`).
+    @State private var cache = MusicTabCache()
+
     /// Runs syncs (from the environment, set up in `Q2SyncApp`).
     @Environment(SyncCoordinator.self) private var sync
 
@@ -73,7 +76,17 @@ struct DeviceMusicView: View {
 
     @ViewBuilder
     private func content(snapshot: LibrarySnapshot) -> some View {
-        let resolved = SelectionResolver.resolve(selection, in: snapshot)
+        // Redone only when the selection, library or card changed, not on
+        // every redraw (typing in the filter, switching sections…).
+        let key = MusicTabCache.Key(
+            selection: selection, libraryLoad: library.loadCount, trackCount: snapshot.tracks.count,
+            manifestSavedAt: devices.cardManifest?.updatedAt, manifestCount: devices.cardManifest?.entries.count,
+            totalBytes: connected.volume.totalCapacity ?? 0, freeBytes: connected.volume.availableCapacity ?? 0,
+            cardReadable: connected.accessURL != nil)
+        let (resolved, estimate) = cache.values(for: key) {
+            let resolved = SelectionResolver.resolve(selection, in: snapshot)
+            return (resolved, capacity(for: resolved))
+        }
 
         VStack(alignment: .leading, spacing: 0) {
             // The first step on a new Q2: nothing is chosen yet.
@@ -115,7 +128,7 @@ struct DeviceMusicView: View {
 
             Divider()
             // Finder-style bar: what the card holds and what this sync adds.
-            CapacityBarView(estimate: capacity(for: resolved))
+            CapacityBarView(estimate: estimate)
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
             summaryBar(resolved)
@@ -341,5 +354,37 @@ extension Set {
     /// code read naturally: `ids.toggle(id, on: isChecked)`.
     mutating func toggle(_ element: Element, on: Bool) {
         if on { insert(element) } else { remove(element) }
+    }
+}
+
+/// The Music tab's last resolved selection and capacity estimate. Working
+/// them out goes through every song in the library and on the card, so
+/// they're kept until something they depend on changes. A class held in
+/// `@State`: updating it doesn't redraw the view.
+final class MusicTabCache {
+
+    /// Everything the values depend on.
+    struct Key: Equatable {
+        var selection: SyncSelection
+        var libraryLoad: Int
+        var trackCount: Int
+        var manifestSavedAt: Date?
+        var manifestCount: Int?
+        var totalBytes: Int64
+        var freeBytes: Int64
+        var cardReadable: Bool
+    }
+
+    private var key: Key?
+    private var stored: (ResolvedSelection, CapacityEstimate)?
+
+    /// The kept values if `key` matches, else `make()`'s (then kept).
+    func values(for key: Key, _ make: () -> (ResolvedSelection, CapacityEstimate))
+        -> (ResolvedSelection, CapacityEstimate) {
+        if key == self.key, let stored { return stored }
+        let made = make()
+        self.key = key
+        stored = made
+        return made
     }
 }

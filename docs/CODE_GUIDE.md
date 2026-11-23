@@ -132,7 +132,7 @@ sequenceDiagram
     C->>E: SyncExecutor.run (background)
     E->>G: every write / move / delete
     G->>Card: approved changes only
-    E->>Card: manifest saved every 25 items + at end
+    E->>Card: manifest saved every 30 s + at end
     C->>UI: Result — offer Eject, show "update your Q2" steps
 ```
 
@@ -159,8 +159,9 @@ sequenceDiagram
    into tracks to sync, tracks to skip (cloud-only, DRM, missing) and
    playlists.
 6. **Read the card.** `SyncManifest.load` reads `.q2sync/manifest.json`;
-   `CardScanner.scan` lists `Music/` and `_explaylist_data/` (reserved items are
-   skipped). A damaged manifest stops the sync instead of guessing.
+   `CardScanner.scan` lists the whole card once (reserved items are skipped)
+   and `CardScanner.files(in:from:)` takes `Music/` and `_explaylist_data/`
+   from that listing. A damaged manifest stops the sync instead of guessing.
 7. **Plan.** `SyncPlanner.plan` diffs selection and card: add, update, move
    (rename), adopt (an identical file already there), remove (deselected songs
    Q2 Sync manages), orphaned (songs gone from the library), playlists.
@@ -192,8 +193,10 @@ sequenceDiagram
     card-only files to the Mac → card-only deletes (and moves, once their copy
     worked) → removals → adoptions
     → moves → copies → playlists. Every change goes through `CardFileSystem`,
-    which asks `PathGuard` first. The manifest is saved every 25 operations and
-    at the end; a log line is written for every change.
+    which asks `PathGuard` first. The manifest (compact JSON) is saved at most
+    every 30 seconds and always at the end, however the sync ends; after a
+    crash, songs copied since the last save are adopted by the next sync. A
+    log line is written for every change.
 13. **Finish.** The result sheet offers **Eject** (never automatic) and shows
     the firmware-specific "update the library on your Q2" steps. On problems,
     the card stays mounted and errors are listed.
@@ -305,7 +308,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `CoverImage.makeJPEG(from:maxPixels:)` | artwork bytes → baseline RGB JPEG ≤ 1000 px (what the Q2 decodes cheaply) | none |
 | `TimeRemainingEstimator.update(bytesCopied:totalBytes:at:)` / `describe` | progress samples → seconds left, "About 12 minutes remaining". Counts bytes for music; `forCovers()` counts covers for the album-cover step (`SyncProgress.isAddingCovers`, `coversDone`/`coversTotal`), which has its own bar | none |
 | `CardVerifier.verify(manifest:tracks:fileSystem:onProgress:)` / `repairPlan` | managed songs → byte-for-byte comparison with the Mac → `VerifyResult`; failed songs → a copies-only `SyncPlan` | none (reads only) |
-| `CardScanner.scan(folder:on:)` | card folder → files keyed by case-insensitive path (reserved items skipped) | none |
+| `CardScanner.scan(folder:on:)` / `files(in:from:)` | card folder → files keyed by case-insensitive path (reserved items skipped); `files(in:from:)` takes one top-level folder from a whole-card scan | none |
 | `SyncPlanner.plan(...)` | selection + manifest + card listing → `SyncPlan` | none |
 | `PlaylistWriter.plan` / `render` / `dropUnchangedWrites` | playlists → file paths and M3U bytes | none |
 | `CardOnlyFinder.find` / `markLibraryMatches`, `AudioTagReader.fillTags` | card listing → `[CardOnlyItem]` | reads tags only |
@@ -557,3 +560,23 @@ On the card:
 | Auto-sync doesn't start | Q2 Sync must be running (menu bar), the Q2's setting must be **Ask** or **Sync Automatically**, and notifications allowed. |
 | Firmware check fails | Needs internet; GitHub rate-limits anonymous requests (60/hour). Try later. |
 | Tests fail on a fresh clone | Run `swift test` from the repository root (where `Package.swift` is). |
+
+## Performance notes
+
+- **Library groupings** (artists, albums, genres, playlists) and the
+  library's song order are worked out once per `LibrarySnapshot`
+  (`memoized`), off the main thread right after a read
+  (`SelectionResolver.prepare`).
+- **Music tab:** `MusicTabCache` keeps the resolved selection and the
+  capacity estimate until the selection, library or card changes; the
+  ticked set is built once per redraw.
+- **Selection saves** are debounced (0.5 s after the last click);
+  `DeviceMonitor.flushPendingSave()` saves at once before a sync, on
+  disconnect and when the app quits.
+- **The card's manifest** is read in the background (`reloadManifest`),
+  and a read that finishes after the card changed is dropped.
+- **Card scans:** one whole-card listing per plan; `ReservedItemRules`
+  keeps its lowercased name sets from `init`, as it's checked per file.
+- **Sync:** the manifest is saved every 30 s (not every 25 songs), and each
+  album cover is made inside its own autorelease pool.
+

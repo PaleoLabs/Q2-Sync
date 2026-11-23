@@ -123,8 +123,8 @@ struct SyncExecutor: Sendable {
     /// Where logs go (tests pass a temp folder).
     var logsDirectory: URL = SyncLog.logsDirectory
 
-    /// Save the manifest after this many operations.
-    static let manifestSaveInterval = 25
+    /// Save the manifest at most this often during a sync.
+    static let manifestSaveInterval: Duration = .seconds(30)
 
     /// Applies a plan.
     ///
@@ -179,12 +179,18 @@ struct SyncExecutor: Sendable {
                 onProgress(progress)
             }
         }
-        /// Marks one operation done and saves the manifest periodically.
+        /// Marks one operation done and saves the manifest every 30 seconds.
+        /// (Every 25 songs rewrote a multi-megabyte manifest hundreds of
+        /// times on a big sync.) It's always saved at the end too, however
+        /// the sync ends; after a crash or unplugging, the next sync adopts
+        /// songs copied since the last save instead of copying them again.
+        var lastManifestSave = clock.now
         func finishOperation() throws {
             progress.completedOperations += 1
             publish(force: true)
-            if progress.completedOperations % Self.manifestSaveInterval == 0 {
+            if clock.now - lastManifestSave >= Self.manifestSaveInterval {
                 try manifest.save(to: fileSystem)
+                lastManifestSave = clock.now
             }
         }
 

@@ -75,4 +75,17 @@ enum CardScanner {
         }
         return result
     }
+
+    /// The files under one top-level folder, taken from a whole-card scan
+    /// (so the card is listed once, not once per folder). Gives exactly
+    /// what `scan(folder:on:)` would: same reserved rules, same keys.
+    ///
+    /// - Parameters:
+    ///   - folder: A top-level folder, e.g. `"Music"` (case-insensitive,
+    ///     as on FAT).
+    ///   - allFiles: The result of `scan(folder: "", on:)`.
+    static func files(in folder: CardPath, from allFiles: [String: CardFile]) -> [String: CardFile] {
+        let prefix = CardLayout.caseKey(folder) + "/"
+        return allFiles.filter { $0.key.hasPrefix(prefix) }
+    }
 }

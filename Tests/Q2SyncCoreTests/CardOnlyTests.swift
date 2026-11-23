@@ -25,6 +25,20 @@ func putOnCard(_ card: TestCard, _ path: String, bytes: Int = 100) throws {
 @Suite("Card-only finder")
 struct CardOnlyFinderTests {
 
+    @Test("Folders taken from one whole-card scan match scanning each folder")
+    func oneScan() throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        for path in ["Music/A/B/1.mp3", "Music/A/B/._1.mp3", "Music/Live/database.ignore", "music2/x.mp3",
+                     "Old Rips/x.mp3", "_explaylist_data/Mix.m3u", ".q2sync/manifest.json", "Podcasts/ep.mp3"] {
+            try putOnCard(card, path)
+        }
+        let whole = CardScanner.scan(folder: "", on: card.fileSystem)
+        for folder in ["Music", "_explaylist_data"] {
+            #expect(CardScanner.files(in: folder, from: whole) == CardScanner.scan(folder: folder, on: card.fileSystem))
+        }
+        #expect(CardScanner.files(in: "Music", from: whole).keys.sorted() == ["music/a/b/1.mp3"])
+    }
+
     @Test("Finds unmanaged audio anywhere except reserved items, the app folder and playlists")
     func finds() throws {
         let card = try TestCard(); defer { card.cleanUp() }
