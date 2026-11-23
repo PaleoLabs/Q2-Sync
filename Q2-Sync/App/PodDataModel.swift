@@ -31,6 +31,9 @@ final class PodDataModel {
     /// The backup being restored (drives the restore sheet).
     var restoring: PodDataBackupInfo?
 
+    /// Where backups go (default ~/Downloads/Q2 Sync Backups).
+    let backupFolder = BackupFolderSetting()
+
     private let devices: DeviceMonitor
 
     init(devices: DeviceMonitor) {
@@ -40,7 +43,20 @@ final class PodDataModel {
     /// Re-reads what's on the card and which backups exist.
     func refresh() {
         filesOnCard = devices.connected?.accessURL.map { PodDataBackup.filesOnCard(cardRoot: $0) } ?? []
-        backups = PodDataBackup.existingBackups()
+        backups = backupFolder.folder.map { PodDataBackup.existingBackups(in: $0) } ?? []
+    }
+
+    /// Lets the user choose another backup folder.
+    func chooseBackupFolder() {
+        let cards = devices.connected.map { [$0.volume.url] } ?? []
+        if let message = backupFolder.choose(refusingCards: cards) { status = message }
+        refresh()
+    }
+
+    /// Goes back to ~/Downloads/Q2 Sync Backups.
+    func useDefaultBackupFolder() {
+        backupFolder.useDefault()
+        refresh()
     }
 
     /// Backups of the connected card (matched by its unique ID).
@@ -49,16 +65,21 @@ final class PodDataModel {
         return backups.filter { $0.volumeUUID == uuid }
     }
 
-    /// Copies the card's Q2 Pod data to ~/Downloads/Q2 Sync Backups.
+    /// Copies the card's Q2 Pod data into the backup folder.
     func backUp() {
         guard !isBusy, let connected = devices.connected, let root = connected.accessURL else { return }
+        guard let folder = backupFolder.folder else {
+            status = backupFolder.problem
+            return
+        }
         isBusy = true
         defer { isBusy = false }
         do {
             let info = try PodDataBackup.backUp(cardRoot: root, deviceName: connected.device.name,
                                                 volumeUUID: connected.device.volumeUUID,
-                                                protectedFolders: [PathGuard.defaultHomeMusicFolder])
-            status = "Backed up \(info.files.count) files to Downloads › Q2 Sync Backups › \(info.folder?.lastPathComponent ?? "")."
+                                                to: folder,
+                                                protectedFolders: [PathGuard.defaultHomeMusicFolder, root])
+            status = "Backed up \(info.files.count) files to \(backupFolder.displayName) › \(info.folder?.lastPathComponent ?? "")."
         } catch {
             status = error.localizedDescription
         }

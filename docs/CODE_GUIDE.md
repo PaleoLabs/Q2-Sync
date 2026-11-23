@@ -273,8 +273,10 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 - **`ZipExtractor.extract(fileNamed:from:to:)`** · takes one file out of a
   zip (stored or deflate), checking size and CRC-32.
 - **`PodDataBackup`** · backs up Q2 Pod's data on the card (`items`: ratings,
-  scrobbler log, EQ/, …) to `~/Downloads/Q2 Sync Backups`, reads backups,
-  and lists them. Restore goes through `CardFileSystem.restorePodData`,
+  scrobbler log, EQ/, …) to a backup folder (default
+  `~/Downloads/Q2 Sync Backups`; `BackupFolderSetting` in App keeps a chosen
+  one as a security-scoped bookmark, refusing ~/Music and the card), reads
+  backups, and lists them. Restore goes through `CardFileSystem.restorePodData`,
   approved by `PathGuard.checkPodDataPath` (only those paths).
 
 ### Sync engine (`Core/SyncEngine`)
@@ -400,9 +402,9 @@ Defence in depth: several independent layers, each enough on its own.
 | --- | --- |
 | `app-sandbox` | Turns the sandbox on. |
 | `assets.music.read-only` | **Read-only** access to `~/Music` for ITLibrary and copying. There is deliberately no read-write variant. |
-| `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark. |
+| `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
-| `files.downloads.read-write` | "Copy to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups`. |
+| `files.downloads.read-write` | "Copy to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups` (the default backup folder). |
 | `network.client` | The optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
 
 ### Layer 2 — The single PathGuard
@@ -509,7 +511,7 @@ Paths on the Mac are inside the app's sandbox container,
 | Sync logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
 | Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarItem`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |
-| Q2 Pod data backups | `~/Downloads/Q2 Sync Backups/<card> <date>/` with `backup.json` and `About this backup.txt` |
+| Q2 Pod data backups | `<backup folder>/<card> <date>/` (default `~/Downloads/Q2 Sync Backups`; a chosen folder's bookmark is `podBackupsFolderBookmark` in UserDefaults) with `backup.json` and `About this backup.txt` |
 | Firmware downloads | a temporary folder, deleted after copying to the card |
 | Diagnostics | Console.app, subsystem `io.github.q2sync.Q2Sync` (counts only, no song names or paths) |
 

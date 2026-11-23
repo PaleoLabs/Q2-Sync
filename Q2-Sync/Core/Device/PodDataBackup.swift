@@ -23,8 +23,9 @@
 //      .rockbox/config.cfg       Rockbox settings
 //
 //  SAFETY
-//  • Backup only READS the card and writes only inside
-//    ~/Downloads/Q2 Sync Backups (never ~/Music).
+//  • Backup only READS the card and writes only inside the backup folder:
+//    ~/Downloads/Q2 Sync Backups unless the user chose another
+//    (`BackupFolderSetting`, App), never ~/Music or the card.
 //  • Restore writes only the paths above, through
 //    `PathGuard.checkPodDataPath`, and only those you tick.
 //
@@ -109,8 +110,8 @@ enum PodDataBackup {
     /// The most a backup may hold (the real data is a few megabytes).
     static let maximumBytes: UInt64 = 200 * 1024 * 1024
 
-    /// Where backups go: ~/Downloads/Q2 Sync Backups (the real Downloads,
-    /// not the sandbox container's).
+    /// The default backup folder: ~/Downloads/Q2 Sync Backups (the real
+    /// Downloads, not the sandbox container's). The user may choose another.
     static var backupsFolder: URL {
         PathGuard.realHomeDirectory.appending(path: "Downloads/Q2 Sync Backups", directoryHint: .isDirectory)
     }

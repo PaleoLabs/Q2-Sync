@@ -187,6 +187,26 @@ struct PodDataSection: View {
                 Text("On this card: " + items.map(\.label).joined(separator: ", ") + ".")
                     .fixedSize(horizontal: false, vertical: true)
             }
+            LabeledContent("Backup folder") {
+                HStack {
+                    Text(model.backupFolder.displayName)
+                        .foregroundStyle(model.backupFolder.folder == nil ? .orange : .secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(model.backupFolder.folder?.path ?? "")
+                    Button("Change…") { model.chooseBackupFolder() }
+                        .disabled(model.isBusy)
+                    if model.backupFolder.isCustom {
+                        Button("Use Default") { model.useDefaultBackupFolder() }
+                            .disabled(model.isBusy)
+                            .help("Back up to Downloads › Q2 Sync Backups")
+                    }
+                }
+            }
+            if let problem = model.backupFolder.problem {
+                Label(problem, systemImage: "exclamationmark.triangle.fill")
+                    .font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+            }
             if let latest = model.backupsOfThisCard.first {
                 LabeledContent("Last backup", value: latest.created.formatted(date: .abbreviated, time: .shortened))
             }
@@ -195,20 +215,22 @@ struct PodDataSection: View {
             }
             HStack {
                 Button("Back Up Now") { model.backUp() }
-                    .disabled(model.filesOnCard.isEmpty || model.isBusy || isBlocked || connected.accessURL == nil)
+                    .disabled(model.filesOnCard.isEmpty || model.isBusy || isBlocked || connected.accessURL == nil
+                              || model.backupFolder.folder == nil)
                 Button("Restore…") { chooseBackup() }
                     .disabled(model.isBusy || isBlocked || connected.accessURL == nil)
                 Spacer()
                 Button("Show Backups") {
-                    let folder = PodDataBackup.backupsFolder
+                    guard let folder = model.backupFolder.folder else { return }
                     try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                     NSWorkspace.shared.open(folder)
                 }
+                .disabled(model.backupFolder.folder == nil)
             }
         } header: {
             Text("Q2 Pod Data")
         } footer: {
-            Text("Q2 Pod keeps your song ratings, listens waiting to be scrobbled, scrobbling and radio settings, EQ presets, custom App Store sources and Rockbox settings on the card. Back them up to Downloads › Q2 Sync Backups in case the card is lost or reformatted. The Q2's own settings are stored inside the Q2, where a Mac can't reach them.")
+            Text("Q2 Pod keeps your song ratings, listens waiting to be scrobbled, scrobbling and radio settings, EQ presets, custom App Store sources and Rockbox settings on the card. Back them up to a folder on your Mac (Downloads › Q2 Sync Backups unless you change it; the same folder for every Q2) in case the card is lost or reformatted. The Q2's own settings are stored inside the Q2, where a Mac can't reach them.")
         }
         .onAppear { model.refresh() }
     }
@@ -221,7 +243,7 @@ struct PodDataSection: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        let folder = PodDataBackup.backupsFolder
+        let folder = model.backupFolder.folder ?? PodDataBackup.backupsFolder
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         panel.directoryURL = model.backupsOfThisCard.first?.folder ?? folder
         guard panel.runModal() == .OK, let url = panel.url else { return }

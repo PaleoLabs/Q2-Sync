@@ -226,7 +226,11 @@ struct DeviceSettingsView: View {
                            isBlocked: autoSync.isCardInUse(except: .podData))
 
             Section("After Each Sync") {
-                ForEach(Array(connected.device.profile.libraryUpdateSteps.enumerated()), id: \.offset) { index, step in
+                // The library steps, then (last) the cover rebuild, as the
+                // Sync Complete window shows when covers changed.
+                let profile = connected.device.profile
+                ForEach(Array((profile.libraryUpdateSteps + profile.coverRefreshSteps).enumerated()),
+                        id: \.offset) { index, step in
                     Label(step, systemImage: "\(index + 1).circle")
                 }
             }

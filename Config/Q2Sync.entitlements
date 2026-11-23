@@ -37,8 +37,9 @@
     • files.downloads.read-write
         "Copy to Mac" for music that's only on the card writes into
         ~/Downloads/Q2 Recovered, and Q2 Pod data backups go into
-        ~/Downloads/Q2 Sync Backups (never into ~/Music). Each refuses any
-        path outside its folder.
+        ~/Downloads/Q2 Sync Backups by default (never into ~/Music). A
+        different backup folder you choose uses files.user-selected instead.
+        Each refuses any path outside its folder.
 
     • network.client
         Outgoing connections only, for firmware: the optional check of

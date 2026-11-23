@@ -225,7 +225,8 @@ The preview lists them under **Album Covers**.
 
 **Refresh Cover Flow after covers change (Q2 Pod).** Cover Flow keeps its
 own cache of covers, so after a sync that adds or removes covers (for
-example after turning the setting on or off), Q2 Sync reminds you to:
+example after turning the setting on or off), Q2 Sync reminds you to (the
+Q2's Settings tab also lists these last under **After Each Sync**):
 
 1. Update the library as usual (Library → Update Library → Scan music now).
    Refreshing Cover Flow doesn't rescan your music.
@@ -434,8 +435,12 @@ with the song on your Mac. Nothing changes while it checks.
 Q2 Pod keeps some of your data on the card: song ratings, listens waiting to
 be scrobbled, scrobbling and radio settings, EQ presets, custom App Store
 sources and Rockbox settings. On your Q2's **Settings** tab, under **Q2 Pod
-Data**, click **Back Up Now** to copy them to **Downloads › Q2 Sync
-Backups**. To put them on a card (for example a new one), click
+Data**, click **Back Up Now** to copy them to the backup folder:
+**Downloads › Q2 Sync Backups** unless you click **Change…** next to
+**Backup folder** and choose another (one folder for all your Q2s; not your
+Music folder or the card). **Use Default** goes back to Downloads. If the
+folder you chose is on a drive that isn't connected, Back Up Now waits until
+it is (or until you choose another). To put them on a card (for example a new one), click
 **Restore…**, choose a backup and tick what to restore, then restart the Q2.
 
 - Restoring **Listens not yet scrobbled** is off by default: those listens
