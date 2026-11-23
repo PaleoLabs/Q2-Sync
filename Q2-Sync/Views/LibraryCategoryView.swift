@@ -92,18 +92,25 @@ struct LibraryCategoryView: View {
     @State private var selectedSongs: [Track] = []
     private static let listWidthRange: ClosedRange<Double> = 360...560
 
-    /// What the marks depend on; a change rebuilds them.
+    /// What the marks depend on; a change rebuilds them. Compared on every
+    /// redraw, so it holds the card record's identity (which card, when it
+    /// was read, how many songs), not its ~10,000 song IDs: comparing those
+    /// on the main thread each redraw made scrolling big lists stutter.
     private struct MarksKey: Equatable {
         var loadCount: Int
         var category: BrowseCategory
-        var record: CardContentsRecord?
+        var recordCard: String?
+        var recordCheckedAt: Date?
+        var recordSongCount: Int?
         var selection: SyncSelection?
     }
 
     private var marksKey: MarksKey {
         let reference = devices.referenceContents
         return MarksKey(loadCount: library.loadCount, category: category,
-                        record: reference?.record, selection: reference?.device.effectiveSelection)
+                        recordCard: reference?.record.volumeUUID, recordCheckedAt: reference?.record.checkedAt,
+                        recordSongCount: reference?.record.trackIDs.count,
+                        selection: reference?.device.effectiveSelection)
     }
 
     var body: some View {
@@ -111,47 +118,12 @@ struct LibraryCategoryView: View {
             if let snapshot = library.snapshot {
                 let groups = category.groups(in: snapshot)
                 HStack(spacing: 0) {
-                    // A table, not a list, so the marks and counts sit in
-                    // aligned columns under headers. The marks travel inside
-                    // each row value: `Table` only redraws a row when its
-                    // value changes, not when other state the cell reads does.
+                    // An AppKit table (see `GroupTableView`), so the marks and
+                    // counts sit in aligned columns and long lists scroll
+                    // without building a SwiftUI view per cell.
                     let hasQ2 = marks?.hasQ2 ?? false
                     let rows = groups.map { GroupRow(group: $0, marks: groupMarks[$0.id], hasQ2: hasQ2) }
-                    Table(rows, selection: $groupID) {
-                        TableColumn(category.singularTitle) { row in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(row.group.title)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                if let subtitle = row.group.subtitle {
-                                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .help(row.group.title)
-                        }
-                        TableColumn("On Q2") { row in
-                            // Two fixed slots: can't-copy lock, then Q2 state.
-                            HStack(spacing: 4) {
-                                Group {
-                                    if let counts = row.marks { GroupSyncIcon(marks: counts) }
-                                }
-                                .frame(width: 16)
-                                Group {
-                                    if let counts = row.marks, row.hasQ2 { GroupQ2Icon(marks: counts) }
-                                }
-                                .frame(width: 16)
-                            }
-                        }
-                        .width(48)
-                        TableColumn("Songs") { row in
-                            Text((row.marks?.total ?? row.group.trackIDs.count).formatted())
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                        .width(44)
-                    }
+                    GroupTableView(rows: rows, title: category.singularTitle, selection: $groupID)
                     .frame(width: listWidth.clamped(to: Self.listWidthRange))
 
                     splitDivider
@@ -194,7 +166,11 @@ struct LibraryCategoryView: View {
         }
         .onChange(of: category) { groupID = nil }
         .onChange(of: groupID) { selectedSongs = [] }
-        .task(id: marksKey) { await rebuildMarks(for: marksKey) }
+        .task(id: marksKey) {
+            let reference = devices.referenceContents
+            await rebuildMarks(category: category, record: reference?.record,
+                               selection: reference?.device.effectiveSelection)
+        }
     }
 
     /// A thin line with a wider grab area that resizes the group list.
@@ -233,15 +209,15 @@ struct LibraryCategoryView: View {
 
     /// Rebuilds the marks off the main thread (resolving the selection
     /// walks the whole library), then publishes them.
-    private func rebuildMarks(for key: MarksKey) async {
+    private func rebuildMarks(category: BrowseCategory, record: CardContentsRecord?,
+                              selection: SyncSelection?) async {
         guard let snapshot = library.snapshot else {
             marks = nil
             groupMarks = [:]
             return
         }
-        let category = key.category
         let built = await Task.detached(priority: .userInitiated) {
-            let marks = LibraryMarks(snapshot: snapshot, record: key.record, selection: key.selection)
+            let marks = LibraryMarks(snapshot: snapshot, record: record, selection: selection)
             var counts: [String: GroupMarks] = [:]
             for group in category.groups(in: snapshot) {
                 counts[group.id] = marks.marks(for: group.trackIDs)
@@ -251,63 +227,6 @@ struct LibraryCategoryView: View {
         guard !Task.isCancelled else { return }
         marks = built.0
         groupMarks = built.1
-    }
-}
-
-/// One row of the group table: the group plus its marks, so a change in
-/// the marks changes the row value and the table redraws it.
-struct GroupRow: Identifiable, Equatable {
-    let group: TrackGroup
-    let marks: GroupMarks?
-    let hasQ2: Bool
-    var id: String { group.id }
-}
-
-/// The lock slot: some (outline) or all (filled) songs can't be copied.
-/// Blank when every song can be. Details in the tooltip.
-struct GroupSyncIcon: View {
-
-    let marks: GroupMarks
-
-    var body: some View {
-        if marks.syncable == 0 {
-            Image(systemName: "lock.fill")
-                .foregroundStyle(.orange)
-                .help("None of these songs can be copied. Select it to see why for each song.")
-        } else if marks.syncable < marks.total {
-            Image(systemName: "lock")
-                .foregroundStyle(.orange)
-                .help("\(marks.syncable) of \(marks.total) songs can be copied. Select it to see why the others can't.")
-        }
-    }
-}
-
-/// The Q2 column: on the Q2 (check), partly (half circle), coming at the
-/// next sync (blue arrow), or blank when not chosen. Quiet on purpose: the
-/// usual case is a grey check.
-struct GroupQ2Icon: View {
-
-    let marks: GroupMarks
-
-    private static let asOf = " (from Q2 Sync's record of the card when it was last connected)"
-
-    var body: some View {
-        if marks.syncable == 0 && marks.onQ2 == 0 {
-            EmptyView()
-        } else if marks.onQ2 >= marks.syncable {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.secondary)
-                .help("On your Q2" + Self.asOf + ".")
-        } else if marks.onQ2 > 0 {
-            let next = marks.nextSync > 0 ? "; \(marks.nextSync) more at the next sync" : ""
-            Image(systemName: "circle.lefthalf.filled")
-                .foregroundStyle(.secondary)
-                .help("\(marks.onQ2) of \(marks.syncable) on your Q2\(next)" + Self.asOf + ".")
-        } else if marks.nextSync > 0 {
-            Image(systemName: "arrow.down.circle.fill")
-                .foregroundStyle(.blue)
-                .help("\(marks.nextSync) chosen for your Q2 but not copied yet. They go over at the next sync.")
-        }
     }
 }
 

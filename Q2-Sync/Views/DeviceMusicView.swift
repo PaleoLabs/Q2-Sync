@@ -175,24 +175,11 @@ struct DeviceMusicView: View {
         if rows.isEmpty {
             ContentUnavailableView.search(text: filterText)
         } else {
-            List(rows) { row in
-                Toggle(isOn: binding(for: row.id, ticked: ticked)) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(row.title)
-                            if let subtitle = row.subtitle {
-                                Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        Text(row.trackIDs.count, format: .number)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.checkbox)
+            // AppKit, not a SwiftUI `List`: plain reused rows however long
+            // the list (see `ChecklistTableView`).
+            ChecklistTableView(rows: rows, ticked: ticked) { rowID, isOn in
+                setTicked(rowID, isOn, in: section)
             }
-            .listStyle(.inset(alternatesRowBackgrounds: true))
         }
     }
 
@@ -230,28 +217,22 @@ struct DeviceMusicView: View {
         }
     }
 
-    /// A checkbox binding: reads whether `rowID` is ticked, and saves
-    /// the change through `DeviceMonitor` when clicked.
+    /// Ticks or unticks a row and saves the selection.
     ///
     /// - Parameters:
-    ///   - rowID: The row's group ID.
-    ///   - ticked: The section's ticked IDs, from `tickedIDs(for:)`.
-    private func binding(for rowID: String, ticked: Set<String>) -> Binding<Bool> {
-        Binding(
-            get: { ticked.contains(rowID) },
-            set: { isOn in
-                let category = section
-                update { selection in
-                    switch category {
-                    case .artists:   selection.artistIDs.toggle(rowID, on: isOn)
-                    case .albums:    selection.albumIDs.toggle(rowID, on: isOn)
-                    case .genres:    selection.genreIDs.toggle(rowID, on: isOn)
-                    case .playlists:
-                        selection.playlistIDs.toggle(String(rowID.dropFirst("playlist:".count)), on: isOn)
-                    }
-                }
+    ///   - rowID: The row's group ID (`"playlist:<id>"` for playlists).
+    ///   - isOn: The new state.
+    ///   - category: The section the row is in.
+    private func setTicked(_ rowID: String, _ isOn: Bool, in category: BrowseCategory) {
+        update { selection in
+            switch category {
+            case .artists:   selection.artistIDs.toggle(rowID, on: isOn)
+            case .albums:    selection.albumIDs.toggle(rowID, on: isOn)
+            case .genres:    selection.genreIDs.toggle(rowID, on: isOn)
+            case .playlists:
+                selection.playlistIDs.toggle(String(rowID.dropFirst("playlist:".count)), on: isOn)
             }
-        )
+        }
     }
 
     /// `true` if the card holds songs Q2 Sync put there. Then an empty

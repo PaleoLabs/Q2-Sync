@@ -348,12 +348,17 @@ preview's album rows (by folder and album tag).
 ### Views (`Q2-Sync/Views`)
 
 `RootView` (sidebar + detail, sheets), `DeviceView` (header, Music/Settings tabs,
-`DeviceSettingsView`), `DeviceMusicView` (selection checkboxes, summary bar),
+`DeviceSettingsView`), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
+table like the browser's; summary bar),
 `CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NewDeviceSheet`, `FirstLaunchNoticeView`,
-`FirmwareUpdateSection`, `LibraryCategoryView` + `TrackTableView` (library
-browser with "can sync" and "On Q2 / next sync" marks, compared with the
-connected Q2 or the one read most recently), `ConnectQ2View` (the sidebar's
+`FirmwareUpdateSection`,
+`LibraryCategoryView` + `GroupTableView` +
+`TrackTableView` (library browser with "can sync" and "On Q2 / next sync"
+marks, compared with the connected Q2 or the one read most recently; the
+two lists are AppKit `NSTableView`s with plain reused cells, built by
+`AppKitTableSupport`, because SwiftUI `Table` hosted a view per cell and
+removing thousands of them hung the app), `ConnectQ2View` (the sidebar's
 "Connect Your Q2" page while no Q2 is connected; selected on first launch),
 `OpenAtLoginPrompt` (one line under a Q2's Auto-Sync picker while auto-sync
 is on and the app doesn't open at login; `LoginItem` wraps `SMAppService`
@@ -575,6 +580,14 @@ On the card:
   disconnect and when the app quits.
 - **The card's manifest** is read in the background (`reloadManifest`),
   and a read that finishes after the card changed is dropped.
+- **Library browser and Music tab:** the lists are `NSTableView`s with
+  plain cells (`GroupTableView`, `TrackTableView`, and the Music tab's
+  `ChecklistTableView`): a screenful of reused cells however
+  long the list, instead of a hosted SwiftUI view per cell (a sample of a
+  5-second hang showed all of it tearing those down). Data changes redraw
+  rows in place; only a different list reloads. The marks' task key holds
+  the card record's identity, not its song IDs, and `GroupRow` compares
+  only what it shows.
 - **Card scans:** one whole-card listing per plan; `ReservedItemRules`
   keeps its lowercased name sets from `init`, as it's checked per file.
 - **Sync:** the manifest is saved every 30 s (not every 25 songs), and each

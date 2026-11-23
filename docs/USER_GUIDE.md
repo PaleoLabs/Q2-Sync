@@ -166,7 +166,9 @@ unplugged:
   open **Song Info**).
 - An artist's songs are listed album by album (albums in A–Z order, as on
   the Q2), each album in track order. A genre's songs are listed by album
-  artist, then album, then track. Click a column header to sort another way.
+  artist, then album, then track. Click a column header to sort another way;
+  click **#** to go back to the album or playlist order. Drag column headers
+  to reorder them or their edges to resize them; Q2 Sync remembers.
 - Drag the divider between the list and the songs to resize the list; Q2
   Sync remembers the width.
 - Click **Song Info** in the toolbar (or right-click a song and choose
