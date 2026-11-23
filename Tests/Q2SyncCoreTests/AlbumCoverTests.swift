@@ -259,6 +259,16 @@ struct TimeRemainingTests {
         #expect(remaining.map { abs($0 - 79) < 1 } == true)
     }
 
+    @Test("An out-of-order (smaller) sample is ignored instead of crashing")
+    func outOfOrder() {
+        var estimator = TimeRemainingEstimator()
+        let total: UInt64 = 1_000_000_000
+        _ = estimator.update(bytesCopied: 50_000_000, totalBytes: total, at: 100)
+        _ = estimator.update(bytesCopied: 80_000_000, totalBytes: total, at: 105)
+        #expect(estimator.update(bytesCopied: 20_000_000, totalBytes: total, at: 106) == nil)
+        #expect(estimator.update(bytesCopied: 250_000_000, totalBytes: total, at: 120) != nil)
+    }
+
     @Test("No copying, no estimate")
     func nothingToCopy() {
         var estimator = TimeRemainingEstimator()

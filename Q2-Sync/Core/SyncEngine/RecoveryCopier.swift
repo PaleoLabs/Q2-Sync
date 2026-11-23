@@ -97,10 +97,13 @@ struct RecoveryCopier: Sendable {
                 throw CocoaError(.fileWriteUnknown)
             }
             let output = try FileHandle(forWritingTo: temp)
-            while let chunk = try input.read(upToCount: CardFileSystem.chunkSize), !chunk.isEmpty {
+            // A pool per chunk, so read buffers are freed as we go.
+            while try autoreleasepool(invoking: {
+                guard let chunk = try input.read(upToCount: CardFileSystem.chunkSize), !chunk.isEmpty else { return false }
                 try Task.checkCancellation()
                 try output.write(contentsOf: chunk)
-            }
+                return true
+            }) {}
             try output.synchronize()
             try output.close()
 
@@ -173,9 +176,11 @@ struct RecoveryCopier: Sendable {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hasher = SHA256()
-        while let chunk = try handle.read(upToCount: CardFileSystem.chunkSize), !chunk.isEmpty {
+        while try autoreleasepool(invoking: {
+            guard let chunk = try handle.read(upToCount: CardFileSystem.chunkSize), !chunk.isEmpty else { return false }
             hasher.update(data: chunk)
-        }
+            return true
+        }) {}
         return hasher.finalize()
     }
 }

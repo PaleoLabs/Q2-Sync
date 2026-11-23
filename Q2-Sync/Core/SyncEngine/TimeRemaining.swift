@@ -44,6 +44,10 @@ struct TimeRemainingEstimator: Sendable {
         guard totalBytes > 0 else { return nil }
         guard bytesCopied > 0 else { return nil }
         if start == nil { start = (time, bytesCopied); samples = [(time, bytesCopied)]; return nil }
+        // Progress hops to the main thread in separate tasks, which can
+        // arrive out of order: ignore a sample that goes backwards (the
+        // unsigned subtractions below would otherwise crash).
+        if let last = samples.last, bytesCopied < last.bytes || time < last.time { return nil }
         samples.append((time, bytesCopied))
         samples.removeAll { time - $0.time > Self.windowSeconds }
 

@@ -141,11 +141,19 @@ struct CardFileSystem: Sendable {
             let output = try FileHandle(forWritingTo: tempURL)
             var written: UInt64 = 0
             do {
-                while let chunk = try input.read(upToCount: Self.chunkSize), !chunk.isEmpty {
-                    try Task.checkCancellation()
-                    try output.write(contentsOf: chunk)
-                    written += UInt64(chunk.count)
-                    onProgress(chunk.count)
+                // A pool per chunk: FileHandle's reads return autoreleased
+                // buffers, which would otherwise pile up for the whole sync
+                // (gigabytes) until macOS kills the app.
+                while true {
+                    let count: Int = try autoreleasepool {
+                        guard let chunk = try input.read(upToCount: Self.chunkSize), !chunk.isEmpty else { return 0 }
+                        try Task.checkCancellation()
+                        try output.write(contentsOf: chunk)
+                        return chunk.count
+                    }
+                    guard count > 0 else { break }
+                    written += UInt64(count)
+                    onProgress(count)
                 }
                 // Step 3: make sure the bytes are on the card.
                 try output.synchronize()

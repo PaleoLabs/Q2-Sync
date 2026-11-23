@@ -151,14 +151,25 @@ enum CardVerifier {
         _ = fcntl(cardHandle.fileDescriptor, F_NOCACHE, 1)
         guard let macHandle = try? FileHandle(forReadingFrom: mac) else { return nil } // Mac side unreadable: can't judge
         defer { try? macHandle.close() }
+        // One step per chunk pair: keep going, or stop with an answer.
+        enum Step { case next(Int), done(VerifyProblem.Kind?) }
         while true {
             if Task.isCancelled { return nil }
-            let cardChunk: Data
-            do { cardChunk = try cardHandle.read(upToCount: 1 << 20) ?? Data() } catch { return .unreadable }
-            let macChunk = (try? macHandle.read(upToCount: 1 << 20)) ?? Data()
-            if cardChunk.isEmpty && macChunk.isEmpty { return nil }
-            if cardChunk != macChunk { return .damaged }
-            onBytes(cardChunk.count)
+            // FileHandle's reads hand back autoreleased buffers. Without a
+            // pool per chunk they pile up until the whole check ends: a
+            // full card's worth of memory, until macOS kills the app.
+            let step: Step = autoreleasepool {
+                let cardChunk: Data
+                do { cardChunk = try cardHandle.read(upToCount: 1 << 20) ?? Data() } catch { return .done(.unreadable) }
+                let macChunk = (try? macHandle.read(upToCount: 1 << 20)) ?? Data()
+                if cardChunk.isEmpty && macChunk.isEmpty { return .done(nil) }
+                if cardChunk != macChunk { return .done(.damaged) }
+                return .next(cardChunk.count)
+            }
+            switch step {
+            case .next(let count): onBytes(count)
+            case .done(let answer): return answer
+            }
         }
     }
 
