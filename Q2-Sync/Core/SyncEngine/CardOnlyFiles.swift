@@ -146,6 +146,63 @@ enum CardOnlyFinder {
         }
     }
 
+    /// Turns new-song copies into adoptions of the same song already on the
+    /// card, for music copied there by hand (in Finder, say).
+    ///
+    /// A card-only file counts as the same song when it's in the music
+    /// folder (not in a hidden folder), its title and artist match (ignoring
+    /// case), its length is within 2 seconds, and its size equals the Mac
+    /// file's exactly. Then, instead of copying the song again, the plan
+    /// adopts that file and moves it to Q2 Sync's path for it, and it's no
+    /// longer card-only. Other matches stay card-only (marked "already in
+    /// your library"), for the user to trash or delete.
+    ///
+    /// Call after `fillTags` and `markLibraryMatches`, with the plan's
+    /// `cardOnly` filled in.
+    ///
+    /// - Parameters:
+    ///   - plan: The plan to adjust.
+    ///   - musicFolderName: The card's music folder, e.g. "Music".
+    /// - Returns: How many copies were turned into adoptions.
+    @discardableResult
+    static func adoptIdenticalCopies(in plan: inout SyncPlan, musicFolderName: String) -> Int {
+        let musicFolder = musicFolderName.lowercased()
+        // Candidates by title|artist; each is used at most once.
+        var candidates: [String: [CardOnlyItem]] = [:]
+        for item in plan.cardOnly where item.origin == .unmanaged && item.isInLibrary {
+            let parts = item.path.split(separator: "/").map(String.init)
+            guard parts.count >= 2, parts[0].lowercased() == musicFolder,
+                  !parts.contains(where: { $0.hasPrefix(".") }),
+                  let title = item.title, item.durationSeconds != nil else { continue }
+            candidates[matchKey(title: title, artist: item.artist), default: []].append(item)
+        }
+        guard !candidates.isEmpty else { return 0 }
+
+        var adopted = Set<CardPath>()
+        var keptCopies: [CopyOperation] = []
+        for copy in plan.copies {
+            let track = copy.track
+            let key = matchKey(title: track.title, artist: track.artist)
+            guard copy.kind == .add,
+                  let index = candidates[key]?.firstIndex(where: { item in
+                      item.size == track.fileSize
+                          && abs((item.durationSeconds ?? -10) - track.durationSeconds) <= 2
+                  }),
+                  let item = candidates[key]?.remove(at: index) else {
+                keptCopies.append(copy)
+                continue
+            }
+            plan.adoptions.append(AdoptOperation(track: track, path: item.path, size: item.size))
+            if CardLayout.caseKey(item.path) != CardLayout.caseKey(copy.destination) {
+                plan.moves.append(MoveOperation(track: track, from: item.path, to: copy.destination))
+            }
+            adopted.insert(item.path)
+        }
+        plan.copies = keptCopies
+        plan.cardOnly.removeAll { adopted.contains($0.path) }
+        return adopted.count
+    }
+
     private static func matchKey(title: String, artist: String?) -> String {
         "\(title.lowercased())|\((artist ?? "").lowercased())"
     }

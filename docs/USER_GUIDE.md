@@ -67,7 +67,12 @@ formats a card itself.
    see it once.
 3. The first time macOS asks whether Q2 Sync may access **Apple Music**, click
    **Allow**. Q2 Sync needs this to *read* your library.
-4. When your Q2's card is connected, a window asks **"Is this your Shanling Q2?"**
+4. Until a Q2 is connected, the sidebar's **Devices** section shows **Connect
+   Your Q2**, with the steps above and what happens next. Meanwhile you can
+   browse your Music library.
+5. When your Q2's card is connected, a window asks **"Is this your Shanling Q2?"**
+   If Q2 Sync's window is closed (it keeps running in the menu bar), a
+   notification says **Set Up Your Q2?**: click it to open the window.
    - Choose which firmware it runs: **Q2 Pod** or **Shanling (stock)**. If
      you're not sure: Q2 Pod looks like an iPod; stock is Shanling's own look.
    - This window pops up by itself only for a Q2 connected by USB cable. A
@@ -92,7 +97,8 @@ From now on, Q2 Sync recognises your card automatically and shows it under
 2. Q2 Sync reads your Music library when the window opens and whenever the
    Q2 connects. To re-read it (after adding music, say), click **Refresh
    Library** at the top right.
-3. Choose one:
+3. Choose one (on a new Q2, nothing is chosen yet, and **Sync** waits until
+   you choose):
    - **Entire music library**: everything that can be copied, plus all your
      playlists.
    - **Selected artists, albums, genres, and playlists**: tick what you want
@@ -234,6 +240,15 @@ choose. For each file, pick:
 
 Use **Set all to** to choose for every file at once.
 
+**Music you copied to the card yourself** (in Finder, say) is recognised on
+the first sync. A file in the card's `Music` folder that's the same song as
+one you sync (same title, artist and length) and exactly the same file (same
+size) isn't copied again: Q2 Sync takes it over and moves it into its own
+folder layout. Other copies of songs you sync (a different encoding, or
+outside the `Music` folder) are marked **already in your library**; clear them
+all at once with the **Move to Card Trash** or **Delete from Card** buttons
+next to "N already in your library". Only deleting frees their space.
+
 **About "Copy to Mac":** Q2 Sync never puts files into your Music library. It
 copies them to **Downloads › Q2 Recovered**, keeping their folders, and lists
 them in `RECOVERED.txt`. To add them to Apple Music, open Music and choose
@@ -298,7 +313,9 @@ Q2 Sync can notice when your Q2 connects. On your Q2's **Settings** tab, under
 **Auto-Sync**, choose **When this Q2 connects**:
 
 - **Ask Me (Notification)** (default): a notification asks whether to sync.
-  Click **Sync Now**.
+  Click **Sync Now**. (Not while Q2 Sync's window is in front: you're already
+  looking at your Q2 then.) macOS asks once whether Q2 Sync may show
+  notifications, the first time it has one to show.
 - **Sync Automatically**: syncs straight away.
 - **Do Nothing**: you sync by hand.
 
@@ -306,11 +323,12 @@ Automatic syncs follow every safety rule. They **never remove songs and never
 eject**. If anything needs your decision (the first sync with a card, songs
 you unticked, songs gone from your library, or not enough space), they stop,
 open the preview in Q2 Sync, and notify you. When an automatic sync finishes,
-a notification has an **Eject** button.
+a notification has **Eject** and **Verify Card** buttons.
 
 For auto-sync to work, Q2 Sync must be running. It stays in the **menu bar**
-when you close its window. To start it automatically, open
-**Q2 Sync › Settings** and turn on **Open Q2 Sync at login**.
+when you close its window. To start it automatically, click **Open at Login**
+when Q2 Sync offers it after your first sync, or open **Q2 Sync › Settings**
+and turn on **Open Q2 Sync at login**.
 
 The **menu bar item** shows whether your Q2 is connected and lets you **Sync
 Now**, **Eject**, **Open Q2 Sync**, open **Settings** or **Quit**. You can hide

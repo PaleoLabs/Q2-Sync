@@ -77,6 +77,10 @@ final class DeviceMonitor {
     /// auto-sync).
     var onDeviceConnected: ((ConnectedDevice) -> Void)?
 
+    /// Called when a new drive starts waiting for the "Is this your Q2?"
+    /// sheet, so the user can be told even with the window closed.
+    var onNewDriveNeedsSetUp: ((VolumeInfo) -> Void)?
+
     /// Q2 Sync's record of the connected card (for the capacity bar), or
     /// `nil` if it couldn't be read.
     private(set) var cardManifest: SyncManifest?
@@ -123,6 +127,9 @@ final class DeviceMonitor {
             }
         }
     }
+
+    /// `true` once any Q2 has been set up on this Mac.
+    var hasKnownDevices: Bool { !store.knownDevices.isEmpty }
 
     /// The Q2 the library browser compares against: the connected one, or
     /// else the one read most recently. `nil` before any Q2 has been read.
@@ -201,6 +208,7 @@ final class DeviceMonitor {
         if pendingVolume == nil, connected == nil {
             pendingVolume = unknown.first(where: asksByItself)
             postponedVolumes.removeAll { $0 == pendingVolume }
+            if let pendingVolume { onNewDriveNeedsSetUp?(pendingVolume) }
         }
     }
 

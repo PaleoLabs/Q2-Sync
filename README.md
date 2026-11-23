@@ -86,7 +86,12 @@ a warning when your selection won't fit.
 
 ### 🔌 Plug in and forget
 **Auto-sync** when your Q2 connects (or ask first), notifications when it's
-done, a menu bar item, and an option to open at login.
+done (with Eject and Verify Card), a menu bar item, and an option to open at
+login, offered after your first sync.
+
+### 👋 Easy to start
+A **Connect Your Q2** page walks you through USB Storage mode, and music you
+already copied to the card by hand is recognised instead of copied twice.
 
 ### 🖼️ Album covers
 Optionally add a `cover.jpg` to each album folder, made from Apple Music's

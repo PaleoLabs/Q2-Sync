@@ -162,6 +162,10 @@ sequenceDiagram
    manage plus orphaned songs. Files the plan adopts (library songs already on
    the card but not in the manifest, as after an interrupted sync) are not
    card-only and are never offered for trashing. `AudioTagReader.fillTags` reads their tags;
+   `CardOnlyFinder.adoptIdenticalCopies` then turns new-song copies into an
+   adoption plus a move when an unmanaged file in `Music/` is the same song
+   (title, artist, length within 2 s) with exactly the Mac file's size, for
+   music copied to the card by hand;
    `CardOnlyFinder.markLibraryMatches` marks ones already in your library.
 9. **First sync.** If nothing has been synced to the card yet, the preview
    says so and `AutoSyncPolicy` won't apply it automatically; a sync you
@@ -298,8 +302,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
 | `DeviceMonitor` | Watches mounts (NSWorkspace), recognises the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel), eject, per-device settings, card manifest for the capacity bar. |
 | `SyncCoordinator` | Sync state machine (idle → planning → preview → running → finished/failed); automatic mode consults `AutoSyncPolicy`. |
-| `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks. |
-| `NotificationManager` | Posts notifications; handles Sync Now / Eject / Open buttons. |
+| `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks; tells you about a new Q2 needing setup. Connect and setup notifications are only posted while Q2 Sync isn't in front (`isInFront`, checked 1.5 s after the event so a launching window counts), and notification permission is requested only when one is posted. |
+| `NotificationManager` | Posts notifications; handles Sync Now / Eject / Verify Card / Open buttons. |
 | `FirmwareModel` | Firmware check state (opt-in, at most daily, cached). |
 | `FirmwareInstaller` | Install sheet state and pipeline: find offers, download (`FileDownloader`), unzip, inspect, verify checksum, check free space, `CardFileSystem.placeFirmwareUpdate`, then remember `pendingFirmwareInstall` and ask on the next connection whether the Q2 installed it. |
 | `CardVerifyModel` | Verify Card sheet state: check in the background, re-copy failures with `SyncExecutor`. |
@@ -314,7 +318,10 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 `SyncResultView`), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 `FirmwareUpdateSection`, `LibraryCategoryView` + `TrackTableView` (library
 browser with "can sync" and "On Q2 / next sync" marks, compared with the
-connected Q2 or the one read most recently), `SongInspectorView` (the
+connected Q2 or the one read most recently), `ConnectQ2View` (the sidebar's
+"Connect Your Q2" page while no Q2 is connected; selected on first launch),
+`OpenAtLoginOffer` (in `SyncSheet`: offered once after a successful sync),
+`SongInspectorView` (the
 browser's song inspector; artwork via `LibraryModel.artworkData(for:)`, one
 whole-library `LibraryArtworkReader` opened on first use), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
 

@@ -20,6 +20,8 @@ import SwiftUI
 /// either a device (by UUID) or a library category.
 enum SidebarItem: Hashable {
     case device(uuid: String)
+    /// "Connect Your Q2", while no Q2 is connected.
+    case connectQ2
     case library(BrowseCategory)
 }
 
@@ -38,8 +40,15 @@ struct RootView: View {
     /// `true` once the one-time first-launch notice has been acknowledged.
     @AppStorage(FirstLaunchNoticeView.acknowledgedKey) private var noticeAcknowledged = false
 
-    /// The selected sidebar row.
-    @State private var selection: SidebarItem? = .library(.artists)
+    /// The selected sidebar row. Starts on "Connect Your Q2" until a Q2
+    /// has been set up on this Mac, then on Artists.
+    @State private var selection: SidebarItem?
+
+    init(library: LibraryModel, devices: DeviceMonitor) {
+        self.library = library
+        self.devices = devices
+        _selection = State(initialValue: devices.hasKnownDevices ? .library(.artists) : .connectQ2)
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -130,7 +139,7 @@ struct RootView: View {
         // Select the Q2 automatically when it connects, like Finder does.
         .onChange(of: devices.connected?.device.volumeUUID) { _, uuid in
             if let uuid { selection = .device(uuid: uuid) }
-            else if case .device = selection { selection = .library(.artists) }
+            else if case .device = selection { selection = .connectQ2 }
         }
     }
 
@@ -138,23 +147,25 @@ struct RootView: View {
 
     private var sidebar: some View {
         List(selection: $selection) {
-            if devices.connected != nil || !devices.postponedVolumes.isEmpty {
-                Section("Devices") {
-                    if let connected = devices.connected {
-                        DeviceSidebarRow(connected: connected, devices: devices)
-                            .tag(SidebarItem.device(uuid: connected.device.volumeUUID))
+            Section("Devices") {
+                if let connected = devices.connected {
+                    DeviceSidebarRow(connected: connected, devices: devices)
+                        .tag(SidebarItem.device(uuid: connected.device.volumeUUID))
+                } else {
+                    Label("Connect Your Q2", systemImage: "cable.connector")
+                        .foregroundStyle(.secondary)
+                        .tag(SidebarItem.connectQ2)
+                }
+                ForEach(devices.postponedVolumes) { volume in
+                    HStack {
+                        Label(volume.name, systemImage: "externaldrive.badge.questionmark")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Set Up…") { devices.setUp(volume) }
+                            .buttonStyle(.borderless)
+                            .font(.caption)
                     }
-                    ForEach(devices.postponedVolumes) { volume in
-                        HStack {
-                            Label(volume.name, systemImage: "externaldrive.badge.questionmark")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Button("Set Up…") { devices.setUp(volume) }
-                                .buttonStyle(.borderless)
-                                .font(.caption)
-                        }
-                        .selectionDisabled()
-                    }
+                    .selectionDisabled()
                 }
             }
 
@@ -181,9 +192,12 @@ struct RootView: View {
             if let connected = devices.connected {
                 DeviceView(connected: connected, devices: devices, library: library)
             } else {
-                ContentUnavailableView("Q2 Not Connected", systemImage: "ipod",
-                                       description: Text("Set the Q2's USB switch to USB Storage and connect it."))
+                ConnectQ2View(hasSetUpBefore: devices.hasKnownDevices,
+                          waitingDrives: devices.postponedVolumes.map(\.name))
             }
+        case .connectQ2:
+            ConnectQ2View(hasSetUpBefore: devices.hasKnownDevices,
+                          waitingDrives: devices.postponedVolumes.map(\.name))
         case .library(let category):
             LibraryCategoryView(library: library, devices: devices, category: category)
         case nil:

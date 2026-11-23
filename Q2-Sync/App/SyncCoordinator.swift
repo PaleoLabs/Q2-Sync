@@ -264,6 +264,9 @@ final class SyncCoordinator {
         await AudioTagReader.fillTags(&cardOnly, cardRoot: fileSystem.pathGuard.cardRoot)
         CardOnlyFinder.markLibraryMatches(&cardOnly, snapshot: snapshot)
         adjusted.cardOnly = cardOnly
+        // Music copied to the card by hand: adopt identical copies instead
+        // of copying the same songs again.
+        CardOnlyFinder.adoptIdenticalCopies(in: &adjusted, musicFolderName: profile.musicFolderName)
 
         adjusted.playlistPlan.onlyChangedForImport = onlyChangedPlaylists
         adjusted.playlistPlan.reimportAll = reimportAllPlaylists

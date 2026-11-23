@@ -7,7 +7,13 @@
 //    • when your Q2 connects, it asks (notification) or syncs straight
 //      away, depending on that card's "When This Q2 Connects" setting;
 //    • it turns automatic syncs' outcomes into notifications;
-//    • it handles the notification buttons (Sync Now, Eject, Open).
+//    • it handles the notification buttons (Sync Now, Eject, Verify Card,
+//      Open);
+//    • it tells you about a new Q2 that needs setting up when the window
+//      isn't in front.
+//  Connect notifications are only posted while Q2 Sync isn't in front
+//  (when it is, you're already looking at the Q2), and notification
+//  permission is only asked for when one is actually posted.
 //
 //  SAFETY
 //  Automatic syncs go through exactly the same engine and checks as
@@ -63,6 +69,7 @@ final class AutoSyncController {
         // `[weak self]` avoids a retain cycle: these closures are stored by
         // objects this controller owns references to.
         devices.onDeviceConnected = { [weak self] connected in self?.deviceConnected(connected) }
+        devices.onNewDriveNeedsSetUp = { [weak self] volume in self?.newDriveNeedsSetUp(volume) }
         sync.onAutomaticEvent = { [weak self] event in self?.handle(event) }
         notifications.onAction = { [weak self] action in self?.handle(action) }
         installer.onPendingQuestionAnswered = { [weak self] in
@@ -101,14 +108,45 @@ final class AutoSyncController {
            UserDefaults.standard.bool(forKey: FirstLaunchNoticeView.acknowledgedKey) {
             Task { await library.load() }
         }
-        guard mode != .off else { return }
-        Task {
-            await notifications.requestPermission()
-            switch mode {
-            case .off: break
-            case .ask: notifications.postConnected(deviceName: connected.device.name)
-            case .automatic: await startSync(automatic: true)
+        switch mode {
+        case .off:
+            break
+        case .ask:
+            // Only when Q2 Sync isn't in front: otherwise the Q2's page is
+            // already showing, with its Sync button.
+            postIfInBackground { $0.postConnected(deviceName: connected.device.name) }
+        case .automatic:
+            Task {
+                await notifications.requestPermission()
+                await startSync(automatic: true)
             }
+        }
+    }
+
+    /// A new drive that looks like a Q2 is waiting for setup. If the window
+    /// isn't in front, say so; the notification opens it to the sheet.
+    private func newDriveNeedsSetUp(_ volume: VolumeInfo) {
+        postIfInBackground { $0.postNewDevice(name: volume.name) }
+    }
+
+    // MARK: - In front or not
+
+    /// `true` if Q2 Sync is the active app with its main window showing.
+    var isInFront: Bool {
+        NSApp.isActive && NSApp.windows.contains {
+            $0.identifier?.rawValue.hasPrefix(Q2SyncApp.mainWindowID) == true && $0.isVisible && !$0.isMiniaturized
+        }
+    }
+
+    /// Posts a notification only if Q2 Sync isn't in front, asking for
+    /// permission first (macOS asks the user once). Waits a moment so that,
+    /// at launch, the window has had time to open before deciding.
+    private func postIfInBackground(_ post: @escaping (NotificationManager) -> Void) {
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !isInFront else { return }
+            await notifications.requestPermission()
+            post(notifications)
         }
     }
 
@@ -223,6 +261,13 @@ final class AutoSyncController {
             Task { await eject() }
         case .open:
             showMainWindow()
+        case .verify:
+            // From "Sync Complete": the same Verify Card as in the window.
+            showMainWindow()
+            // The finished sync's result sheet would block it: close it.
+            if sync.phase == .finished { sync.close() }
+            guard devices.connected?.accessURL != nil, !isCardInUse(except: .verifier) else { return }
+            verifier.present()
         }
     }
 

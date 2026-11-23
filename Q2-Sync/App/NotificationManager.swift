@@ -25,6 +25,7 @@ enum NotificationAction: String {
     case syncNow = "SYNC_NOW"
     case eject = "EJECT"
     case open = "OPEN"
+    case verify = "VERIFY"
 }
 
 /// Posts notifications and reports button clicks.
@@ -49,11 +50,14 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         center.delegate = self
         let sync = UNNotificationAction(identifier: NotificationAction.syncNow.rawValue, title: "Sync Now")
         let eject = UNNotificationAction(identifier: NotificationAction.eject.rawValue, title: "Eject")
+        // Verify needs the window (it shows progress and results there).
+        let verify = UNNotificationAction(identifier: NotificationAction.verify.rawValue, title: "Verify Card",
+                                          options: [.foreground])
         let open = UNNotificationAction(identifier: NotificationAction.open.rawValue, title: "Open Q2 Sync",
                                         options: [.foreground])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: Category.connected, actions: [sync], intentIdentifiers: []),
-            UNNotificationCategory(identifier: Category.finished, actions: [eject], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Category.finished, actions: [eject, verify], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.review, actions: [open], intentIdentifiers: []),
         ])
     }
@@ -75,6 +79,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     /// A finished (or failed) automatic sync.
     func postFinished(title: String, body: String, offerEject: Bool) {
         post(title: title, body: body, category: offerEject ? Category.finished : Category.review, id: "finished")
+    }
+
+    /// A drive that looks like a Q2 needs setting up.
+    func postNewDevice(name: String) {
+        post(title: "Set Up Your Q2?", body: "“\(name)” connected. Open Q2 Sync to set it up.",
+             category: Category.review, id: "newDevice")
     }
 
     /// A new firmware release is available.

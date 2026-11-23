@@ -59,6 +59,36 @@ struct CardOnlyFinderTests {
         #expect(items.map(\.path) == ["Music/Other/manual.mp3"])
     }
 
+    @Test("Music copied by hand is adopted and moved into place, not copied again")
+    func adoptsHandCopiedMusic() {
+        let hello = makeTrack(id: "1", title: "Hello", artist: "Adele", album: "25")
+        let other = makeTrack(id: "2", title: "Skyfall", artist: "Adele", album: "Skyfall")
+        let lost = makeTrack(id: "3", title: "Rumour", artist: "Adele", album: "21")
+        let layout = CardLayout(profile: .q2Pod)
+        var plan = SyncPlan()
+        plan.copies = [hello, other, lost].map {
+            CopyOperation(kind: .add, track: $0, destination: layout.preferredPath(for: $0), obsoletePath: nil, reason: nil)
+        }
+        func item(_ path: String, _ title: String, size: UInt64) -> CardOnlyItem {
+            var item = CardOnlyItem(path: path, size: size, origin: .unmanaged, title: title, artist: "adele", album: nil)
+            item.durationSeconds = 181
+            item.isInLibrary = true
+            return item
+        }
+        plan.cardOnly = [
+            item("Music/Adele - Hello.mp3", "HELLO", size: hello.fileSize),   // identical: adopt
+            item("Music/Skyfall.mp3", "Skyfall", size: 4_242),                // different encoding: keep
+            item("Old Rips/Rumour.mp3", "Rumour", size: lost.fileSize),       // outside Music/: keep
+        ]
+
+        let adopted = CardOnlyFinder.adoptIdenticalCopies(in: &plan, musicFolderName: "Music")
+        #expect(adopted == 1)
+        #expect(plan.adoptions.map(\.path) == ["Music/Adele - Hello.mp3"])
+        #expect(plan.moves.map(\.to) == [layout.preferredPath(for: hello)])
+        #expect(plan.copies.map(\.track.id) == ["2", "3"])
+        #expect(plan.cardOnly.map(\.path) == ["Music/Skyfall.mp3", "Old Rips/Rumour.mp3"])
+    }
+
     @Test("Songs that left the library become card-only, not plain removals")
     func orphans() {
         var manifest = SyncManifest()

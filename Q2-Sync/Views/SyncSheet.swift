@@ -14,6 +14,7 @@
 //
 
 import AppKit
+import ServiceManagement
 import SwiftUI
 
 /// Switches between the sync phases.
@@ -409,6 +410,23 @@ struct SyncPreviewView: View {
                     }
                 }
                 .disabled(items.isEmpty)
+                // Copies of songs Q2 Sync syncs from your library anyway
+                // (music copied to the card by hand): clear them in one go.
+                let duplicates = items.filter(\.isInLibrary)
+                if !duplicates.isEmpty {
+                    HStack {
+                        Text("\(duplicates.count.formatted()) already in your library:")
+                        ForEach([CardOnlyAction.moveToTrash, .delete]) { action in
+                            Button(action.title) {
+                                var actions = sync.options.cardOnlyActions
+                                for item in duplicates { actions[item.path] = action }
+                                sync.options.cardOnlyActions = actions
+                            }
+                            .controlSize(.small)
+                        }
+                    }
+                    .help("These look like songs you sync from your library, copied to the card another way. Delete frees their space; the card trash keeps them on the card.")
+                }
                 collapsibleRows(items, expanded: expanded) { item in
                     HStack(alignment: .firstTextBaseline) {
                         Image(systemName: item.origin == .unmanaged ? "sdcard" : "music.note.house")
@@ -501,7 +519,7 @@ struct SyncPreviewView: View {
     private func cardOnlyDetail(_ item: CardOnlyItem) -> String {
         var parts = [item.path, Int64(item.size).formatted(ByteCountFormatStyle(style: .file))]
         if case .removedFromLibrary = item.origin { parts.append("synced earlier, no longer in your library") }
-        if item.isInLibrary { parts.append("already in your library: won't be copied") }
+        if item.isInLibrary { parts.append("already in your library: Copy to Mac skips it") }
         return parts.joined(separator: " · ")
     }
 
@@ -694,6 +712,10 @@ struct SyncResultView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            if report.succeeded {
+                OpenAtLoginOffer(notifications: autoSync.notifications)
+            }
+
             if report.succeeded && !sync.didEject {
                 Text("Eject the card now? You can also verify every song on it first, or keep it connected to sync again.")
                     .fixedSize(horizontal: false, vertical: true)
@@ -766,5 +788,57 @@ struct SyncResultView: View {
             ? "nothing copied"
             : "\(Int64(report.bytesCopied).formatted(ByteCountFormatStyle(style: .file))) copied"
         return parts.joined(separator: ", ") + " · \(copied)"
+    }
+}
+
+// MARK: - Open at login offer
+
+/// Offered once, after a successful sync: open Q2 Sync at login so it
+/// notices the Q2 connecting (and can notify you), since auto-sync and the
+/// "Sync it now?" notification only work while it's running.
+struct OpenAtLoginOffer: View {
+
+    let notifications: NotificationManager
+
+    /// UserDefaults key: the offer was answered (either way).
+    static let answeredKey = "answeredOpenAtLoginOffer"
+
+    @AppStorage(answeredKey) private var answered = false
+
+    /// Set after turning it on, if macOS wants approval first.
+    @State private var needsApproval = false
+
+    var body: some View {
+        if !answered && SMAppService.mainApp.status != .enabled {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Open Q2 Sync at login?", systemImage: "power")
+                        .font(.headline)
+                    Text("Then it's always ready in the menu bar to notice your Q2 connecting and offer to sync it, or sync it automatically if you choose that in the Q2's Settings.")
+                        .font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack {
+                        Spacer()
+                        Button("No Thanks") { answered = true }
+                        Button("Open at Login") { turnOn() }
+                    }
+                }
+                .padding(4)
+            }
+        } else if needsApproval {
+            Label("Approve Q2 Sync in System Settings › General › Login Items.", systemImage: "info.circle")
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Registers the login item and asks for notification permission (the
+    /// "Q2 connected" notifications are what it's for).
+    private func turnOn() {
+        try? SMAppService.mainApp.register()
+        needsApproval = SMAppService.mainApp.status == .requiresApproval
+        answered = true
+        Task { await notifications.requestPermission() }
+        if needsApproval { SMAppService.openSystemSettingsLoginItems() }
     }
 }

@@ -75,6 +75,18 @@ struct DeviceMusicView: View {
         let resolved = SelectionResolver.resolve(selection, in: snapshot)
 
         VStack(alignment: .leading, spacing: 0) {
+            // The first step on a new Q2: nothing is chosen yet.
+            if selection.isEmpty {
+                Label(hasQ2SyncSongs
+                      ? "Nothing is chosen. Syncing now would remove the songs Q2 Sync put on this card."
+                      : "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want.",
+                      systemImage: hasQ2SyncSongs ? "exclamationmark.triangle" : "hand.point.down")
+                    .foregroundStyle(hasQ2SyncSongs ? .orange : .accentColor)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+            }
+
             // "Entire library" vs "Selected items", like Finder.
             Picker("Sync", selection: Binding(
                 get: { selection.mode },
@@ -222,6 +234,13 @@ struct DeviceMusicView: View {
         )
     }
 
+    /// `true` if the card holds songs Q2 Sync put there. Then an empty
+    /// selection is a real choice (remove them all); otherwise there's
+    /// nothing to sync yet.
+    private var hasQ2SyncSongs: Bool {
+        !(devices.cardManifest?.entries.isEmpty ?? true)
+    }
+
     /// Applies a change to the selection and saves it.
     ///
     /// - Parameter change: A closure that edits a copy of the selection.
@@ -274,8 +293,10 @@ struct DeviceMusicView: View {
                 Label("Sync", systemImage: "arrow.triangle.2.circlepath")
             }
             .buttonStyle(.borderedProminent)
-            .disabled(sync.phase != .idle || connected.accessURL == nil)
-            .help("Review the changes, then copy them to the Q2")
+            .disabled(sync.phase != .idle || connected.accessURL == nil || (selection.isEmpty && !hasQ2SyncSongs))
+            .help(selection.isEmpty && !hasQ2SyncSongs
+                  ? "Choose some music first"
+                  : "Review the changes, then copy them to the Q2")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
