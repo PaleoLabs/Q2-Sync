@@ -33,10 +33,14 @@
         {
           "kind": "script",
           "name": "Stamp build number",
+          "input-paths": [
+            "$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+          ],
+          "output-paths": [
+            "$(DERIVED_FILE_DIR)/stamp-version.done",
+          ],
           "shell": "/bin/zsh",
           "script": "\"${SRCROOT}/Scripts/stamp-version.sh\"",
-          "input-paths": [ "$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)" ],
-          "output-paths": [ "$(DERIVED_FILE_DIR)/stamp-version.done" ],
         },
       ],
       "build-settings": {

@@ -61,7 +61,7 @@ extension TableIcon {
         }
         if marks.syncable < marks.total {
             return TableIcon(symbol: "lock", color: .systemOrange,
-                             help: "\(marks.syncable) of \(marks.total) songs can be copied. Select it to see why the others can't.")
+                             help: "\(marks.syncable) of \(pluralized(marks.total, "song")) can be copied. Select it to see why the others can't.")
         }
         return nil
     }

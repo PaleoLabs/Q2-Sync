@@ -242,12 +242,12 @@ final class AutoSyncController {
                 var body = "Added \(report.added), updated \(report.updated)."
                 let cardOnly = sync.preview?.plan.cardOnly.count ?? 0
                 if cardOnly > 0 {
-                    body += " \(cardOnly) files on the card aren't in your library; open Q2 Sync to review them."
+                    body += " \(pluralized(cardOnly, "file")) on the card \(cardOnly == 1 ? "isn't" : "aren't") in your library; open Q2 Sync to review \(cardOnly == 1 ? "it" : "them")."
                 }
                 notifications.postFinished(title: "Sync Complete", body: body, offerEject: true)
             } else {
                 let reason = report.abortReason ?? (report.wasCancelled ? "It was cancelled."
-                                                    : "\(report.errors.count) songs had problems.")
+                                                    : "\(pluralized(report.errors.count, "song")) had problems.")
                 notifications.postFinished(title: "Sync Stopped", body: reason + " The card is still connected.",
                                            offerEject: false)
             }

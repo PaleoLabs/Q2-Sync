@@ -72,10 +72,10 @@ enum AutoSyncPolicy {
         }
         reasons += assessment.blockers
         if !plan.removals.isEmpty {
-            reasons.append("\(plan.removals.count) songs you deselected would be removed.")
+            reasons.append("\(pluralized(plan.removals.count, "song")) you deselected would be removed.")
         }
         if !plan.orphanedEntries.isEmpty {
-            reasons.append("\(plan.orphanedEntries.count) songs on the card are no longer in your library.")
+            reasons.append("\(pluralized(plan.orphanedEntries.count, "song")) on the card \(plan.orphanedEntries.count == 1 ? "is" : "are") no longer in your library.")
         }
         if !reasons.isEmpty { return .needsReview(reasons) }
         return plan.isEmpty ? .nothingToDo : .apply

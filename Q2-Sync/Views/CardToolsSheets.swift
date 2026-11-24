@@ -93,7 +93,7 @@ struct VerifyCardSheet: View {
                       systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green).font(.headline)
             } else {
-                Label("\(result.problems.count) songs need copying again.", systemImage: "exclamationmark.triangle.fill")
+                Label("\(pluralized(result.problems.count, "song")) \(result.problems.count == 1 ? "needs" : "need") copying again.", systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange).font(.headline)
                 List(result.problems) { problem in
                     VStack(alignment: .leading, spacing: 1) {
@@ -135,10 +135,10 @@ struct VerifyCardSheet: View {
     private var repaired: some View {
         if let report = model.repairReport {
             if report.succeeded {
-                Label("Copied \(report.updated) songs again. They're fine now.", systemImage: "checkmark.circle.fill")
+                Label("Copied \(pluralized(report.updated, "song")) again. \(report.updated == 1 ? "It's" : "They're") fine now.", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green).font(.headline)
             } else {
-                Label(report.abortReason ?? (report.wasCancelled ? "Stopped." : "\(report.errors.count) songs couldn't be copied."),
+                Label(report.abortReason ?? (report.wasCancelled ? "Stopped." : "\(pluralized(report.errors.count, "song")) couldn't be copied."),
                       systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)

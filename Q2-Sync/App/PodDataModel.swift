@@ -79,7 +79,7 @@ final class PodDataModel {
                                                 volumeUUID: connected.device.volumeUUID,
                                                 to: folder,
                                                 protectedFolders: [PathGuard.defaultHomeMusicFolder, root])
-            status = "Backed up \(info.files.count) files to \(backupFolder.displayName) › \(info.folder?.lastPathComponent ?? "")."
+            status = "Backed up \(pluralized(info.files.count, "file")) to \(backupFolder.displayName) › \(info.folder?.lastPathComponent ?? "")."
         } catch {
             status = error.localizedDescription
         }
@@ -110,7 +110,7 @@ final class PodDataModel {
             let pathGuard = try PathGuard(cardRoot: root, expectedVolumeUUID: connected.device.volumeUUID,
                                           profile: connected.device.profile)
             let restored = try CardFileSystem(pathGuard: pathGuard).restorePodData(from: folder, files: files)
-            status = "Restored \(restored) files from the backup of \(backup.created.formatted(date: .abbreviated, time: .shortened)). On the Q2, restart it so Q2 Pod reads them."
+            status = "Restored \(pluralized(restored, "file")) from the backup of \(backup.created.formatted(date: .abbreviated, time: .shortened)). On the Q2, restart it so Q2 Pod reads them."
             restoring = nil
         } catch {
             status = "Couldn't restore: \(error.localizedDescription)"

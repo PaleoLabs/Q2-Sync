@@ -353,6 +353,6 @@ extension SyncPlan {
 
     /// e.g. "1 song", "12 songs".
     private static func count(_ n: Int, _ noun: String) -> String {
-        "\(n.formatted()) \(noun)\(n == 1 ? "" : "s")"
+        pluralized(n, noun)
     }
 }

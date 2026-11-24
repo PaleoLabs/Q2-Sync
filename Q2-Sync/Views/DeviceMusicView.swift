@@ -295,7 +295,7 @@ struct DeviceMusicView: View {
             Text(Int64(resolved.totalBytes).formatted(ByteCountFormatStyle(style: .file)))
                 .foregroundStyle(.secondary)
             if !resolved.playlists.isEmpty {
-                Text("\(resolved.playlists.count) playlists").foregroundStyle(.secondary)
+                Text(pluralized(resolved.playlists.count, "playlist")).foregroundStyle(.secondary)
             }
 
             if !resolved.skippedTracks.isEmpty {

@@ -142,7 +142,7 @@ struct SyncPreviewView: View {
                 .padding(16)
         }
         .frame(width: 660, height: showsDetails && !hasNothingToList ? 680 : nil)
-        .confirmationDialog("Permanently delete \(cardOnlyDeleteCount) files from the card?",
+        .confirmationDialog("Permanently delete \(pluralized(cardOnlyDeleteCount, "file")) from the card?",
                             isPresented: $confirmingDeletes) {
             Button("Delete \(cardOnlyDeleteCount) Files and Sync", role: .destructive) {
                 continueApplying(deletesConfirmed: true)
@@ -798,7 +798,7 @@ struct SyncPreviewView: View {
                         symbol: "music.note.list", color: .pink)
                 }
                 if !playlists.overLimit.isEmpty {
-                    Label("The Q2 holds up to \(preview.profile.maximumPlaylists) playlists. These \(playlists.overLimit.count) won't be written: "
+                    Label("The Q2 holds up to \(preview.profile.maximumPlaylists) playlists. \(playlists.overLimit.count == 1 ? "This one" : "These \(playlists.overLimit.count)") won't be written: "
                           + playlists.overLimit.map(\.name).joined(separator: ", "),
                           systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
@@ -1059,11 +1059,11 @@ struct SyncResultView: View {
         if report.removed > 0 { parts.append("removed \(report.removed)") }
         if report.adopted > 0 { parts.append("recorded \(report.adopted) already on the card") }
         if report.cardOnlyMovedToMac > 0 { parts.append("\(report.cardOnlyMovedToMac) moved to your Mac") }
-        if report.cardOnlyRemoved > 0 { parts.append("\(report.cardOnlyRemoved) card-only files deleted") }
-        if report.playlistsWritten > 0 { parts.append("\(report.playlistsWritten) playlists written") }
-        if report.playlistsRemoved > 0 { parts.append("\(report.playlistsRemoved) playlists removed") }
+        if report.cardOnlyRemoved > 0 { parts.append("\(pluralized(report.cardOnlyRemoved, "card-only file")) deleted") }
+        if report.playlistsWritten > 0 { parts.append("\(pluralized(report.playlistsWritten, "playlist")) written") }
+        if report.playlistsRemoved > 0 { parts.append("\(pluralized(report.playlistsRemoved, "playlist")) removed") }
         if report.playlistsToImport > 0 {
-            parts.append("\(report.playlistsToImport) playlists ready to import on the Q2")
+            parts.append("\(pluralized(report.playlistsToImport, "playlist")) ready to import on the Q2")
         } else if report.playlistsTakenOut > 0 {
             parts.append("no playlists need importing")
         }
