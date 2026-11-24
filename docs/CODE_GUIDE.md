@@ -392,7 +392,7 @@ Nothing else in the code mentions a firmware by name.
 | `musicFolderName` | `Music` | `Music` |
 | `appStateFolderName` | `.q2sync` | `.q2sync` |
 | `playlistFolderName` | `_explaylist_data` | `_explaylist_data` |
-| `playlistFormat` | `.m3u`, UTF-8, CRLF, `#EXTM3U`/`#EXTINF`, `/mnt/mmc/…` paths (**unverified**) | same (**unverified**) |
+| `playlistFormat` | `.m3u`, UTF-8, CRLF, `#EXTM3U`/`#EXTINF`, `/mnt/mmc/…` paths (confirmed on Q2 Pod 1.8.9) | same (**unverified**) |
 | `maximumPlaylists` / `maximumPlaylistNameBytes` | 100 / 63 | 100 / 63 |
 | `reservedItems` | shared list (below) | shared list |
 | `libraryUpdateSteps` | Library → Update Library → Scan music now; Library → Playlists → Import | Local Songs → Update Library → Scan music now; Playlists → Import |
@@ -427,7 +427,7 @@ Nothing else in the code mentions a firmware by name.
 
 ## 5. Safety design
 
-Defence in depth: several independent layers, each enough on its own.
+Defense in depth: several independent layers, each enough on its own.
 
 ### Layer 1 — App Sandbox (`Config/Q2Sync.entitlements`)
 
@@ -511,7 +511,7 @@ same time, as both share the same bundle identifier.
 xcodebuild -project Q2-Sync.xcodeproj -scheme Q2-Sync -configuration Debug -derivedDataPath build/DerivedData build
 ```
 
-**Run the unit tests** (Core only, about 130 tests, under a second):
+**Run the unit tests** (Core only, about 230 tests, under a second):
 
 ```bash
 swift test

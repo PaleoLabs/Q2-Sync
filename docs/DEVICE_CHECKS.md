@@ -1,10 +1,12 @@
 # Checks to Do on a Real Q2
 
-Q2 Sync was built before a Q2 was available. These items are based on
-documentation (Shanling's Quick Start Guide and Q2 Pod's docs and user guide,
-release 1.8.5) and still need confirming on a real device. Work through them
-once for **Q2 Pod** and once for **stock** firmware, then update the matching
-`DeviceProfile` in `Q2-Sync/Core/Device/DeviceProfile.swift`.
+Some of Q2 Sync's firmware details come from documentation (Shanling's Quick
+Start Guide and Q2 Pod's docs and user guide, release 1.8.5) rather than from a
+device. The items below still need confirming on a real Q2, especially on
+**stock** firmware. Work through them once for **Q2 Pod** and once for
+**stock**, then update the matching `DeviceProfile` in
+`Q2-Sync/Core/Device/DeviceProfile.swift`. Reports are welcome: see
+[CONTRIBUTING](../CONTRIBUTING.md).
 
 ## 1. Songs scan and play
 
