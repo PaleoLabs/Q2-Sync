@@ -1,5 +1,10 @@
 # Checks to Do on a Real Q2
 
+**Status (v0.1.0):** the checks below have been run on a real Q2 with **Q2
+Pod** firmware, and most pass. **Not yet tested on a device:** backing up and
+restoring Q2 Pod's data (section 6) and everything on **Shanling stock**
+firmware.
+
 Some of Q2 Sync's firmware details come from documentation (Shanling's Quick
 Start Guide and Q2 Pod's docs and user guide, release 1.8.5) rather than from a
 device. The items below still need confirming on a real Q2, especially on
