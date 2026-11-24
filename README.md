@@ -182,6 +182,7 @@ the card, which you fix by syncing again.
 [Releases](https://github.com/PaleoLabs/Q2-Sync/releases), unzip it and drag
 **Q2 Sync** to your Applications folder. It's signed and notarized by Apple.
 Each release lists a SHA-256 checksum to check the download against.
+What changed in each build is in [CHANGELOG.md](CHANGELOG.md).
 
 **Or build it yourself:**
 
