@@ -466,6 +466,9 @@ with the song on your Mac. Nothing changes while it checks.
 
 - Damaged or missing songs are listed. Click **Copy Songs Again** to fix
   them (this goes through the same checks as a sync).
+- When everything checks out (or the songs are copied again successfully),
+  click **Eject** to eject the card right from the results, or **Done** to
+  keep it connected.
 - Songs changed on your Mac since copying aren't checked: your next sync
   updates them.
 - Read your library first (the arrow at the top right).

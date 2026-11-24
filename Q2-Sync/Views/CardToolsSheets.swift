@@ -108,6 +108,7 @@ struct VerifyCardSheet: View {
             HStack {
                 Spacer()
                 if result.problems.isEmpty {
+                    ejectButton
                     Button("Done") { model.close() }.keyboardShortcut(.defaultAction)
                 } else {
                     Button("Close") { model.close() }.keyboardShortcut(.cancelAction)
@@ -151,9 +152,20 @@ struct VerifyCardSheet: View {
                     Button("Show Log") { NSWorkspace.shared.activateFileViewerSelecting([log]) }
                 }
                 Spacer()
+                if report.succeeded { ejectButton }
                 Button("Done") { model.close() }.keyboardShortcut(.defaultAction)
             }
         }
+    }
+
+    /// Closes the sheet, then ejects the card, so it can be pulled right after a clean check.
+    private var ejectButton: some View {
+        Button("Eject") {
+            model.close()
+            Task { await devices.eject() }
+        }
+        .disabled(devices.connected == nil || devices.isEjecting)
+        .help("Eject the card")
     }
 
     @ViewBuilder
