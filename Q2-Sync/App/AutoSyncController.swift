@@ -285,17 +285,12 @@ final class AutoSyncController {
             DispatchQueue.main.async { [weak self] in self?.showMainWindow() }
             return
         }
-        // From the menu bar, the app may not be the active app yet.
-        NSApp.activate(ignoringOtherApps: true)
-        // SwiftUI names the window's identifier after the scene id
-        // (e.g. "main" or "main-AppWindow-1").
-        if let window = NSApp.windows.first(where: {
-            $0.identifier?.rawValue.hasPrefix(Q2SyncApp.mainWindowID) == true
-        }) {
-            if window.isMiniaturized { window.deminiaturize(nil) }
-            window.makeKeyAndOrderFront(nil)
-        } else {
+        // The Dock icon is hidden while the window is closed; bring it back
+        // first.
+        DockIconController.shared.showDockIcon()
+        if !NSApp.windows.contains(where: DockIconController.isMainWindow) {
             openMainWindow?()
         }
+        DockIconController.shared.bringToFront(where: DockIconController.isMainWindow)
     }
 }

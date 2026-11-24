@@ -8,8 +8,8 @@
 //  and Quit.
 //
 //  HOW IT FITS
-//  Declared as a `MenuBarExtra` scene in `Q2SyncApp`. It can be hidden in
-//  Settings. Actions go through `AutoSyncController` and `DeviceMonitor`.
+//  Declared as a `MenuBarExtra` scene in `Q2SyncApp`. Always shown.
+//  Actions go through `AutoSyncController` and `DeviceMonitor`.
 //
 
 import SwiftUI
@@ -18,6 +18,7 @@ import SwiftUI
 struct MenuBarContent: View {
 
     let controller: AutoSyncController
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         let devices = controller.devices
@@ -38,7 +39,10 @@ struct MenuBarContent: View {
 
         Divider()
         Button("Open Q2 Sync") { controller.showMainWindow() }
-        SettingsLink { Text("Settings…") }
+        Button("Settings…") {
+            // Without a Dock icon, Settings would open out of sight.
+            DockIconController.shared.openSettings { openSettings() }
+        }
         Divider()
         Button("Quit Q2 Sync") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
@@ -54,7 +58,8 @@ struct MenuBarLabel: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Image(systemName: controller.sync.phase == .running ? "arrow.triangle.2.circlepath" : "ipod")
+        Image(systemName: controller.sync.phase == .running ? "arrow.triangle.2.circlepath"
+                                                             : DockIconController.menuBarSymbol)
             .onAppear {
                 controller.openMainWindow = { openWindow(id: Q2SyncApp.mainWindowID) }
             }

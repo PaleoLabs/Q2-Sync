@@ -101,7 +101,7 @@ in a card reader.
      files on this card only.
    - Clicked **Not My Q2** on a drive that is not your Q2? Q2 Sync won't ask
      about it again. Did it by mistake? Open **Q2 Sync › Settings** and
-     click **Ask Again About Drives Marked "Not My Q2"**.
+     click **Ask Again About "Not My Q2" Drives**.
 
 From now on, Q2 Sync recognizes your card automatically and shows it under
 **Devices** in the sidebar, like Finder does. It works with one card at a
@@ -413,8 +413,19 @@ Login** button under **When this Q2 connects**. Q2 Sync doesn't ask anywhere
 else.
 
 The **menu bar item** shows whether your Q2 is connected and lets you **Sync
-Now**, **Eject**, **Open Q2 Sync**, open **Settings** or **Quit**. You can hide
-it in Settings.
+Now**, **Eject**, **Open Q2 Sync**, open **Settings** or **Quit**. It's always
+shown.
+
+While Q2 Sync's window is closed, its **Dock icon is hidden** and the app lives
+only in the menu bar; **Open Q2 Sync** there brings the window and the Dock icon
+back. The first time you close the window, Q2 Sync explains this and offers
+**Keep in Menu Bar** or **Quit Q2 Sync**. Tick **Don't show again** to close the
+window quietly from then on; to see it again, click **Show Menu Bar Tip Again**
+in Settings.
+
+On a Mac with a notch, or with many menu bar items, the Q2 Sync icon can be
+hidden behind the notch. Quit other menu bar apps or use a menu bar manager to
+make room, or open Q2 Sync from the Applications folder.
 
 ---
 
@@ -605,4 +616,4 @@ Yes. The record of what's on the card lives on the card itself.
 Your Q2's **Settings** tab → **Show Sync Logs**.
 
 **I clicked "Not My Q2" by mistake.**
-**Q2 Sync › Settings → Ask Again About Drives Marked "Not My Q2"**.
+**Q2 Sync › Settings → Ask Again About "Not My Q2" Drives**.

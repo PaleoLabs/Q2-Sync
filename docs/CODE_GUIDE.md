@@ -34,7 +34,7 @@ The project has two halves:
   be unit-tested with `swift test`.
 - **App + Views** (`Q2-Sync/App`, `Q2-Sync/Views`) hold the SwiftUI interface
   and the glue that connects it to macOS: disk notifications, notifications,
-  the menu bar and the login item.
+  the menu bar, the Dock icon and the login item.
 
 ```mermaid
 flowchart TB
@@ -349,7 +349,8 @@ preview's album rows (by folder and album tag).
 
 | Type | Purpose |
 | --- | --- |
-| `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra`, `Settings`. `AppDelegate` keeps the app running when the window closes. |
+| `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra` (always shown; it's the way back while the Dock icon is hidden), `Settings`. `AppDelegate` keeps the app running when the window closes. |
+| `DockIconController` | Hides the Dock icon (`.accessory` activation policy) while the main window is closed and brings it back (`.regular`) in `showMainWindow()` or when the window becomes main. Settings, the sync sheet and alerts don't count. `openSettings` (the menu bar's Settings…) brings the Dock icon back while Settings is open, since an app without one can't reliably bring Settings to the front; it hides again when Settings closes with the main window still closed. A `CloseProxy` stands in front of SwiftUI's window delegate to answer `windowShouldClose` and show the "Still in the Menu Bar" notice (Keep in Menu Bar / Quit Q2 Sync / Don't show again, saved as `showMenuBarCloseNotice`; Settings › Messages › "Show Menu Bar Tip Again" turns it back on); every other delegate call is forwarded to SwiftUI's. |
 | `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
 | `DeviceMonitor` | Watches mounts (NSWorkspace), recognizes the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel; the waiting drive is matched by `id`, not `==`, since free space differs between reads), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
 | `SyncCoordinator` | Sync state machine (idle → planning → preview → running → finished/failed); automatic mode consults `AutoSyncPolicy`. |
@@ -557,7 +558,7 @@ Paths on the Mac are inside the app's sandbox container,
 | Known devices, selections, auto-sync mode, bookmarks | `Library/Application Support/Q2 Sync/devices.json` |
 | Each Q2's last known contents (song IDs, dates) for the library browser | `Library/Application Support/Q2 Sync/Card Contents/<volume UUID>.json` |
 | Sync logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
-| Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarItem`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease` |
+| Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarCloseNotice`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |
 | Q2 Pod data backups | `<backup folder>/<card> <date>/` (default `~/Downloads/Q2 Sync Backups`; a chosen folder's bookmark is `podBackupsFolderBookmark` in UserDefaults) with `backup.json` and `About this backup.txt` |
 | Firmware downloads | a temporary folder, deleted after copying to the card |
@@ -582,7 +583,7 @@ On the card:
 | --- | --- |
 | "Couldn't open your Apple Music library" | Allow Q2 Sync in System Settings › Privacy & Security › Media & Apple Music. With local signing this may reset after rebuilding. |
 | "Library appears to have no songs" / "media folder isn't available" | The "Mac looks empty" guard: connect the external music drive, or check the right library is open in Music. |
-| Card never shows up | It must be exFAT/FAT, removable, with a UUID. Check Disk Utility. If you clicked **Not My Q2**, use Settings (⌘,) → **Ask Again About Drives Marked “Not My Q2”**. |
+| Card never shows up | It must be exFAT/FAT, removable, with a UUID. Check Disk Utility. If you clicked **Not My Q2**, use Settings (⌘,) → **Ask Again About “Not My Q2” Drives**. |
 | "no longer has permission to use this card" | Settings tab → **Grant Access…**, select the card root. |
 | "The selected music doesn't fit" | Deselect music, or allow removals in the preview. The app keeps 200 MB free. |
 | "record of this card is damaged" | `.q2sync/manifest.json` is corrupt. Delete it; the next sync re-adopts identical files and copies the rest. |

@@ -6,14 +6,16 @@
 //  The app's entry point. `@main` tells Swift that this type starts the
 //  program; SwiftUI then creates the scenes declared in `body`:
 //    • the main window (a single window, like Music or Finder),
-//    • the menu bar item (can be hidden in Settings),
+//    • the menu bar item (always shown: with the window closed it's the
+//      only way back, since the Dock icon is hidden then),
 //    • the Settings window (⌘,).
 //
 //  HOW IT FITS
 //  It creates the long-lived models once (`LibraryModel`, `DeviceMonitor`,
 //  `SyncCoordinator`, `AutoSyncController`) and hands them to the views.
 //  The app keeps running when its window is closed, so it can notice your
-//  Q2 connecting; quit it from the menu bar item or with ⌘Q.
+//  Q2 connecting; quit it from the menu bar item or with ⌘Q. While the
+//  window is closed the Dock icon is hidden (see `DockIconController`).
 //
 
 import SwiftUI
@@ -25,18 +27,12 @@ struct Q2SyncApp: App {
     /// Identifier of the main window, used to reopen it.
     static let mainWindowID = "main"
 
-    /// UserDefaults key for "Show Q2 Sync in the menu bar".
-    static let showMenuBarKey = "showMenuBarItem"
-
     // `@State` makes SwiftUI create each model once and keep it alive for
     // the app's lifetime (instead of recreating it on every redraw).
     @State private var library: LibraryModel
     @State private var devices: DeviceMonitor
     @State private var sync: SyncCoordinator
     @State private var autoSync: AutoSyncController
-
-    /// Whether the menu bar item is shown (saved in UserDefaults).
-    @AppStorage(showMenuBarKey) private var showMenuBarItem = true
 
     /// Connects an old-style AppKit "app delegate" so we can tell macOS to
     /// keep the app running after its window closes (SwiftUI quits a
@@ -56,6 +52,8 @@ struct Q2SyncApp: App {
         let autoSync = AutoSyncController(library: library, devices: devices, sync: sync)
         _autoSync = State(initialValue: autoSync)
         AppDelegate.cardBusyActivity = { [weak autoSync] in autoSync?.cardBusyActivity }
+        // Starts hiding the Dock icon while the main window is closed.
+        _ = DockIconController.shared
     }
 
     var body: some Scene {
@@ -75,7 +73,7 @@ struct Q2SyncApp: App {
             AboutCommand()
         }
 
-        MenuBarExtra(isInserted: $showMenuBarItem) {
+        MenuBarExtra {
             MenuBarContent(controller: autoSync)
         } label: {
             MenuBarLabel(controller: autoSync)
@@ -202,7 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 /// An invisible view that hands SwiftUI's `openWindow` action to the
 /// auto-sync controller, so notifications can reopen the main window even
-/// when the menu bar item is hidden.
+/// before the menu bar icon has appeared.
 private struct WindowOpenerBridge: View {
     let controller: AutoSyncController
     @Environment(\.openWindow) private var openWindow

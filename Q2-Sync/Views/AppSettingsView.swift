@@ -3,10 +3,11 @@
 //  Q2-Sync › Views
 //
 //  PURPOSE
-//  The app's Settings window (Q2 Sync › Settings…, or ⌘,): show the menu
-//  bar item, and open Q2 Sync at login so auto-sync works without opening
-//  the app yourself. This toggle is the real control; the only other place
-//  that offers it is `OpenAtLoginPrompt`, under a Q2's Auto-Sync picker.
+//  The app's Settings window (Q2 Sync › Settings…, or ⌘,): open Q2 Sync
+//  at login so auto-sync works without opening the app yourself, and bring
+//  back messages you turned off. The login toggle is the real control; the
+//  only other place that offers it is `OpenAtLoginPrompt`, under a Q2's
+//  Auto-Sync picker.
 //
 //  HOW IT FITS
 //  Declared as the `Settings` scene in `Q2SyncApp`. Per-card settings
@@ -27,9 +28,11 @@ struct AppSettingsView: View {
     /// For forgetting drives marked "Not My Q2".
     let devices: DeviceMonitor
 
-    /// Saved in the app's preferences. `@AppStorage` reads and writes
-    /// UserDefaults and redraws the view when it changes.
-    @AppStorage(Q2SyncApp.showMenuBarKey) private var showMenuBarItem = true
+    /// Whether closing the main window shows the menu bar tip. Turned off by
+    /// the tip's "Don't show again"; "Show Menu Bar Tip Again" turns it back
+    /// on. `@AppStorage` reads and writes UserDefaults and redraws the view
+    /// when it changes.
+    @AppStorage(DockIconController.closeNoticeKey) private var showCloseNotice = true
 
     /// Whether Q2 Sync opens at login (read from macOS).
     @State private var opensAtLogin = LoginItem.isOn
@@ -40,7 +43,6 @@ struct AppSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Show Q2 Sync in the menu bar", isOn: $showMenuBarItem)
                 Toggle("Open Q2 Sync at login", isOn: Binding(
                     get: { opensAtLogin },
                     set: { setOpensAtLogin($0) }))
@@ -49,13 +51,14 @@ struct AppSettingsView: View {
                     Button("Open Login Items Settings") { SMAppService.openSystemSettingsLoginItems() }
                 }
             } footer: {
-                Text("Keep Q2 Sync running (it stays in the menu bar when its window is closed) so it notices when your Q2 connects. Choose what happens then in each Q2's Settings tab.")
+                Text("Keeps Q2 Sync in the menu bar, ready for your Q2.")
             }
 
-            Section {
-                Button("Ask Again About Drives Marked “Not My Q2”") { devices.clearIgnoredDrives() }
-            } footer: {
-                Text("Use this if you marked your Q2's card as “Not My Q2” by mistake.")
+            // Bring back questions and tips you turned off.
+            Section("Messages") {
+                Button("Show Menu Bar Tip Again") { showCloseNotice = true }
+                    .disabled(showCloseNotice)
+                Button("Ask Again About “Not My Q2” Drives") { devices.clearIgnoredDrives() }
             }
         }
         .formStyle(.grouped)
