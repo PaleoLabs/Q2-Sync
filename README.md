@@ -168,7 +168,12 @@ the card, which you fix by syncing again.
 
 ## Install
 
-There's no prebuilt release yet. To build and install it yourself:
+**Download:** get the latest `Q2-Sync-<version>.zip` from
+[Releases](https://github.com/PaleoLabs/Q2-Sync/releases), unzip it and drag
+**Q2 Sync** to your Applications folder. It's signed and notarized by Apple.
+Each release lists a SHA-256 checksum to check the download against.
+
+**Or build it yourself:**
 
 1. Clone this repository.
 2. In Terminal, from the repository folder, run:
