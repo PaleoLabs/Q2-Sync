@@ -2,7 +2,7 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
-## Unreleased
+## 0.2.0 (2026-11-24)
 
 ### Changed
 - **Playlists stay in the Q2's import folder by default.** The setting "Only put new or changed playlists in the import folder" is now off by default, so every sync puts all your synced playlists in `_explaylist_data/`. This applies to Q2s you've already synced, unless you turned the setting on yourself.
