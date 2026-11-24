@@ -33,7 +33,7 @@ extension TableIcon {
 
     private static let asOf = " (from Q2 Sync's record of the card when it was last connected)"
 
-    /// A song's On Q2 icon: on the Q2 (grey check), next sync (blue
+    /// A song's On Q2 icon: on the Q2 (green check), next sync (grey
     /// arrow), not chosen (none: the cell shows a dash), or can't be
     /// synced (orange, with the reason).
     static func song(_ track: Track, placement: TrackPlacement?) -> TableIcon? {
@@ -43,10 +43,10 @@ extension TableIcon {
         }
         switch placement {
         case .onQ2:
-            return TableIcon(symbol: "checkmark.circle.fill", color: .secondaryLabelColor,
+            return TableIcon(symbol: "checkmark.circle.fill", color: .systemGreen,
                              help: "On your Q2, as of Q2 Sync's record of the card.")
         case .nextSync:
-            return TableIcon(symbol: "arrow.down.circle", color: .systemBlue,
+            return TableIcon(symbol: "arrow.down.circle", color: .secondaryLabelColor,
                              help: "Chosen for your Q2 but not copied yet. It goes over at the next sync.")
         case .notChosen, .cantSync, nil:
             return nil
@@ -66,22 +66,23 @@ extension TableIcon {
         return nil
     }
 
-    /// A group's Q2 state: on the Q2 (check), partly (half circle), coming
-    /// at the next sync (blue arrow), or none when not chosen. Quiet on
-    /// purpose: the usual case is a grey check.
+    /// A group's Q2 state: on the Q2 (green check), partly (teal half
+    /// circle), coming at the next sync (grey arrow), or none when not
+    /// chosen. Each state has its own shape and color; orange is only for
+    /// songs that can't be synced.
     static func groupQ2(_ marks: GroupMarks) -> TableIcon? {
         if marks.syncable == 0 && marks.onQ2 == 0 { return nil }
         if marks.onQ2 >= marks.syncable {
-            return TableIcon(symbol: "checkmark.circle.fill", color: .secondaryLabelColor,
+            return TableIcon(symbol: "checkmark.circle.fill", color: .systemGreen,
                              help: "On your Q2" + asOf + ".")
         }
         if marks.onQ2 > 0 {
             let next = marks.nextSync > 0 ? "; \(marks.nextSync) more at the next sync" : ""
-            return TableIcon(symbol: "circle.lefthalf.filled", color: .secondaryLabelColor,
+            return TableIcon(symbol: "circle.lefthalf.filled", color: .systemTeal,
                              help: "\(marks.onQ2) of \(marks.syncable) on your Q2\(next)" + asOf + ".")
         }
         if marks.nextSync > 0 {
-            return TableIcon(symbol: "arrow.down.circle.fill", color: .systemBlue,
+            return TableIcon(symbol: "arrow.down.circle.fill", color: .secondaryLabelColor,
                              help: "\(marks.nextSync) chosen for your Q2 but not copied yet. They go over at the next sync.")
         }
         return nil

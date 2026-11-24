@@ -156,12 +156,12 @@ The **Music Library** section of the sidebar (Artists, Albums, Genres,
 Playlists) shows your library as it relates to your Q2, even when the Q2 is
 unplugged:
 
-- a **checkmark**: on your Q2; a **half circle**: partly on it; a blue
-  **arrow**: chosen, and copied at the next sync; nothing: not chosen.
+- a green **checkmark**: on your Q2; a teal **half circle**: partly on it;
+  a grey **arrow**: chosen, and copied at the next sync; nothing: not chosen.
 - an orange **lock**: some (outline) or all (filled) of these songs can't be
   copied.
 - Hover over an icon for the numbers, or select the row: each song's
-  **On Q2** column shows a grey check (on your Q2), a blue arrow (comes at
+  **On Q2** column shows a green check (on your Q2), a grey arrow (comes at
   the next sync), a dash (not chosen), or an orange icon when the song can't
   be synced (iCloud only, copy-protected, file missing…; hover for why, or
   open **Song Info**).

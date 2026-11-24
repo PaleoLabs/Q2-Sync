@@ -132,8 +132,8 @@ struct SongInspectorView: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let placement {
                 switch placement {
-                case .onQ2:      Label("On your Q2", systemImage: "checkmark.circle.fill").foregroundStyle(.secondary)
-                case .nextSync:  Label("Copied at the next sync", systemImage: "arrow.down.circle").foregroundStyle(.blue)
+                case .onQ2:      Label("On your Q2", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                case .nextSync:  Label("Copied at the next sync", systemImage: "arrow.down.circle").foregroundStyle(.secondary)
                 case .notChosen: Label("Not chosen for your Q2", systemImage: "minus.circle").foregroundStyle(.secondary)
                 case .cantSync:  EmptyView()
                 }
