@@ -107,7 +107,9 @@ for Q2 Pod), copies it to the card and walks you through the update on the Q2.
 ### 🧰 Card tools
 **Verify Card** compares every song with your Mac's copy, byte for byte, and
 re-copies anything damaged. **Back up and restore Q2 Pod's data** (ratings,
-unsent scrobbles, EQ presets, radio favorites and settings). Music that's only
+unsent scrobbles, EQ presets, radio favorites and settings). *Backup and
+restore are covered by unit tests but haven't been tested on a real Q2 yet, so
+treat them as experimental and report anything odd.* Music that's only
 on the card is never removed without asking: keep it, move it back to
 your Mac, or delete it.
 

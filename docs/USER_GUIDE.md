@@ -484,6 +484,10 @@ with the song on your Mac. Nothing changes while it checks.
 
 ### Back up Q2 Pod's data
 
+> **Not yet tested on a real Q2.** Back up and restore pass their unit tests,
+> but haven't been tried on a device yet. Treat them as experimental, and
+> please report anything odd (see [Contributing](../CONTRIBUTING.md)).
+
 Q2 Pod keeps some of your data on the card: song ratings, listens waiting to
 be scrobbled, scrobbling and radio settings, EQ presets, custom App Store
 sources and Rockbox settings. On your Q2's **Settings** tab, under **Q2 Pod
