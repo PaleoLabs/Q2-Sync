@@ -82,7 +82,7 @@ flowchart TB
 | `Q2-Sync/Views` | SwiftUI views |
 | `Tests/Q2SyncCoreTests` | Unit tests (Swift Testing) for Core |
 | `Config/Q2Sync.entitlements` | App Sandbox permissions, each one explained |
-| `Scripts/` | `install.sh` (build and install in /Applications), `stamp-version.sh` (build number), app icon generator |
+| `Scripts/` | `install.sh` (build and install in /Applications), `release.sh` (signed, notarized release zip), `stamp-version.sh` (build number), app icon and README art generators |
 | `docs/` | This guide, the user guide, and the on-device check list |
 
 ### Version and build number
@@ -518,10 +518,21 @@ swift test
 ```
 
 **Signing:** the project signs locally ("Sign to Run Locally",
-`CODE_SIGN_IDENTITY = -`). To distribute, set your Development Team in the
-target's Signing & Capabilities and use Developer ID signing and notarization.
-With local signing, macOS may ask again for Apple Music access after each
-rebuild, and the login item may need approval.
+`CODE_SIGN_IDENTITY = -`). With local signing, macOS may ask again for Apple
+Music access after each rebuild, and the login item may need approval. The
+Hardened Runtime is already on.
+
+**Releasing:** `Scripts/release.sh` builds the Release configuration signed
+with your **Developer ID Application** certificate (your Team ID is passed as
+`TEAM_ID`, never stored in the project), has Apple notarize it with
+`notarytool`, staples the ticket, and writes `build/release/Q2-Sync-<version>.zip`
+and a `.sha256` checksum. The script's header lists the one-time setup
+(certificate, and a `notarytool store-credentials` profile). A Developer ID
+signature shows the account holder's name, and keeping the same Team ID across
+releases keeps the app's identity stable, so users aren't asked to grant
+access to the Music library and the card again. Steps for a release: bump
+`MARKETING_VERSION`, commit, run the script, tag (`git tag v<version>`), push
+the tag, and attach the zip and checksum to a GitHub release.
 
 **Project file:** Xcode 27 stores the project as `Q2-Sync.xcodeproj/project.xcproj`
 (JSON-style). The app target compiles the whole `Q2-Sync/` folder, so new files
