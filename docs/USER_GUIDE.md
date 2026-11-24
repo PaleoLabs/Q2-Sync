@@ -123,7 +123,8 @@ sync or Verify Card is running).
      playlists.
    - **Selected artists, albums, genres, and playlists**: tick what you want
      in the **Artists**, **Albums**, **Genres** and **Playlists** tabs. Use the
-     **Filter** box to find things quickly.
+     **Filter** box to find things quickly; click the **×** in it to clear
+     the search.
 
 Everything you tick is combined: a song is synced if its artist, album, genre
 or any of its playlists is ticked. When you tick an artist, their new albums

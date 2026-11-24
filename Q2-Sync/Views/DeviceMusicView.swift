@@ -160,9 +160,25 @@ struct DeviceMusicView: View {
 
             Spacer()
 
-            TextField("Filter", text: $filterText, prompt: Text("Filter \(section.rawValue)"))
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 220)
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Filter", text: $filterText, prompt: Text("Filter \(section.rawValue)"))
+                    .textFieldStyle(.plain)
+                if !filterText.isEmpty {
+                    Button {
+                        filterText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Clear the filter")
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: .separatorColor)))
+            .frame(maxWidth: 220)
         }
         .onChange(of: section) { filterText = "" }
     }

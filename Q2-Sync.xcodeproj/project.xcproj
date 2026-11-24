@@ -35,7 +35,6 @@
           "name": "Stamp build number",
           "shell": "/bin/zsh",
           "script": "\"${SRCROOT}/Scripts/stamp-version.sh\"",
-          "always-out-of-date": true,
         },
       ],
       "build-settings": {
