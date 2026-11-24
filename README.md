@@ -49,6 +49,12 @@ window the moment you plug it in. Choose your artists, albums, genres and
 playlists, preview exactly what will change, and
 click Sync. Next time, only what's new is copied.
 
+Plenty of us still keep a carefully built library in the Music app, the one
+place that syncs to an iPhone, an iPod, and everything else. Moving to
+another player shouldn't mean giving that up. Q2 Sync treats your Music
+library as the source of truth and keeps your Q2 matching it, so the Q2
+simply becomes one more device your library syncs to.
+
 It's a native Mac app built with SwiftUI, and it's built to feel like part of
 macOS: a sidebar and detail layout, SF Symbols, a menu bar item, notifications,
 and light and dark mode.

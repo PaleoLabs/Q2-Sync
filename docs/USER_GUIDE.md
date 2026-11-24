@@ -14,7 +14,8 @@ in iCloud are skipped too. These are listed as "can't be synced".
 
 **The most important thing first:** Q2 Sync only *reads* your Apple Music
 library. It never changes, moves or deletes anything in your library or its
-music files. It only copies music **to** your Q2.
+music files. It only copies music **to** your Q2. Your Music library stays
+the source of truth, and the Q2 is simply one more device it syncs to.
 
 ---
 
