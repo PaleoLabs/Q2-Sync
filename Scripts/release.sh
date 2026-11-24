@@ -49,12 +49,18 @@ xcodebuild -project Q2-Sync.xcodeproj -scheme Q2-Sync -configuration Release \
   CODE_SIGN_IDENTITY="Developer ID Application" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   OTHER_CODE_SIGN_FLAGS="--timestamp" \
+  CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   build
 
 [[ -d "$BUILT_APP" ]] || { echo "Build output not found at $BUILT_APP"; exit 1; }
 
 echo "→ Checking the signature…"
 codesign --verify --deep --strict --verbose=2 "$BUILT_APP"
+# Apple rejects apps that carry the debugging entitlement get-task-allow.
+if codesign -d --entitlements - "$BUILT_APP" 2>/dev/null | grep -q "get-task-allow"; then
+  echo "The app still requests com.apple.security.get-task-allow; Apple would reject it."
+  exit 1
+fi
 
 PLIST="$BUILT_APP/Contents/Info.plist"
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
