@@ -230,7 +230,7 @@ for testing; see [docs/DEVICE_CHECKS.md](docs/DEVICE_CHECKS.md).
 
 ## License
 
-Copyright © 2026 PaleoDev and Q2 Sync contributors.
+Copyright © 2026 PaleoLabs and Q2 Sync contributors.
 
 Q2 Sync is free software, released under the
 [GNU General Public License v3.0](LICENSE). You can use, study, share and
