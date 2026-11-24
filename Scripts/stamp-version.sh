@@ -27,3 +27,4 @@ fi
   || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $count" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :Q2SyncBuildCommit $commit" "$PLIST" 2>/dev/null \
   || /usr/libexec/PlistBuddy -c "Add :Q2SyncBuildCommit string $commit" "$PLIST"
+touch "${DERIVED_FILE_DIR}/stamp-version.done"
