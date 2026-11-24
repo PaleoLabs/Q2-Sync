@@ -8,7 +8,7 @@
 //  Linux system, which reads the card.
 //
 //  RULES (each one prevents a real problem)
-//  1. Unicode is normalised to NFC ("é" as one character, not "e" + accent),
+//  1. Unicode is normalized to NFC ("é" as one character, not "e" + accent),
 //     so the bytes we write match the bytes we later put in playlists.
 //  2. Characters FAT/exFAT forbid — \ / : * ? " < > | — and control
 //     characters become "_".
@@ -45,7 +45,7 @@ enum FilenameSanitizer {
         return names
     }()
 
-    /// Sanitises a folder name or a file name without extension.
+    /// Sanitizes a folder name or a file name without extension.
     ///
     /// - Parameters:
     ///   - raw: The text to clean, e.g. an artist name.
@@ -54,7 +54,7 @@ enum FilenameSanitizer {
     /// - Returns: A safe name, never empty.
     static func sanitizeComponent(_ raw: String, fallback: String,
                                   maximumBytes: Int = maximumComponentBytes) -> String {
-        // Rule 1: NFC normalisation.
+        // Rule 1: NFC normalization.
         var name = raw.precomposedStringWithCanonicalMapping
 
         // Rule 2: replace forbidden and control characters, one at a time.
@@ -79,7 +79,7 @@ enum FilenameSanitizer {
         return name.isEmpty ? fallback : name
     }
 
-    /// Sanitises a file name, keeping its extension intact.
+    /// Sanitizes a file name, keeping its extension intact.
     ///
     /// - Parameters:
     ///   - base: The name without extension, e.g. "01 Hello".

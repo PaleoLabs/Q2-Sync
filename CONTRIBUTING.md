@@ -23,7 +23,7 @@ fixes an issue closes it from its commit.
 
 ## Testing on a real Q2
 
-Some behaviour, mostly on Shanling's stock firmware, still needs checking on a
+Some behavior, mostly on Shanling's stock firmware, still needs checking on a
 device. [docs/DEVICE_CHECKS.md](docs/DEVICE_CHECKS.md) lists what's open;
 reports of what you saw on your Q2 are very helpful.
 

@@ -114,7 +114,7 @@ struct FirmwareUpdateSection: View {
         }
     }
 
-    /// One line summarising the status.
+    /// One line summarizing the status.
     @ViewBuilder
     private var statusLabel: some View {
         let latestTag = firmware.latest?.tag ?? ""

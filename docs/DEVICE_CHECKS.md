@@ -53,7 +53,7 @@ including one of Q2 Sync's (the next sync rewrites it).
 ## 4. USB connection
 
 - [ ] With the quick-access switch on **USB Storage**, the card mounts on the
-      Mac and Q2 Sync recognises it as the same card as in a card reader (same
+      Mac and Q2 Sync recognizes it as the same card as in a card reader (same
       volume ID).
 - [ ] Eject from Q2 Sync works while the Q2 is connected.
 
@@ -82,11 +82,11 @@ and `ioreg`:
 
 ## 6. Q2 Pod data on the card
 
-- [ ] After rating a song, scrobbling and saving a radio favourite on the
+- [ ] After rating a song, scrobbling and saving a radio favorite on the
       Q2, `.ratings.tsv`, `.scrobbler.log`, `.scrobble.ini` and
-      `Radio/favourites.m3u` appear on the card (paths from Q2 Pod's docs).
+      `Radio/favorites.m3u` appear on the card (paths from Q2 Pod's docs).
 - [ ] After **Restore…** onto a fresh card and a restart, Q2 Pod shows the
-      restored ratings, favourites and EQ presets.
+      restored ratings, favorites and EQ presets.
 
 - [ ] Stock firmware: whether its album grid (Album Wall) needs anything
       to show new `cover.jpg` files beyond the library scan. If so, add the

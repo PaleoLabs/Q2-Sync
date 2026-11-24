@@ -80,7 +80,7 @@ Regular playlists, smart playlists and Genius playlists are written for the
 Q2's **Library → Playlists → Import**. Only playlists that changed are put up
 for import, so the Q2 doesn't re-read everything each time.
 
-### 📊 A capacity bar you'll recognise
+### 📊 A capacity bar you'll recognize
 Music, files not from Q2 Sync, what this sync adds, and free space, all at a
 glance, with a warning when your selection won't fit.
 
@@ -91,7 +91,7 @@ login (in Settings, and suggested when you turn on auto-sync).
 
 ### 👋 Easy to start
 A **Connect Your Q2** page walks you through USB Storage mode, and music you
-already copied to the card by hand is recognised instead of copied twice.
+already copied to the card by hand is recognized instead of copied twice.
 
 ### 🖼️ Album covers
 A `cover.jpg` in each album folder (on by default), made from Apple Music's
@@ -107,7 +107,7 @@ for Q2 Pod), copies it to the card and walks you through the update on the Q2.
 ### 🧰 Card tools
 **Verify Card** compares every song with your Mac's copy, byte for byte, and
 re-copies anything damaged. **Back up and restore Q2 Pod's data** (ratings,
-unsent scrobbles, EQ presets, radio favourites and settings). Music that's only
+unsent scrobbles, EQ presets, radio favorites and settings). Music that's only
 on the card is never removed without asking: keep it, move it back to
 your Mac, or delete it.
 
@@ -135,7 +135,7 @@ the card, which you fix by syncing again.
   two narrow exceptions, each used only when you ask: `update.tar` at the
   card root (Install Firmware), and the fixed list of Q2 Pod's data files
   (Restore Q2 Pod Data).
-- **Your card is recognised by its unique ID**, which you confirm once, so
+- **Your card is recognized by its unique ID**, which you confirm once, so
   another drive is never mistaken for it.
 - **"Mac looks empty" guard.** If the library can't be read or your music drive
   is disconnected, the sync stops before touching the card.
@@ -213,7 +213,7 @@ code? Start with the [Code Guide](docs/CODE_GUIDE.md) and
 | Install / switch firmware | ✅ latest GitHub release (checksum-verified) | ✅ latest from Shanling's download page |
 | Firmware update notices | ✅ from GitHub releases | Not checked automatically |
 
-Firmware-specific behaviour lives in one place, `DeviceProfile`, so other
+Firmware-specific behavior lives in one place, `DeviceProfile`, so other
 firmware can be added. Some details were documented before a Q2 was available
 for testing; see [docs/DEVICE_CHECKS.md](docs/DEVICE_CHECKS.md).
 
@@ -222,7 +222,7 @@ for testing; see [docs/DEVICE_CHECKS.md](docs/DEVICE_CHECKS.md).
 - **[Q2 Pod](https://github.com/DiamondBond/q2-pod)** by DiamondBond (GPL-3.0):
   its README, `docs/internals.md`, `docs/discovery.md` and user guide are the
   source of the card layout, playlist folder and format, reserved items and
-  library behaviour Q2 Sync relies on. No Q2 Pod code is included.
+  library behavior Q2 Sync relies on. No Q2 Pod code is included.
 - **Shanling** for the Q2 Quick Start Guide.
 - **[iTunes Export](https://www.ericdaugherty.com/dev/itunesexport/)** by Eric
   Daugherty, used only as a reference for playlist-export edge cases. No code

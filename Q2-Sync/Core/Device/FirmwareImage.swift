@@ -64,11 +64,11 @@ enum FirmwareImageError: LocalizedError, Equatable {
         case .notATar:
             return "This isn't a firmware file (update.tar)."
         case .missingInfo:
-            return "This file doesn't say which player it's for, so it isn't Q2 firmware Q2 Sync recognises."
+            return "This file doesn't say which player it's for, so it isn't Q2 firmware Q2 Sync recognizes."
         case .wrongModel(let model):
             return "This firmware is for “\(model)”, not a Shanling Q2."
         case .unknownVersion(let line):
-            return "This firmware's version (“\(line)”) isn't one Q2 Sync recognises."
+            return "This firmware's version (“\(line)”) isn't one Q2 Sync recognizes."
         case .implausibleSize(let size):
             return "This file is the wrong size for Q2 firmware (\(size.formatted(.byteCount(style: .file))))."
         case .checksumMismatch:
@@ -143,7 +143,7 @@ enum FirmwareImage {
     ///   "V1890" → Q2 Pod 1.8.9 (digits only, one per part)
     ///
     /// - Parameter versionLine: The info entry's second line.
-    /// - Returns: The kind and display version, or `nil` if unrecognised.
+    /// - Returns: The kind and display version, or `nil` if unrecognized.
     static func classify(versionLine: String) -> (FirmwareKind, String)? {
         let line = versionLine.trimmingCharacters(in: .whitespaces)
         if line.wholeMatch(of: /[Vv]\d+\.\d+(\.\d+)*/) != nil {

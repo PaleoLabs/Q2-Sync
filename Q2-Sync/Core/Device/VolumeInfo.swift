@@ -122,7 +122,7 @@ enum VolumeIneligibility: Equatable, Sendable {
         case .startupDisk:       return "This is your Mac's startup disk."
         case .internalFixedDisk: return "This is an internal disk."
         case .notRemovable:      return "This disk isn't removable."
-        case .noUUID:            return "This disk has no unique ID, so it can't be recognised reliably."
+        case .noUUID:            return "This disk has no unique ID, so it can't be recognized reliably."
         case .unsupportedFormat(let format):
             return "This disk is formatted as \(format). The Q2 needs exFAT or FAT32."
         }
@@ -142,7 +142,7 @@ enum VolumeEligibility {
     ///   2. Must be removable or ejectable media.
     ///   3. Internal is only OK when the media itself is removable (a Mac's
     ///      built-in SD card slot). Internal fixed disks are always refused.
-    ///   4. Must have a UUID, so we can recognise it next time.
+    ///   4. Must have a UUID, so we can recognize it next time.
     ///   5. Must be exFAT or FAT, the only formats the Q2 reads.
     ///
     /// - Parameter volume: The volume to check.

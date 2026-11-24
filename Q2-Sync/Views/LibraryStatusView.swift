@@ -13,7 +13,7 @@
 
 import SwiftUI
 
-/// Sidebar footer summarising the library's state.
+/// Sidebar footer summarizing the library's state.
 struct LibraryStatusView: View {
 
     /// The model to summarise.
@@ -126,7 +126,7 @@ extension TrackAvailability {
         }
     }
 
-    /// Colour for the symbol. The normal state is grey; colour is kept
+    /// Color for the symbol. The normal state is gray; color is kept
     /// for what needs attention.
     var tint: Color {
         switch self {

@@ -157,7 +157,7 @@ sequenceDiagram
    re-read in the same run) are remembered across reads by
    `SongLocationCache` while a song's size and date are unchanged. A read
    that takes longer than `LibraryModel.readTimeLimit` (60 s) fails with "isn't
-   responding" (`TimeLimit.result` races it; `ITLibrary` can't be cancelled),
+   responding" (`TimeLimit.result` races it; `ITLibrary` can't be canceled),
    and the sync stops rather than using the previous snapshot. Try Again waits
    on that same read, and if it finishes on its own its result is used.
 3. **"Mac looks empty" check.** `LibraryHealthCheck.evaluate` stops the sync if
@@ -348,7 +348,7 @@ preview's album rows (by folder and album tag).
 | --- | --- |
 | `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra`, `Settings`. `AppDelegate` keeps the app running when the window closes. |
 | `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
-| `DeviceMonitor` | Watches mounts (NSWorkspace), recognises the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel; the waiting drive is matched by `id`, not `==`, since free space differs between reads), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
+| `DeviceMonitor` | Watches mounts (NSWorkspace), recognizes the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel; the waiting drive is matched by `id`, not `==`, since free space differs between reads), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
 | `SyncCoordinator` | Sync state machine (idle → planning → preview → running → finished/failed); automatic mode consults `AutoSyncPolicy`. |
 | `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks; tells you about a new Q2 needing setup. Connect and setup notifications are only posted while Q2 Sync isn't in front (`isInFront`, checked 1.5 s after the event so a launching window counts), and notification permission is requested only when one is posted. |
 | `NotificationManager` | Posts notifications; handles Sync Now / Eject / Verify Card / Open buttons. |
@@ -384,7 +384,7 @@ whole-library `LibraryArtworkReader` opened on first use), `LibraryStatusView`, 
 
 ## 4. Device profiles (and adding one)
 
-All firmware-specific behaviour lives in `Q2-Sync/Core/Device/DeviceProfile.swift`.
+All firmware-specific behavior lives in `Q2-Sync/Core/Device/DeviceProfile.swift`.
 Nothing else in the code mentions a firmware by name.
 
 | Field | Q2 Pod | Stock |
@@ -519,7 +519,7 @@ swift test
 
 **Signing:** the project signs locally ("Sign to Run Locally",
 `CODE_SIGN_IDENTITY = -`). To distribute, set your Development Team in the
-target's Signing & Capabilities and use Developer ID signing and notarisation.
+target's Signing & Capabilities and use Developer ID signing and notarization.
 With local signing, macOS may ask again for Apple Music access after each
 rebuild, and the login item may need approval.
 

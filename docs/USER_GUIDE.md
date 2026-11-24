@@ -94,7 +94,7 @@ in a card reader.
    - This window pops up by itself only for a Q2 connected by USB cable. A
      card in a card reader (or any other drive) is listed in the sidebar under
      **Devices** instead: click **Set Up…** next to it. Once set up, your card
-     is recognised either way.
+     is recognized either way.
    - Click **Continue…**. macOS shows the card in a window: make sure the card
      itself is selected, then click **Grant Access**. This lets Q2 Sync change
      files on this card only.
@@ -102,7 +102,7 @@ in a card reader.
      about it again. Did it by mistake? Open **Q2 Sync › Settings** and
      click **Ask Again About Drives Marked "Not My Q2"**.
 
-From now on, Q2 Sync recognises your card automatically and shows it under
+From now on, Q2 Sync recognizes your card automatically and shows it under
 **Devices** in the sidebar, like Finder does. It works with one card at a
 time: if more than one card you've set up is connected (say your Q2 by USB
 and a spare card in a reader), one is shown (the one you just set up or last clicked), and the
@@ -308,7 +308,7 @@ right-click it to copy the path. The choices are:
 A line under the heading counts what you've chosen (deletes in red), and
 the **Sync** button says how many files it will delete.
 
-**Music you copied to the card yourself** (in Finder, say) is recognised on
+**Music you copied to the card yourself** (in Finder, say) is recognized on
 the first sync. A file in the card's `Music` folder that's the same song as
 one you sync (same title, artist and length) and exactly the same file (same
 size) isn't copied again: Q2 Sync takes it over and moves it into its own
@@ -557,7 +557,7 @@ They're either protected by DRM or only in iCloud (not downloaded to your Mac).
 **Does Q2 Sync work with an Apple Music subscription?**
 Only for the music files you own. Your subscription doesn't stop Q2 Sync from
 syncing your local, DRM-free files, but songs added from the Apple Music
-catalogue can't be copied. To get a song onto your Q2, buy it (the iTunes
+catalog can't be copied. To get a song onto your Q2, buy it (the iTunes
 Store sells DRM-free files) or add your own copy to the Music app.
 
 **I unticked an album but it's still on my Q2.**
