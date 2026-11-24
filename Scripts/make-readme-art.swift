@@ -7,8 +7,8 @@
 //    docs/images/logo-light.png      wordmark (app icon + "Q2 Sync") for light mode
 //    docs/images/logo-dark.png       the same for dark mode
 //    docs/images/hero.png            README banner with the app window
-//    docs/images/social-preview.png  1280×640 image for GitHub's
-//                                    Settings → Social preview
+//    docs/branding/social-preview.png  1280×640 image for GitHub's
+//                                      Settings → Social preview (upload by hand)
 //
 //  It uses the app icon and the screenshots already in docs/images, so
 //  re-run it after replacing a screenshot.
@@ -21,6 +21,7 @@ import AppKit
 
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let images = root.appendingPathComponent("docs/images")
+let branding = root.appendingPathComponent("docs/branding")
 let icon = NSImage(contentsOf: root.appendingPathComponent("Q2-Sync/Assets.xcassets/AppIcon.appiconset/icon-1024.png"))!
 let window = NSImage(contentsOf: images.appendingPathComponent("device-music.png"))!
 let sheet = NSImage(contentsOf: images.appendingPathComponent("sync-preview.png"))!
@@ -59,9 +60,10 @@ func render(_ name: String, width: CGFloat, height: CGFloat, _ draw: @escaping (
     NSGraphicsContext.current?.imageInterpolation = .high
     draw(NSRect(x: 0, y: 0, width: width, height: height))
     NSGraphicsContext.restoreGraphicsState()
-    let url = images.appendingPathComponent(name)
+    let folder = name.hasPrefix("social-preview") ? branding : images
+    let url = folder.appendingPathComponent(name)
     try! rep.representation(using: .png, properties: [:])!.write(to: url)
-    print("Wrote docs/images/\(name)")
+    print("Wrote docs/\(folder.lastPathComponent)/\(name)")
 }
 
 /// Soft light backdrop: white fading to a pale blue, with a blue glow.
