@@ -459,7 +459,7 @@ struct SyncPreviewView: View {
                 row(move.track.title, detail: "\(move.from) → \(move.to)", symbol: "pencil.circle", color: .purple)
             }
             collapsibleSection("skipped", "Can't Sync", lists.skipped) { track in
-                row("\(track.displayArtist) — \(track.title)", detail: track.availability.reportDescription,
+                row("\(track.displayArtist) — \(track.title)", detail: track.unavailableReason,
                     symbol: track.availability.symbolName, color: .orange)
             }
             collapsibleSection("adopt", "Already on Card — Newly Recorded", lists.adoptions,

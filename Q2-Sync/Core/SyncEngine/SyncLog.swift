@@ -94,7 +94,7 @@ final class SyncLog {
             write("CARD-ONLY  \(item.path)  (\(note))")
         }
         for track in plan.skipped {
-            write("SKIP  \(track.displayArtist) — \(track.title): \(track.availability.reportDescription)")
+            write("SKIP  \(track.displayArtist) — \(track.title): \(track.unavailableReason)")
         }
     }
 

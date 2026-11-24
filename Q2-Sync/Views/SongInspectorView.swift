@@ -130,6 +130,10 @@ struct SongInspectorView: View {
                   systemImage: track.availability.symbolName)
                 .foregroundStyle(track.availability.tint)
                 .fixedSize(horizontal: false, vertical: true)
+            if track.availability == .fileMissing {
+                Text(track.unavailableReason).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let placement {
                 switch placement {
                 case .onQ2:      Label("On your Q2", systemImage: "checkmark.circle.fill").foregroundStyle(.green)

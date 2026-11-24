@@ -131,3 +131,59 @@ struct CardContentsStoreTests {
         #expect(!FileManager.default.fileExists(atPath: store.directory.path))
     }
 }
+
+@Suite("Song list CSV and missing-file reasons")
+struct SongListCSVTests {
+
+    @Test("Fields with commas, quotes or line breaks are quoted")
+    func escaping() {
+        #expect(SongListCSV.escape("plain") == "plain")
+        #expect(SongListCSV.escape("a, b") == "\"a, b\"")
+        #expect(SongListCSV.escape("say \"hi\"") == "\"say \"\"hi\"\"\"")
+    }
+
+    @Test("Durations read like a player")
+    func durations() {
+        #expect(SongListCSV.duration(225) == "3:45")
+        #expect(SongListCSV.duration(3723) == "1:02:03")
+    }
+
+    @Test("Only songs on the Q2 or chosen for it are listed, with their status")
+    func rows() {
+        let snapshot = LibrarySnapshot(tracks: [
+            makeTrack(id: "a", title: "One, Two", album: "A", track: 1),
+            makeTrack(id: "b", title: "Next", album: "A", track: 2),
+            makeTrack(id: "c", title: "Skipped", album: "A", track: 3),
+        ], playlists: [Playlist(id: "P", name: "Next", kind: .regular, parentID: nil, trackIDs: ["b"])],
+                                    mediaFolderURL: nil)
+        var manifest = SyncManifest()
+        manifest.entries["a"] = SyncManifest.Entry(path: "Music/a.m4a", sourceSize: 1, sourceModified: nil,
+                                                   cardSize: 1, syncedAt: .now, title: "a", artist: nil, album: nil)
+        var selection = SyncSelection()
+        selection.mode = .selectedItems
+        selection.playlistIDs = ["P"]
+        let marks = LibraryMarks(snapshot: snapshot, record: CardContentsRecord(volumeUUID: "ABCD-1234", manifest: manifest),
+                                 selection: selection)
+        let lines = SongListCSV.make(snapshot: snapshot, marks: marks).split(separator: "\r\n")
+        #expect(lines.count == 3)
+        #expect(lines[1].hasPrefix("On Q2,\"One, Two\""))
+        #expect(lines[2].hasPrefix("Next sync,Next"))
+    }
+
+    @Test("A missing file says where it went")
+    func missingReasons() throws {
+        let trash = URL(filePath: "/Users/x/.Trash/song.mp3")
+        #expect(Track.missingFileReason(for: trash) == "In the Trash")
+
+        let drive = URL(filePath: "/Volumes/NoSuchDrive-Q2Sync/Music/song.mp3")
+        #expect(Track.missingFileReason(for: drive).contains("NoSuchDrive-Q2Sync"))
+        #expect(Track.missingFileReason(for: drive).contains("isn't connected"))
+
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        #expect(Track.missingFileReason(for: folder.appending(path: "gone.mp3")).hasPrefix("Moved or renamed"))
+        #expect(Track.missingFileReason(for: folder.appending(path: "no/gone.mp3")).hasPrefix("Moved or deleted"))
+        #expect(Track.missingFileReason(for: nil) == "File not found on disk")
+    }
+}

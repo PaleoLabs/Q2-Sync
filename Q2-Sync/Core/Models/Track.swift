@@ -180,6 +180,51 @@ struct Track: Codable, Hashable, Identifiable, Sendable {
 
     /// `true` if this track can be copied to the card.
     var isCopyable: Bool { availability == .available }
+
+    /// Why this track can't be copied, in words. For a missing file this
+    /// says where it went (Trash, a drive that isn't connected, or moved);
+    /// for the other kinds it is the plain `reportDescription`.
+    ///
+    /// Checked when asked, not when the library is read, so it follows the
+    /// drive being plugged in or the file being restored.
+    ///
+    /// - Side effects: Only checks whether folders exist. Nothing is opened.
+    var unavailableReason: String {
+        guard availability == .fileMissing else { return availability.reportDescription }
+        return Self.missingFileReason(for: fileURL)
+    }
+
+    /// Works out where a missing file went from its last known location.
+    ///
+    /// - Parameters:
+    ///   - fileURL: Where Music last expected the file.
+    ///   - fileManager: Injectable so tests can use temp folders.
+    /// - Returns: A short reason, e.g. "In the Trash" or
+    ///   "On \"Music Drive\", which isn't connected".
+    static func missingFileReason(for fileURL: URL?, fileManager: FileManager = .default) -> String {
+        guard let fileURL else { return "File not found on disk" }
+        let parts = fileURL.standardizedFileURL.pathComponents
+
+        // In a Trash folder (the user's, or a drive's .Trashes).
+        if parts.contains(".Trash") || parts.contains(".Trashes") {
+            return "In the Trash"
+        }
+
+        // On a drive under /Volumes that isn't mounted right now.
+        if parts.count > 2, parts[1] == "Volumes" {
+            let volume = URL(filePath: "/Volumes").appending(path: parts[2])
+            if !fileManager.fileExists(atPath: volume.path) {
+                return "On \u{201C}\(parts[2])\u{201D}, which isn't connected"
+            }
+        }
+
+        // The drive (or Mac) is there, but the file isn't.
+        let folder = fileURL.deletingLastPathComponent().path
+        if fileManager.fileExists(atPath: folder) {
+            return "Moved or renamed (its folder is still there)"
+        }
+        return "Moved or deleted (its folder is gone)"
+    }
 }
 
 extension String {

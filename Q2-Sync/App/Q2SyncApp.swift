@@ -17,6 +17,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 @main
 struct Q2SyncApp: App {
@@ -70,6 +71,7 @@ struct Q2SyncApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             DeviceCommands(controller: autoSync)
+            SongListCommands(controller: autoSync)
             AboutCommand()
         }
 
@@ -127,6 +129,43 @@ struct DeviceCommands: Commands {
             Button("Eject") { Task { await controller.eject() } }
                 .keyboardShortcut("e", modifiers: .command)
                 .disabled(connected == nil || controller.devices.isEjecting || controller.isCardBusy)
+        }
+    }
+}
+
+/// File › Export Song List…: saves a CSV (for Excel or Numbers) of the
+/// songs on the Q2 or chosen for the next sync. A menu item only, so the
+/// window stays uncluttered.
+struct SongListCommands: Commands {
+    let controller: AutoSyncController
+
+    var body: some Commands {
+        CommandGroup(after: .importExport) {
+            Button("Export Song List…") { export() }
+                .disabled(controller.library.snapshot == nil || controller.devices.referenceContents == nil)
+        }
+    }
+
+    /// Asks where to save, then writes the CSV.
+    ///
+    /// - Side effects: Writes one file where the user chooses. Shows an
+    ///   alert if that fails.
+    @MainActor private func export() {
+        guard let snapshot = controller.library.snapshot,
+              let reference = controller.devices.referenceContents else { return }
+        let marks = LibraryMarks(snapshot: snapshot, record: reference.record,
+                                 selection: reference.device.effectiveSelection)
+        let text = SongListCSV.make(snapshot: snapshot, marks: marks)
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.commaSeparatedText]
+        panel.nameFieldStringValue = "\(reference.device.name) songs.csv"
+        panel.message = "Songs on your Q2, and those chosen for the next sync."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            NSAlert(error: error).runModal()
         }
     }
 }

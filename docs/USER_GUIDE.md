@@ -165,7 +165,8 @@ unplugged:
   **On Q2** column shows a green check (on your Q2), a grey arrow (comes at
   the next sync), a dash (not chosen), or an orange icon when the song can't
   be synced (iCloud only, copy-protected, file missing…; hover for why, or
-  open **Song Info**).
+  open **Song Info**). For a missing file it says where it went: in the
+  Trash, on a drive that isn't connected, or moved or deleted.
 - An artist's songs are listed album by album (albums in A–Z order, as on
   the Q2), each album in track order. A genre's songs are listed by album
   artist, then album, then track. Click a column header to sort another way;
@@ -188,6 +189,12 @@ These marks come from Q2 Sync's record of the card from the last time it was
 connected; the window's subtitle says which Q2 and when. If the card was
 changed elsewhere since (on the Q2 itself or another Mac), they catch up the
 next time you connect it.
+
+**Export a song list.** Choose **File › Export Song List…** to save a CSV (for
+Excel or Numbers) of the songs on your Q2 and those chosen for the next sync,
+with title, artist, album, genre, year, length, size and format, and whether
+each is **On Q2** or **Next sync**. It uses the same record of the card as the
+marks above, so it works without the Q2 connected.
 
 ---
 

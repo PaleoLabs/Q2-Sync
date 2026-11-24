@@ -223,10 +223,11 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 
 | Type | Purpose | Notes |
 | --- | --- | --- |
-| `Track` | One song, copied out of Apple Music into a plain value | `availability` says if it can be copied (`available`, `cloudOnly`, `drmProtected`, `fileMissing`, `unsupported`). `effectiveAlbumArtist` mirrors Q2 Pod's album grouping. |
+| `Track` | One song, copied out of Apple Music into a plain value | `availability` says if it can be copied (`available`, `cloudOnly`, `drmProtected`, `fileMissing`, `unsupported`). `effectiveAlbumArtist` mirrors Q2 Pod's album grouping. `unavailableReason` words why it can't be copied; for `fileMissing` it checks the last known path (Trash, unmounted `/Volumes` drive, or moved). |
 | `Playlist` | One playlist: name, kind (regular/smart/folder), ordered track IDs | Smart playlists are their current contents. |
 | `LibrarySnapshot` | Immutable picture of the library | `artistGroups`, `albumGroups`, `genreGroups` build the selection lists, once per snapshot (`memoized`, shared by copies, lock-protected); `groupsByID` looks rows up. `SortKey` sorts like the Q2 (ignores leading The/A/An). |
 | `LibraryMarks` | The library browser's marks: per song `TrackPlacement` (on Q2 / next sync / not chosen / can't sync), per group `GroupMarks` counts | Built once per library read, card record and selection (it resolves the selection); compares against `CardContentsRecord`. |
+| `SongListCSV` | CSV text of the songs on the Q2 or chosen for it (`make(snapshot:marks:)`) | Pure text. File › Export Song List… (`SongListCommands` in `Q2SyncApp`) builds the marks for `devices.referenceContents` and saves it with an `NSSavePanel`. |
 | `SyncSelection` | What you ticked for a device | Stores *intent* (artist/album/genre/playlist IDs) so new albums by a ticked artist sync automatically. |
 
 ### Library (`Core/Library`)

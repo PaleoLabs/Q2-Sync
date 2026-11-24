@@ -39,7 +39,7 @@ extension TableIcon {
     static func song(_ track: Track, placement: TrackPlacement?) -> TableIcon? {
         if !track.isCopyable {
             return TableIcon(symbol: track.availability.symbolName, color: .systemOrange,
-                             help: "Can't be synced: \(track.availability.reportDescription.lowercased()). Select it and open Song Info for more.")
+                             help: "Can't be synced: \(track.unavailableReason.lowercased()). Select it and open Song Info for more.")
         }
         switch placement {
         case .onQ2:
