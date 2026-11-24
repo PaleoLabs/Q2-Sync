@@ -83,8 +83,10 @@ keeps you posted.
 
 ### 📋 Playlists that actually make it
 Regular playlists, smart playlists and Genius playlists are written for the
-Q2's **Library → Playlists → Import**. Only playlists that changed are put up
-for import, so the Q2 doesn't re-read everything each time.
+Q2's **Library → Playlists → Import**. By default every playlist stays in the
+import folder, so none can miss an Import. If Import is slow for you, turn on
+**Only put new or changed playlists in the import folder**: the sync window
+then asks whether you imported the last batch before taking any out.
 
 ### 📊 A capacity bar you'll recognize
 Music, files not from Q2 Sync, what this sync adds, and free space, all at a

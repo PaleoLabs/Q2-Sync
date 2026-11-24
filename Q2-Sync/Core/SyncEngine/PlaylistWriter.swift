@@ -71,6 +71,10 @@ struct PlaylistPlan: Sendable {
     /// Unchanged playlists whose file is still in the import folder from an
     /// earlier sync, to be taken out (only with `onlyChangedForImport`).
     var leavingImport: [PlannedPlaylist] = []
+    /// Selected playlists whose file from an earlier sync is still in the
+    /// import folder. With `onlyChangedForImport`, the sync window asks
+    /// whether these were imported (`SyncOptions.playlistsWereImported`).
+    var waitingForImport = 0
 }
 
 /// Which playlists go in the import folder.
@@ -80,8 +84,10 @@ struct PlaylistPlan: Sendable {
 /// file there doesn't remove a playlist the Q2 already imported. So, with
 /// "only changed playlists" on, a sync leaves in the folder only playlists
 /// whose contents changed since they were last put up for import (by
-/// SHA-256, `SyncManifest.playlistDigests`), and takes out unchanged ones
-/// left from the sync before, assuming they were imported after it.
+/// SHA-256, `SyncManifest.playlistDigests`). Unchanged ones left from an
+/// earlier sync are taken out only when the user confirms they imported
+/// them (`SyncOptions.playlistsWereImported`); otherwise they stay, so a
+/// skipped Import never loses a playlist.
 enum PlaylistImportRule {
 
     /// The playlist file's fingerprint.
@@ -184,6 +190,10 @@ enum PlaylistWriter {
             }
         }
         result.removals.sort { $0.path < $1.path }
+        result.waitingForImport = result.writes.filter { planned in
+            manifest.playlistFiles[planned.playlist.id] == planned.path
+                && folderFiles[CardLayout.caseKey(planned.path)] != nil
+        }.count
         return result
     }
 

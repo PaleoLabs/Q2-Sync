@@ -199,7 +199,7 @@ struct DeviceSettingsView: View {
             }
 
             Section {
-                Toggle("Only put changed playlists up for import", isOn: Binding(
+                Toggle("Only put new or changed playlists in the import folder", isOn: Binding(
                     get: { connected.device.effectiveImportOnlyChangedPlaylists },
                     set: { devices.setImportOnlyChangedPlaylists($0) }))
                 HStack {
@@ -219,7 +219,7 @@ struct DeviceSettingsView: View {
             } header: {
                 Text("Playlists")
             } footer: {
-                Text("The Q2's Import reads every playlist in the card's playlist folder, which takes minutes. With this on, each sync leaves there only playlists that are new or changed, and takes out ones you imported after the previous sync, so Import only does what's needed. Playlists already on the Q2 stay there.")
+                Text("Off (the default): every playlist stays in the card's playlist folder, and the Q2's Import reads them all, which can take minutes. On: Import only reads new or changed playlists. Q2 Sync can't see whether you ran Import on the Q2, so when playlists from an earlier sync are still in the folder, the sync window asks, and takes them out only if you tick \u{201C}I imported them on the Q2.\u{201D} Playlists already on the Q2 stay there either way.")
             }
 
             PodDataSection(model: autoSync.podData, connected: connected,

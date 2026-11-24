@@ -73,11 +73,12 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     var effectiveAlbumCovers: Bool { albumCovers ?? true }
 
     /// Keep only new or changed playlists in the import folder, so the
-    /// Q2's Import is quick. Optional so older files load; `nil` means on.
+    /// Q2's Import is quick. Optional so older files load; `nil` means off.
     var importOnlyChangedPlaylists: Bool?
 
-    /// The setting, with its default (on).
-    var effectiveImportOnlyChangedPlaylists: Bool { importOnlyChangedPlaylists ?? true }
+    /// The setting, with its default (off: every playlist stays in the
+    /// import folder, so none can miss the Q2's Import).
+    var effectiveImportOnlyChangedPlaylists: Bool { importOnlyChangedPlaylists ?? false }
 
     /// Put every playlist up for import at the next sync (one time).
     var reimportAllPlaylists: Bool?

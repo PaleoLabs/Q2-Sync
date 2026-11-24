@@ -192,7 +192,9 @@ sequenceDiagram
    start yourself can be applied straight from the preview.
 10. **Preview.** `SyncPreviewView` shows `SyncPlan.summary(applyRemovals:)`
     (one sentence) and free space, a box for choices (removals, one pop-up per
-    `CardOnlyGroup`), and a Details disclosure (`@AppStorage
+    `CardOnlyGroup`, and, with "only changed playlists" on and
+    `PlaylistPlan.waitingForImport > 0`, an "I imported them on the Q2"
+    checkbox), and a Details disclosure (`@AppStorage
     "syncPreviewShowsDetails"`, closed by default) with the counts in one box
     per topic (Songs, Not Copied, Playlists, Album Covers) and the lists in the same
     order after the sections that need a choice.
@@ -316,7 +318,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `CardFileSystem` | `copyFromMac`, `move`, `removeFile`, `writeAtomically`, `createDirectory`, `removeEmptyFolders`, `removeAppleDoubleCompanion`, `cleanTempFolder` | **the only card writes**, each guarded |
 | `SyncManifest.load` / `save` | card ↔ record of managed songs, playlist files, playlist fingerprints and covers (newer fields are optional, so older manifests load) | `save` writes `.q2sync/manifest.json` atomically |
 | `PlaylistNaming.disambiguate(_:folders:)` | selected playlists → same-named ones in a folder renamed "Folder - Name" | none |
-| `PlaylistImportRule.needsImport(...)` / `digest` | a playlist's bytes + its last fingerprint → whether it goes up for the Q2's Import (only changed playlists stay in `_explaylist_data`) | none |
+| `PlaylistImportRule.needsImport(...)` / `digest` | a playlist's bytes + its last fingerprint → whether it goes up for the Q2's Import (with the setting on, only changed playlists are added to `_explaylist_data`; unchanged ones come out only when `SyncOptions.playlistsWereImported` is set from the sync window's checkbox) | none |
 | `AlbumCovers.plan(tracks:finalPaths:manifest:cardFiles:)` | songs' final paths → `[CoverWrite]` (one `cover.jpg` per album folder; skips folders with the user's own cover/folder image; manifest `albumCovers` records Q2 Sync's) | none |
 | `CoverImage.makeJPEG(from:maxPixels:)` | artwork bytes → baseline RGB JPEG ≤ 1000 px (what the Q2 decodes cheaply) | none |
 | `TimeRemainingEstimator.update(bytesCopied:totalBytes:at:)` / `describe` | progress samples → seconds left, "About 12 minutes remaining". Counts bytes for music; `forCovers()` counts covers for the album-cover step (`SyncProgress.isAddingCovers`, `coversDone`/`coversTotal`), which has its own bar | none |
@@ -333,7 +335,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `SyncLog` | writes `Logs/Sync <date>.log` | writes in the app container |
 
 **`SyncOptions`** (the preview's choices): `applyRemovals` (default off),
-`largeRemovalConfirmed`, `cardOnlyActions`
+`largeRemovalConfirmed`, `playlistsWereImported` (default off: unchanged
+playlists stay in the import folder; auto-sync never sets it), `cardOnlyActions`
 (per file: leave, move to Mac, delete; what the executor
 reads) and `cardOnlyChoices` (what the preview shows). `CardOnlyChoices` holds
 one `GroupChoice` per `CardOnlyGroup` (on card only / not put there by

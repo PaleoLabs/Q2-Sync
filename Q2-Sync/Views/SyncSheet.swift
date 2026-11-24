@@ -117,6 +117,14 @@ struct SyncPreviewView: View {
 
     /// Up to date with no lists worth showing (nothing skipped, nothing
     /// only on the card), so the list area shows a centred message.
+    /// "Only changed playlists" is on and playlists from an earlier sync
+    /// are still in the import folder: ask whether they were imported,
+    /// since Q2 Sync can't tell. Unticked, they stay.
+    private var asksAboutPlaylistImport: Bool {
+        plan.playlistPlan.onlyChangedForImport && !plan.playlistPlan.reimportAll
+            && plan.playlistPlan.waitingForImport > 0
+    }
+
     private var hasNothingToList: Bool { plan.isEmpty && plan.cardOnly.isEmpty && plan.skipped.isEmpty }
 
     var body: some View {
@@ -236,12 +244,13 @@ struct SyncPreviewView: View {
         CardOnlyGroup.allCases.filter { group in plan.cardOnly.contains { CardOnlyGroup($0) == group } }
     }
 
-    /// A box for what needs a choice: songs you no longer sync, and music
-    /// only on the card (one pop-up per group). Shown only when there's
+    /// A box for what needs a choice: songs you no longer sync, music only
+    /// on the card (one pop-up per group), and playlists waiting in the
+    /// import folder (only with "only changed playlists" on). Shown only when there's
     /// something to decide.
     @ViewBuilder
     private var decisions: some View {
-        if !plan.removals.isEmpty || !cardOnlyGroups.isEmpty {
+        if !plan.removals.isEmpty || !cardOnlyGroups.isEmpty || asksAboutPlaylistImport {
             VStack(alignment: .leading, spacing: 10) {
                 if !plan.removals.isEmpty {
                     HStack {
@@ -256,6 +265,22 @@ struct SyncPreviewView: View {
                         Label("That's \(removalPercent)% of the songs on this card. You'll be asked to confirm.",
                               systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
+                    }
+                }
+                if asksAboutPlaylistImport {
+                    let waiting = plan.playlistPlan.waitingForImport
+                    HStack {
+                        Image(systemName: "music.note.list").foregroundStyle(.pink)
+                        Text(waiting == 1
+                             ? "1 playlist from an earlier sync is still in the Q2's import folder."
+                             : "\(waiting.formatted()) playlists from an earlier sync are still in the Q2's import folder.")
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                        Toggle("I imported them on the Q2", isOn: Binding(
+                            get: { sync.options.playlistsWereImported },
+                            set: { sync.options.playlistsWereImported = $0 }))
+                            .toggleStyle(.checkbox)
+                            .fixedSize()
                     }
                 }
                 ForEach(cardOnlyGroups) { group in
@@ -296,7 +321,7 @@ struct SyncPreviewView: View {
         let playlistBox = countBox("Playlists") {
             countLine("Playlists", playlists.writes.count, "music.note.list", .pink)
             countLine("Remove playlists", playlists.removals.count, "minus.circle", .red)
-            countLine("Already imported", playlists.leavingImport.count, "tray.and.arrow.up", .secondary)
+            countLine("Already imported", sync.options.playlistsWereImported ? playlists.leavingImport.count : 0, "tray.and.arrow.up", .secondary)
         }
         let coverBox = countBox("Album Covers") {
             countLine("Album covers", plan.coverWrites.count, "photo", .indigo)

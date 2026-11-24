@@ -98,6 +98,10 @@ struct SyncOptions: Sendable, Equatable {
     var applyRemovals = false
     /// The user confirmed a removal above the 20% threshold.
     var largeRemovalConfirmed = false
+    /// The user says they ran Import on the Q2 after the previous sync, so
+    /// unchanged playlists can be taken out of the import folder. Off,
+    /// they stay (Q2 Sync can't see whether an import happened).
+    var playlistsWereImported = false
     /// What to do with each card-only file (missing = leave). The preview
     /// derives it from `cardOnlyChoices` (`setCardOnlyChoices`).
     var cardOnlyActions: [CardPath: CardOnlyAction] = [:]
@@ -412,9 +416,10 @@ struct SyncExecutor: Sendable {
                                                           fileOnCard: existing, reimportAll: playlistPlan.reimportAll)
                     if manifest.playlistDigests == nil { manifest.playlistDigests = [:] }
                     if !upForImport {
-                        // Unchanged and imported after an earlier sync: take
-                        // it out so the Q2's Import doesn't read it again.
-                        if existing != nil, manifest.playlistFiles[id] == planned.path {
+                        // Unchanged, and the user says they imported it after
+                        // an earlier sync: take it out so the Q2's Import
+                        // doesn't read it again. Without their word, leave it.
+                        if options.playlistsWereImported, existing != nil, manifest.playlistFiles[id] == planned.path {
                             try fileSystem.removeFile(planned.path)
                             report.playlistsTakenOut += 1
                             log.write("TAKE OUT OF IMPORT  \(planned.path)  (unchanged, already imported)")

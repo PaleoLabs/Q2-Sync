@@ -261,7 +261,8 @@ struct PlaylistImportTests {
             try? FileManager.default.removeItem(at: logs)
         }
 
-        func sync(_ playlists: [Playlist], onlyChanged: Bool = true, reimportAll: Bool = false) async throws
+        func sync(_ playlists: [Playlist], onlyChanged: Bool = true, reimportAll: Bool = false,
+                  imported: Bool = true) async throws
             -> (SyncPlan, SyncReport) {
             let manifest = try SyncManifest.load(from: card.fileSystem)
             let selection = ResolvedSelection(tracksToSync: tracks, skippedTracks: [], playlists: playlists,
@@ -275,8 +276,10 @@ struct PlaylistImportTests {
             PlaylistWriter.dropUnchangedWrites(in: &plan, manifest: manifest, profile: .q2Pod) { path in
                 try? Data(contentsOf: card.fileSystem.urlForReading(path))
             }
+            var options = SyncOptions()
+            options.playlistsWereImported = imported
             let report = await SyncExecutor(fileSystem: card.fileSystem, deviceName: "T", logsDirectory: logs)
-                .run(plan: plan, manifest: manifest, options: SyncOptions()) { _ in }
+                .run(plan: plan, manifest: manifest, options: options) { _ in }
             return (plan, report)
         }
 
@@ -337,6 +340,28 @@ struct PlaylistImportTests {
         #expect(f.inImportFolder().isEmpty)
         (_, report) = try await f.sync([changed, two], onlyChanged: false)
         #expect(f.inImportFolder() == ["One.m3u", "Two.m3u"])
+    }
+
+    @Test("A sync with no Import in between keeps the playlists in the folder")
+    func skippedImport() async throws {
+        let f = try makeFixture(); defer { f.cleanUp() }
+        let one = playlist("P1", "One", ["A"]), two = playlist("P2", "Two", ["B"])
+
+        // First sync puts both up for import.
+        var (plan, report) = try await f.sync([one, two], imported: false)
+        #expect(report.succeeded && f.inImportFolder() == ["One.m3u", "Two.m3u"])
+
+        // Synced again without importing on the Q2: the sync window asks,
+        // the user doesn't tick it, and nothing is taken out.
+        (plan, report) = try await f.sync([one, two], imported: false)
+        #expect(plan.playlistPlan.waitingForImport == 2)
+        #expect(report.playlistsTakenOut == 0 && f.inImportFolder() == ["One.m3u", "Two.m3u"])
+
+        // Once they say they imported them, the unchanged ones come out.
+        (plan, report) = try await f.sync([one, two], imported: true)
+        #expect(report.playlistsTakenOut == 2 && f.inImportFolder().isEmpty)
+        (plan, _) = try await f.sync([one, two], imported: false)
+        #expect(plan.playlistPlan.waitingForImport == 0)
     }
 
     @Test("Upgrading: identical files already on the card count as imported")

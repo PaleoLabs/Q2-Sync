@@ -339,9 +339,9 @@ extension SyncPlan {
         if !forgottenEntries.isEmpty {
             changes.append("forget \(Self.count(forgottenEntries.count, "song")) no longer on the card")
         }
-        if !playlistPlan.leavingImport.isEmpty {
-            changes.append("take \(Self.count(playlistPlan.leavingImport.count, "imported playlist")) out of the import folder")
-        }
+        // Playlists waiting in the import folder aren't mentioned: the
+        // choices box asks about them, and changing this sentence when the
+        // box is ticked would move the box under the pointer.
 
         guard !changes.isEmpty else { return "Everything you chose is already on the card." }
         let list = changes.count == 1 ? changes[0]

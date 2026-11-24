@@ -221,6 +221,10 @@ marks above, so it works without the Q2 connected.
    deleted from the card. They're still in your library, so ticking them
    again puts them back at the next sync. If that's more than 20% of the
    songs on the card, you'll be asked to confirm.
+   With **Only put new or changed playlists in the import folder** on, the
+   same box may also ask about playlists still waiting in the import folder.
+   Tick **I imported them on the Q2** only if you did (see
+   [Update the library on your Q2](#6-update-the-library-on-your-q2)).
 5. Click **Sync**. A progress bar shows what's being copied, with an
    estimate such as "About 12 minutes remaining" once it has measured the
    copying speed (after about 10 seconds). If album covers are on, they're
@@ -358,14 +362,19 @@ its file from the card doesn't remove a playlist you already imported.
 shows no progress while it does, so big playlists can look frozen for
 several minutes. Leave it until it finishes.
 
-**Only changed playlists (on by default):** so you don't wait for every
-playlist each time, each sync leaves in the card's playlist folder only the
-playlists that are new or changed, and takes out the ones you imported after
-the previous sync. Playlists already on the Q2 stay there. The sync result
-tells you how many are ready to import. If you skipped an import, reset the
-Q2 or use a new card, click **Put All Up for Import** on your Q2's
-**Settings** tab (under **Playlists**) before syncing. Turn the setting off
-to keep every playlist in the folder.
+**Only put new or changed playlists in the import folder (off by
+default):** off, every playlist stays in the card's playlist folder and Q2
+Sync never takes one out, so the Q2's Import reads them all each time. That
+is the safe choice: no playlist can miss an Import. Turn it on (your Q2's
+**Settings** tab, under **Playlists**) if Import takes too long for you. Each
+sync then adds only playlists that are new or changed. Q2 Sync can't see
+whether you ran Import on the Q2, so when playlists from an earlier sync are
+still in the folder, the sync window says how many and shows a
+**I imported them on the Q2** checkbox. Tick it only if you ran Import since
+that sync: the unchanged ones are then taken out. Leave it unticked and they
+stay. Auto-sync never ticks it for you. Playlists already on the Q2 stay there either way. The sync result
+tells you how many are ready to import. If you reset the Q2 or use a new
+card, click **Put All Up for Import** under **Playlists** before syncing.
 
 **Which playlists go on the card:** your own regular, smart and Genius
 playlists, and Apple's music smart playlists (My Top Rated, Recently Played,

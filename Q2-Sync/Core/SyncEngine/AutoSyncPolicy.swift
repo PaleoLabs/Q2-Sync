@@ -78,6 +78,11 @@ enum AutoSyncPolicy {
             reasons.append("\(pluralized(plan.orphanedEntries.count, "song")) on the card \(plan.orphanedEntries.count == 1 ? "is" : "are") no longer in your library.")
         }
         if !reasons.isEmpty { return .needsReview(reasons) }
-        return plan.isEmpty ? .nothingToDo : .apply
+        // Playlists waiting in the import folder are only taken out when the
+        // user ticks "I imported them on the Q2", which auto-sync never does,
+        // so on their own they're not work for an automatic sync.
+        var work = plan
+        work.playlistPlan.leavingImport = []
+        return work.isEmpty ? .nothingToDo : .apply
     }
 }
