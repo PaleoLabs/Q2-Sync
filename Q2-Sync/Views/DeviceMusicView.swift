@@ -286,6 +286,12 @@ struct DeviceMusicView: View {
                 .foregroundStyle(.secondary)
             Text("\(resolved.tracksToSync.count.formatted()) songs")
                 .fontWeight(.medium)
+            // Total playing time, e.g. "3d 4h" or "2h 35m".
+            if resolved.totalDurationSeconds >= 60 {
+                Text(Duration.seconds(resolved.totalDurationSeconds)
+                        .formatted(.units(allowed: [.days, .hours, .minutes], width: .narrow, maximumUnitCount: 2)))
+                    .foregroundStyle(.secondary)
+            }
             Text(Int64(resolved.totalBytes).formatted(ByteCountFormatStyle(style: .file)))
                 .foregroundStyle(.secondary)
             if !resolved.playlists.isEmpty {

@@ -42,6 +42,9 @@ struct ResolvedSelection: Sendable {
     /// Total size of `tracksToSync`, in bytes, from the library's records.
     var totalBytes: UInt64 { tracksToSync.reduce(0) { $0 + $1.fileSize } }
 
+    /// Total playing time of `tracksToSync`, in seconds.
+    var totalDurationSeconds: Double { tracksToSync.reduce(0) { $0 + $1.durationSeconds } }
+
     /// Skipped tracks counted by reason, for the summary line.
     var skippedCounts: [TrackAvailability: Int] {
         Dictionary(grouping: skippedTracks, by: \.availability).mapValues(\.count)

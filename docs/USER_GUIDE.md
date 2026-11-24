@@ -132,7 +132,8 @@ sync automatically next time.
 
 The bar at the bottom shows:
 
-- how many songs and how much space your selection uses;
+- how many songs your selection holds, how long they play for in total
+  (for example "2h 35m" or "3d 4h"), and how much space they use;
 - **"can't be synced"**: click it to see songs that won't be copied: songs
   only in iCloud (Q2 Sync never downloads them; if they're your own music,
   download them in Music first) and protected (DRM) songs, which includes
