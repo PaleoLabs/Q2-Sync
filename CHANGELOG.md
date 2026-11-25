@@ -4,6 +4,9 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 
 ## Unreleased
 
+### Added
+- **Double-click a song to open Song Info.** **View › Show Song Info** (**⌘I**) shows or hides it.
+
 ### Changed
 - **Sync Complete shows your next steps on the Q2 before you eject**, as a numbered list like the one in Install Firmware. Before, the steps appeared only after clicking **Eject** in that window, so ejecting any other way skipped them. The list includes the playlist and Cover Flow steps only when that sync calls for them.
 - **Eject now ejects and closes the window.** **Done** (previously **Not Now**) closes it with the card still connected, **Verify Card…** sits on the left, and **Show Log** is a link. The eject question and the separate cover note are gone.

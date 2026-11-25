@@ -63,6 +63,12 @@ enum BrowseCategory: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+extension FocusedValues {
+    /// `true` when the frontmost window shows a view with a Song Info panel
+    /// (read by `SongInfoCommands` to enable its menu item).
+    @Entry var offersSongInfo: Bool?
+}
+
 /// A two-pane browser for one category.
 struct LibraryCategoryView: View {
 
@@ -148,6 +154,8 @@ struct LibraryCategoryView: View {
         }
         .navigationTitle(category.rawValue)
         .navigationSubtitle(comparisonSubtitle)
+        // Enables View › Show Song Info while this view is showing.
+        .focusedSceneValue(\.offersSongInfo, true)
         .inspector(isPresented: $showSongInfo) {
             let song = selectedSongs.count == 1 ? selectedSongs.first : nil
             SongInspectorView(track: song, selectedCount: selectedSongs.count,
@@ -161,7 +169,7 @@ struct LibraryCategoryView: View {
                     Label("Song Info", systemImage: "info.circle")
                 }
                 .labelStyle(.titleAndIcon)
-                .help("Show or hide details of the selected song")
+                .help("Show or hide details of the selected song (⌘I)")
             }
         }
         .onChange(of: category) { groupID = nil }

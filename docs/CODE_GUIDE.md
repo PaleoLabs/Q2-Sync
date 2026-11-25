@@ -388,8 +388,11 @@ removing thousands of them hung the app), `ConnectQ2View` (the sidebar's
 is on and the app doesn't open at login; `LoginItem` wraps `SMAppService`
 for it and `AppSettingsView`'s toggle, the real control),
 `SongInspectorView` (the
-browser's song inspector; artwork via `LibraryModel.artworkData(for:)`, one
-whole-library `LibraryArtworkReader` opened on first use), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
+browser's song inspector, opened by double-clicking a song, View › Show Song
+Info (⌘I; `SongInfoCommands`, enabled by the `offersSongInfo` focused value),
+the toolbar button or Show Info, and never closed automatically; artwork via
+`LibraryModel.artworkData(for:)`, one whole-library `LibraryArtworkReader`
+opened on first use), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
 
 ---
 

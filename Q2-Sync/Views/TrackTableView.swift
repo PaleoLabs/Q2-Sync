@@ -34,7 +34,8 @@ struct TrackTableView: NSViewRepresentable {
     /// the song inspector).
     var onSelect: ([Track]) -> Void = { _ in }
 
-    /// Called by the right-click menu's "Show Info".
+    /// Called by double-clicking a song and by the right-click menu's
+    /// "Show Info".
     var onShowInfo: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -69,6 +70,8 @@ struct TrackTableView: NSViewRepresentable {
         tableView.dataSource = context.coordinator
         tableView.delegate = context.coordinator
         context.coordinator.tableView = tableView
+        tableView.target = context.coordinator
+        tableView.doubleAction = #selector(Coordinator.rowDoubleClicked)
 
         let rowMenu = NSMenu()
         rowMenu.delegate = context.coordinator
@@ -238,6 +241,13 @@ struct TrackTableView: NSViewRepresentable {
         }
 
         private func notifySelection() { onSelect(selectedTracks()) }
+
+        /// Double-clicking a song opens Song Info. Double-clicks on the
+        /// header or empty space report no row and are ignored.
+        @objc func rowDoubleClicked() {
+            guard let tableView, tableView.clickedRow >= 0 else { return }
+            onShowInfo?()
+        }
 
         // MARK: Menus
 

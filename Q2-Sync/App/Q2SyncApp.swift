@@ -70,6 +70,7 @@ struct Q2SyncApp: App {
         .commands {
             DeviceCommands(controller: autoSync)
             SongListCommands(controller: autoSync)
+            SongInfoCommands()
             AboutCommand()
         }
 
@@ -127,6 +128,27 @@ struct DeviceCommands: Commands {
             Button("Eject") { Task { await controller.eject() } }
                 .keyboardShortcut("e", modifiers: .command)
                 .disabled(connected == nil || controller.devices.isEjecting || controller.isCardBusy)
+        }
+    }
+}
+
+/// View › Show Song Info (⌘I): shows or hides the panel with the selected
+/// song's details. Dimmed unless the main window is on a library view.
+struct SongInfoCommands: Commands {
+    // The same stored setting the library view's panel and toolbar use.
+    @AppStorage("showSongInfo") private var showSongInfo = false
+
+    /// Set by `LibraryCategoryView` while it's in the frontmost window.
+    @FocusedValue(\.offersSongInfo) private var offersSongInfo
+
+    var body: some Commands {
+        CommandGroup(after: .sidebar) {
+            let available = offersSongInfo == true
+            Button(available && showSongInfo ? "Hide Song Info" : "Show Song Info") {
+                showSongInfo.toggle()
+            }
+            .keyboardShortcut("i", modifiers: .command)
+            .disabled(!available)
         }
     }
 }
