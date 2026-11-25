@@ -2,7 +2,7 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
-## Unreleased
+## 0.3.0 (2026-11-25)
 
 ### Added
 - **Sync Now and Eject in the Dock menu.** Right-click (or click and hold) Q2 Sync's Dock icon.
