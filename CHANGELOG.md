@@ -2,7 +2,7 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
-## Unreleased
+## 0.3.1 (2026-11-25)
 
 ### Added
 - **Search your library.** A search field in the toolbar on Artists, Albums, Genres and Playlists finds items by their name, or by a song's title, artist or album. **Edit › Find** (**⌘F**) puts the cursor there. ([#58](https://github.com/PaleoLabs/Q2-Sync/issues/58))
