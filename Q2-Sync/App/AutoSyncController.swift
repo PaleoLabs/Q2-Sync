@@ -201,14 +201,17 @@ final class AutoSyncController {
     /// sheets' own Eject buttons call `DeviceMonitor` with the window in
     /// view.)
     ///
-    /// A failure shows in the main window's alert, and also as a
-    /// notification if the window isn't there to show it.
+    /// If the main window isn't there to show what happened, a notification
+    /// says the card was ejected or, with the window's alert, why not.
     ///
     /// - Returns: `true` if the card was ejected.
     @discardableResult
     func eject() async -> Bool {
-        // Read the name first: ejecting changes what's connected.
-        let name = devices.connected?.device.name
+        // Read these first: ejecting changes what's connected, and another
+        // Q2 card taking over can bring the window forward.
+        let current = devices.connected
+        let wasInFront = isInFront
+        let name = current?.device.name
         guard !isCardBusy else {
             let message = "Q2 Sync is still using the card. Wait for it to finish, then eject."
             devices.errorMessage = message
@@ -220,7 +223,15 @@ final class AutoSyncController {
         if !ejected, name != nil, let message = devices.errorMessage {
             postEjectFailed(deviceName: name, message: message)
         }
+        if ejected, !wasInFront, let current { postEjected(current) }
         return ejected
+    }
+
+    private func postEjected(_ card: ConnectedDevice) {
+        Task {
+            await notifications.requestPermission()
+            notifications.postEjected(deviceName: card.device.name, message: card.connection.ejectedMessage)
+        }
     }
 
     private func postEjectFailed(deviceName: String?, message: String) {

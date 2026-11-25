@@ -96,6 +96,14 @@ enum CardConnection: String, Equatable, Sendable {
         }
     }
 
+    /// What you can do once the card has been ejected.
+    var ejectedMessage: String {
+        switch self {
+        case .otherDrive: return "You can take the card out now."
+        case .q2, .unknown: return "You can unplug your Q2 now."
+        }
+    }
+
     /// `true` if the "Is this your Q2?" sheet should pop up for a new drive
     /// on this connection. Unknown drives still ask, as before.
     var promptsForSetUp: Bool { self != .otherDrive }

@@ -100,6 +100,13 @@ struct ReservedItemTests {
         #expect(CardConnection.q2.ejectStep.contains("unplug"))
         #expect(CardConnection.unknown.ejectStep == CardConnection.q2.ejectStep)
     }
+
+    @Test("After ejecting, only a card in a reader is taken out")
+    func ejectedMessage() {
+        #expect(CardConnection.otherDrive.ejectedMessage.contains("take the card out"))
+        #expect(CardConnection.q2.ejectedMessage.contains("unplug"))
+        #expect(CardConnection.unknown.ejectedMessage == CardConnection.q2.ejectedMessage)
+    }
 }
 
 /// Builds a fake volume description with safe defaults (a removable exFAT card).

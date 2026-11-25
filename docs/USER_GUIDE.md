@@ -576,10 +576,12 @@ Always eject before unplugging:
 - **Eject** in the menu bar item, or
 - **Device › Eject** (**⌘E**), or right-click your Q2 in the sidebar.
 
+If Q2 Sync's window isn't in front (you ejected from the menu bar item or a
+notification, say), a notification tells you whether the card was ejected;
+click it to open Q2 Sync.
+
 If ejecting fails, Q2 Sync says so and the card stays connected. Close any
-Finder windows showing the card and try again. If Q2 Sync's window isn't in
-front (you ejected from the menu bar item or a notification, say), it also
-sends a notification; click it to open Q2 Sync.
+Finder windows showing the card and try again.
 
 Ejecting or plugging in a different drive (another card, a USB stick)
 while a sync runs doesn't affect the Q2 being synced, and the sidebar shows
