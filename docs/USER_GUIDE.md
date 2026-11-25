@@ -114,6 +114,32 @@ and a spare card in a reader), one is shown (the one you just set up or last cli
 others are listed below it in grey. Click one to switch to it (not while a
 sync or Verify Card is running).
 
+### New versions of Q2 Sync
+
+Q2 Sync checks GitHub for a new version when it starts, then once a day while
+it runs. When one is out, a small window says so and stays on top of other
+windows until you choose:
+
+- **View on GitHub** opens the download page.
+- **Later** closes the window. It's shown again the next time Q2 Sync starts,
+  or a day later.
+- **Skip This Version** stops it for that version. You'll still be told about
+  newer ones.
+
+If Q2 Sync is busy, for example syncing or waiting for you to answer
+something in its window, the update window appears after you're done.
+
+The menu bar item also shows **Get Q2 Sync …** until you've updated.
+
+To check yourself, choose **Q2 Sync › Check for Updates…**, or **Check for
+Updates…** in the menu bar item. To stop the automatic check, open **Q2 Sync ›
+Settings** and turn off **Check for new versions automatically**.
+
+Q2 Sync doesn't download or install updates. To update, download the new
+`Q2-Sync-<version>.zip`, unzip it, quit Q2 Sync, and drag the new **Q2 Sync**
+into your Applications folder, replacing the old one. Your settings and Q2s
+are kept.
+
 ---
 
 ## 3. Choose what to sync
@@ -594,7 +620,8 @@ the change straight away.
 
 **Which version of Q2 Sync do I have?** Choose **Q2 Sync › About Q2 Sync**.
 It shows the version and build, for example `Version 0.1 (142 · 0e7d893)`.
-Mention it when you report a problem.
+Mention it when you report a problem. For a newer one, see
+[New versions of Q2 Sync](#new-versions-of-q2-sync).
 
 **Can Q2 Sync damage my Apple Music library?**
 No. It only reads your library, and macOS itself prevents it from writing to

@@ -45,6 +45,9 @@ final class AutoSyncController {
     /// Optional Q2 Pod firmware update checks.
     let firmware = FirmwareModel()
 
+    /// Checks for new releases of Q2 Sync itself.
+    let updates = AppUpdateModel()
+
     /// Puts firmware on the card when you ask, and asks afterwards whether
     /// the Q2 installed it.
     let installer: FirmwareInstaller
@@ -86,6 +89,10 @@ final class AutoSyncController {
         // (e.g. "Did the firmware update finish?"). The main queue runs
         // this after launch.
         DispatchQueue.main.async { devices.start() }
+        // Also after launch, so its window can be shown.
+        DispatchQueue.main.async { [weak self] in
+            self?.updates.startAutomaticChecks { self?.isOccupied ?? false }
+        }
     }
 
     // MARK: - Connecting
@@ -310,6 +317,19 @@ final class AutoSyncController {
             if sync.phase == .finished { sync.close() }
             guard devices.connected?.accessURL != nil, !isCardInUse(except: .verifier) else { return }
             verifier.present()
+        }
+    }
+
+    /// `true` while something has your attention, so news that can wait (a
+    /// new version) shouldn't appear: the library or card is being read or
+    /// written, or the main window or a panel is asking something. A sheet
+    /// in a closed window doesn't count, as it isn't on screen.
+    var isOccupied: Bool {
+        // Reading the library includes macOS asking to allow it.
+        if library.state == .loading || isCardBusy || NSApp.modalWindow != nil { return true }
+        return NSApp.windows.contains {
+            DockIconController.isMainWindow($0) && $0.isVisible && !$0.isMiniaturized
+                && ($0.attachedSheet != nil || isShowingSheet)
         }
     }
 

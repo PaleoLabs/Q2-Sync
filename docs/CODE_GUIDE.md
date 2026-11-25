@@ -79,6 +79,7 @@ flowchart TB
 | `Q2-Sync/Core/Device` | Device facts: `DeviceProfile`, `ReservedItemRules`, `VolumeInfo`, `CardConnection`, `DeviceStore`, `FirmwareUpdates`, `FirmwareSources`, `FirmwareImage`, `ZipExtractor` |
 | `Q2-Sync/Core/SyncEngine` | Planning, diffing, copying, playlists, path guard, safety |
 | `Q2-Sync/Core/Help` | `UserGuide`: reading the user guide for the help window |
+| `Q2-Sync/Core/Updates` | `AppUpdates`: asking GitHub for the latest Q2 Sync release |
 | `Q2-Sync/App` | App entry point and UI-facing models (`@Observable` classes) |
 | `Q2-Sync/Views` | SwiftUI views |
 | `Tests/Q2SyncCoreTests` | Unit tests (Swift Testing) for Core |
@@ -261,6 +262,15 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   songs: the files if they share a folder, their folders if those share one,
   otherwise nothing.
 
+### Updates (`Core/Updates`)
+
+- **`AppUpdateChecker.fetchLatest() -> AppRelease`** · GitHub's latest Q2 Sync
+  release. Only the tag is read; drafts and pre-releases are refused. The page
+  opened for a new version is the fixed `downloadPage`, never a link from the
+  answer.
+- **`AppRelease.isNewer(than:) -> Bool`** · compares the tag with
+  `MARKETING_VERSION` using `FirmwareVersion` (`v0.2.0` equals `0.2`).
+
 ### Device (`Core/Device`)
 
 - **`DeviceProfile`** · everything firmware-specific (see section 4).
@@ -374,7 +384,9 @@ preview's album rows (by folder and album tag).
 | `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra` (always shown; it's the way back while the Dock icon is hidden), `Settings`. `AppDelegate` keeps the app running when the window closes. |
 | `AppCommands` (file) | The menu bar menus and their shortcuts. A changed shortcut also goes in the user guide's "Keyboard shortcuts". |
 | `AppNavigation` | The sidebar selection, the Q2 page's tab, the selected songs, whether the main window is in front, the filter field Edit › Find focuses, and the Settings section a menu item scrolls to. Owned by `AutoSyncController`. |
-| `SupportActions` | Show Sync Logs, Show Card in Finder and the Help menu's GitHub links (fixed addresses, no user data). |
+| `SupportActions` | Show Sync Logs, Show Card in Finder, the latest release's page and the Help menu's GitHub links (fixed addresses, no user data). |
+| `AppUpdateModel` | New versions of Q2 Sync: checks at launch and every 24 hours (after a failure, in an hour) unless turned off, and Check for Updates…, which always answers. Both show `UpdateNoticeView`; an automatic find is shown on every check until the app is updated or the release is skipped (`skippedAppRelease`), after a 5 s settle delay and only once `AutoSyncController.isOccupied` is false (library or card in use, a modal panel, or a sheet in the visible main window), so it doesn't pile onto launch prompts and auto-sync. The menu bar item offers it while `available` is set. |
+| `UpdateWindow` | The floating, non-modal AppKit window for that notice, centered over the main window (on screen without one), so it can appear with no other window open and never holds up a sync or quitting. Takes the keyboard only when you asked for the check. |
 | `DockIconController` | Hides the Dock icon (`.accessory` activation policy) while the main window is closed and brings it back (`.regular`) in `showMainWindow()` or when the window becomes main. Settings, the sync sheet and alerts don't count. The help window and About panel keep the icon until they close. `openSettings` (the menu bar's Settings…) brings the Dock icon back while Settings is open, since an app without one can't reliably bring Settings to the front; it hides again when Settings closes with the main window still closed. A `CloseProxy` stands in front of SwiftUI's window delegate to answer `windowShouldClose` and show the "Still in the Menu Bar" notice (Keep in Menu Bar / Quit Q2 Sync / Don't show again, saved as `showMenuBarCloseNotice`; Settings › Messages › "Show Menu Bar Tip Again" turns it back on); every other delegate call is forwarded to SwiftUI's. |
 | `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
 | `DeviceMonitor` | Watches mounts (NSWorkspace), recognizes the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel; the waiting drive is matched by `id`, not `==`, since free space differs between reads), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
@@ -390,7 +402,7 @@ preview's album rows (by folder and album tag).
 ### Views (`Q2-Sync/Views`)
 
 `RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, Music/Settings tabs,
-`DeviceSettingsView`), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
+`DeviceSettingsView`), `UpdateNoticeView` (a new version, up to date, or a failed check), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
 table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
 `CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NumberedSteps` (the next-steps list in the sync result
@@ -479,7 +491,7 @@ Defense in depth: several independent layers, each enough on its own.
 | `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
 | `files.downloads.read-write` | "Move to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups` (the default backup folder). |
-| `network.client` | The optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
+| `network.client` | The check for new Q2 Sync releases, the optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
 
 ### Layer 2 — The single PathGuard
 
@@ -573,7 +585,11 @@ signature shows the account holder's name, and keeping the same Team ID across
 releases keeps the app's identity stable, so users aren't asked to grant
 access to the Music library and the card again. Steps for a release: bump
 `MARKETING_VERSION`, commit, run the script, tag (`git tag v<version>`), push
-the tag, and attach the zip and checksum to a GitHub release.
+the tag, and attach the zip and checksum to a GitHub release. The tag must
+match `MARKETING_VERSION`: running apps compare the latest release's tag with
+their own version, so a tag ahead of it keeps offering the update to people
+who already have it. Marking the release as a pre-release keeps it from being
+offered.
 
 **Project file:** Xcode 27 stores the project as `Q2-Sync.xcodeproj/project.xcproj`
 (JSON-style). The app target compiles the whole `Q2-Sync/` folder, so new files
@@ -595,7 +611,7 @@ Paths on the Mac are inside the app's sandbox container,
 | Known devices, selections, auto-sync mode, bookmarks | `Library/Application Support/Q2 Sync/devices.json` |
 | Each Q2's last known contents (song IDs, dates) for the library browser | `Library/Application Support/Q2 Sync/Card Contents/<volume UUID>.json` |
 | Sync logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
-| Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarCloseNotice`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease` |
+| Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarCloseNotice`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease`, `checkForAppUpdates`, `skippedAppRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |
 | Q2 Pod data backups | `<backup folder>/<card> <date>/` (default `~/Downloads/Q2 Sync Backups`; a chosen folder's bookmark is `podBackupsFolderBookmark` in UserDefaults) with `backup.json` and `About this backup.txt` |
 | Firmware downloads | a temporary folder, deleted after copying to the card |

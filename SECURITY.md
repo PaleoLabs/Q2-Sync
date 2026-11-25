@@ -34,7 +34,8 @@ Examples of problems we want to hear about privately:
 - Any change to your Apple Music library or `~/Music`.
 - A downloaded firmware file being accepted without passing its checks.
 - Data about you or your library being sent anywhere (the only network use is
-  downloading firmware).
+  checking for new versions of Q2 Sync, and checking for and downloading
+  firmware).
 - A way to make Q2 Sync damage files on a card without you asking.
 
 Ordinary bugs, such as a song not syncing, belong in

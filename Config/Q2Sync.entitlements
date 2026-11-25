@@ -42,12 +42,13 @@
         Each refuses any path outside its folder.
 
     • network.client
-        Outgoing connections only, for firmware: the optional check of
-        GitHub for new Q2 Pod releases (api.github.com), the check of
-        Shanling's download page for stock when you ask, and firmware
-        downloads you start with Install Firmware (GitHub for Q2 Pod;
-        Shanling's download page and Google Drive for stock). Nothing about
-        you or your library is sent.
+        Outgoing connections only, for two things. New versions of Q2 Sync:
+        a check of GitHub (api.github.com) at launch and daily, which you
+        can turn off, and when you ask. Firmware: the optional check of
+        GitHub for new Q2 Pod releases, the check of Shanling's download
+        page for stock when you ask, and firmware downloads you start with
+        Install Firmware (GitHub for Q2 Pod; Shanling's download page and
+        Google Drive for stock). Nothing about you or your library is sent.
 -->
 <plist version="1.0">
 <dict>

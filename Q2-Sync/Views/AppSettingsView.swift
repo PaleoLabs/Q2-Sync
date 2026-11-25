@@ -4,8 +4,9 @@
 //
 //  PURPOSE
 //  The app's Settings window (Q2 Sync › Settings…, or ⌘,): open Q2 Sync
-//  at login so auto-sync works without opening the app yourself, and bring
-//  back messages you turned off. The login toggle is the real control; the
+//  at login so auto-sync works without opening the app yourself, turn the
+//  automatic check for new versions off or on, and bring back messages you
+//  turned off. The login toggle is the real control; the
 //  only other place that offers it is `OpenAtLoginPrompt`, under a Q2's
 //  Auto-Sync picker.
 //
@@ -34,6 +35,9 @@ struct AppSettingsView: View {
     /// when it changes.
     @AppStorage(DockIconController.closeNoticeKey) private var showCloseNotice = true
 
+    /// Whether Q2 Sync looks for a newer version by itself.
+    @AppStorage(AppUpdateModel.automaticKey) private var checksForUpdates = true
+
     /// Whether Q2 Sync opens at login (read from macOS).
     @State private var opensAtLogin = LoginItem.isOn
 
@@ -52,6 +56,12 @@ struct AppSettingsView: View {
                 }
             } footer: {
                 Text("Keeps Q2 Sync in the menu bar, ready for your Q2.")
+            }
+
+            Section {
+                Toggle("Check for new versions automatically", isOn: $checksForUpdates)
+            } footer: {
+                Text("Asks GitHub when Q2 Sync starts, then once a day. Nothing about you is sent.")
             }
 
             // Bring back questions and tips you turned off.

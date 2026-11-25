@@ -36,6 +36,18 @@ struct AboutCommand: Commands {
     }
 }
 
+/// Q2 Sync › Check for Updates…, under About: looks for a newer release.
+struct UpdateCommand: Commands {
+    let controller: AutoSyncController
+
+    var body: some Commands {
+        CommandGroup(after: .appInfo) {
+            Button("Check for Updates…") { Task { await controller.updates.checkOnRequest() } }
+                .disabled(controller.updates.isCheckingOnRequest)
+        }
+    }
+}
+
 /// The Help menu: the user guide (⌘?), sync logs, and links to GitHub.
 struct HelpCommand: Commands {
     @Environment(\.openWindow) private var openWindow

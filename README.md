@@ -159,8 +159,9 @@ the card, which you fix by syncing again.
 - **Nothing is removed without asking.** Removals are off by default, and
   removing more than 20% needs extra confirmation. Music that's only on the
   card can be moved to your Mac before it leaves the card.
-- **Private.** The only network access is for firmware (GitHub, and
-  Shanling's download page for stock firmware). Nothing about you or your
+- **Private.** The only network access is to check GitHub for a new version
+  of Q2 Sync (you can turn that off in Settings) and for firmware (GitHub,
+  and Shanling's download page for stock firmware). Nothing about you or your
   library is ever sent anywhere.
 - **Keep a backup of your Mac.** Q2 Sync can back up Q2 Pod's data on the
   card, but it doesn't back up your Mac: please use Time Machine or another
@@ -186,6 +187,10 @@ the card, which you fix by syncing again.
 **Q2 Sync** to your Applications folder. It's signed and notarized by Apple.
 Each release lists a SHA-256 checksum to check the download against.
 What changed in each build is in [CHANGELOG.md](CHANGELOG.md).
+
+**Updating:** Q2 Sync checks for new versions and tells you when one is out
+(or choose **Q2 Sync › Check for Updates…**). Download it the same way, quit
+Q2 Sync, and replace the copy in your Applications folder.
 
 **Or build it yourself:**
 

@@ -82,6 +82,7 @@ struct Q2SyncApp: App {
             SongListCommands(controller: autoSync)
             SongInfoCommands()
             AboutCommand()
+            UpdateCommand(controller: autoSync)
             HelpCommand()
         }
 

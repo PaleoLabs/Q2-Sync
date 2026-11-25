@@ -4,8 +4,8 @@
 //
 //  PURPOSE
 //  The small "open something elsewhere" actions used by menus and buttons:
-//  the sync logs, the release notes, reporting a problem, and showing the
-//  card in Finder.
+//  the sync logs, the release notes, a new version's download page,
+//  reporting a problem, and showing the card in Finder.
 //
 //  PRIVACY
 //  The web links are fixed addresses. Nothing about you, your Mac, your
@@ -23,6 +23,11 @@ enum SupportActions {
 
     /// Help › Report a Problem…: an empty new issue.
     static let newIssue = URL(string: "https://github.com/PaleoLabs/Q2-Sync/issues/new")!
+
+    /// Opens the latest release's page, to download a new version.
+    static func showLatestRelease() {
+        NSWorkspace.shared.open(AppUpdateChecker.downloadPage)
+    }
 
     /// Opens the folder of sync logs in Finder, creating it if needed.
     static func showSyncLogs() {

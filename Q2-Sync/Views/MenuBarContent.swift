@@ -5,7 +5,8 @@
 //  PURPOSE
 //  The Q2 Sync menu in the menu bar: shows whether the Q2 is connected
 //  and any sync in progress, with Sync Now, Eject, Open Q2 Sync, Settings,
-//  Help, About and Quit.
+//  Help, About, Check for Updates and Quit, plus the new version when
+//  there is one.
 //
 //  HOW IT FITS
 //  Declared as a `MenuBarExtra` scene in `Q2SyncApp`. Always shown.
@@ -49,6 +50,11 @@ struct MenuBarContent: View {
             DockIconController.shared.openHelp { openWindow(id: Q2SyncApp.helpWindowID) }
         }
         Button("About Q2 Sync") { AboutCommand.showAboutPanel() }
+        if let release = controller.updates.available {
+            Button("Get Q2 Sync \(release.version)…") { SupportActions.showLatestRelease() }
+        }
+        Button("Check for Updates…") { Task { await controller.updates.checkOnRequest() } }
+            .disabled(controller.updates.isCheckingOnRequest)
         Divider()
         Button("Quit Q2 Sync") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
