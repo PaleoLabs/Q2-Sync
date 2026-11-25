@@ -324,11 +324,14 @@ final class DeviceMonitor {
     /// - Parameters:
     ///   - device: The saved record.
     ///   - volume: The mounted volume with the matching UUID.
-    /// - Side effects: Starts security-scoped access (balanced in
-    ///   `disconnect()`); may refresh a stale bookmark in the store.
     ///   - connectedAt: When the card was mounted; pass the old value when
     ///     reconnecting after a failed eject.
-    private func connect(device: KnownDevice, volume: VolumeInfo, connectedAt: Date = .now) {
+    ///   - isRestoring: `true` after a failed eject: the card never left, so
+    ///     `onDeviceConnected` isn't called.
+    /// - Side effects: Starts security-scoped access (balanced in
+    ///   `disconnect()`); may refresh a stale bookmark in the store.
+    private func connect(device: KnownDevice, volume: VolumeInfo, connectedAt: Date = .now,
+                         isRestoring: Bool = false) {
         var device = device
         let connection = connection(for: volume)
         var isStale = false
@@ -355,7 +358,7 @@ final class DeviceMonitor {
                                         connection: connection, connectedAt: connectedAt)
             reloadManifest()
             Self.logger.notice("Connected to known Q2 card")
-            if let connected { onDeviceConnected?(connected) }
+            if !isRestoring, let connected { onDeviceConnected?(connected) }
         } catch {
             connected = ConnectedDevice(device: device, volume: volume, accessURL: nil,
                                         accessProblem: "Q2 Sync no longer has permission to use this card. Grant access again.",
@@ -667,8 +670,11 @@ final class DeviceMonitor {
             refresh()
             return true
         } catch {
-            // Still mounted: restore access so the user can carry on.
-            connect(device: current.device, volume: current.volume, connectedAt: current.connectedAt)
+            // Still mounted: restore access so the user can carry on. Not a
+            // new connection, so nothing that runs on connecting (auto-sync,
+            // its notification, the firmware question) should run again.
+            connect(device: current.device, volume: current.volume, connectedAt: current.connectedAt,
+                    isRestoring: true)
             errorMessage = "The card couldn't be ejected. Close any windows or apps using it and try again. (\(error.localizedDescription))"
             return false
         }

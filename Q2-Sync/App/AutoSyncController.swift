@@ -195,17 +195,36 @@ final class AutoSyncController {
         devices.connected?.accessURL != nil && !isCardInUse()
     }
 
-    /// Ejects the card, unless something is still using it. Every Eject
-    /// button and notification action goes through here.
+    /// Ejects the card, unless something is still using it. Every way to
+    /// eject from outside a sheet comes through here: the sidebar, the Q2's
+    /// page, the menus, the menu bar item and the notification button. (The
+    /// sheets' own Eject buttons call `DeviceMonitor` with the window in
+    /// view.)
+    ///
+    /// A failure shows in the main window's alert, and also as a
+    /// notification if the window isn't there to show it.
     ///
     /// - Returns: `true` if the card was ejected.
     @discardableResult
     func eject() async -> Bool {
+        // Read the name first: ejecting changes what's connected.
+        let name = devices.connected?.device.name
         guard !isCardBusy else {
-            devices.errorMessage = "Q2 Sync is still using the card. Wait for it to finish, then eject."
+            let message = "Q2 Sync is still using the card. Wait for it to finish, then eject."
+            devices.errorMessage = message
+            postEjectFailed(deviceName: name, message: message)
             return false
         }
-        return await devices.eject()
+        let ejected = await devices.eject()
+        // With no card connected there was nothing to eject, and no error.
+        if !ejected, name != nil, let message = devices.errorMessage {
+            postEjectFailed(deviceName: name, message: message)
+        }
+        return ejected
+    }
+
+    private func postEjectFailed(deviceName: String?, message: String) {
+        postIfInBackground { $0.postEjectFailed(deviceName: deviceName ?? "Your Q2", message: message) }
     }
 
     /// Starts a sync of the connected Q2.

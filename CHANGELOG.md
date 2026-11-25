@@ -13,7 +13,7 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 - **Shanling stock firmware can be checked too**: **Check Now** on the Settings tab shows the latest version on Shanling's download page.
 - The user guide has a **Keyboard shortcuts** section.
 - **The user guide is in the Help menu.** **Help › Q2 Sync Help** (**⌘?**) opens it in its own window, with the sections in a sidebar. It works offline and matches the version you're running. ([#52](https://github.com/PaleoLabs/Q2-Sync/issues/52))
-- **Double-click a song to open Song Info.** **View › Show Song Info** (**⌘I**) shows or hides it.
+- **Double-click a song to open Song Info, and again to close it.** **View › Show Song Info** (**⌘I**) shows or hides it too.
 
 ### Changed
 - **Setting up a new Q2 no longer preselects Q2 Pod.** Neither firmware is selected, **Shanling (stock)** is listed first, and **Continue…** waits until you choose. Q2s you've already set up keep their setting.
@@ -22,7 +22,9 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 - The notification after an automatic sync now says to open Q2 Sync for next steps.
 
 ### Fixed
+- **A failed eject no longer goes unnoticed.** If Q2 Sync's window isn't in front, for example when you eject from the menu bar item or a notification, a notification says the card wasn't ejected and why.
 - With a card reader, the step after a sync said to unplug the Q2. It now says to put the card back in your Q2.
+- A failed eject no longer counts as your Q2 connecting again, which could start an automatic sync, ask whether to sync, or ask whether a firmware update had finished.
 
 ## 0.2.0 (2026-11-24)
 

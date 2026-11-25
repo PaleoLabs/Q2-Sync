@@ -34,9 +34,12 @@ struct TrackTableView: NSViewRepresentable {
     /// the song inspector).
     var onSelect: ([Track]) -> Void = { _ in }
 
-    /// Called by double-clicking a song and by the right-click menu's
-    /// "Show Info".
+    /// Called by the right-click menu's "Show Info"; the item is left out
+    /// without it.
     var onShowInfo: (() -> Void)? = nil
+
+    /// Called by double-clicking a song.
+    var onDoubleClick: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -91,6 +94,7 @@ struct TrackTableView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.onSelect = onSelect
         context.coordinator.onShowInfo = onShowInfo
+        context.coordinator.onDoubleClick = onDoubleClick
         context.coordinator.update(tracks: tracks, marks: marks)
     }
 
@@ -125,6 +129,7 @@ struct TrackTableView: NSViewRepresentable {
         weak var tableView: NSTableView?
         var onSelect: ([Track]) -> Void = { _ in }
         var onShowInfo: (() -> Void)?
+        var onDoubleClick: (() -> Void)?
 
         /// The songs in natural order, their marks, and the order shown
         /// (indexes into `tracks`, after sorting).
@@ -242,11 +247,11 @@ struct TrackTableView: NSViewRepresentable {
 
         private func notifySelection() { onSelect(selectedTracks()) }
 
-        /// Double-clicking a song opens Song Info. Double-clicks on the
-        /// header or empty space report no row and are ignored.
+        /// Double-clicking a song opens or closes Song Info. Double-clicks
+        /// on the header or empty space report no row and are ignored.
         @objc func rowDoubleClicked() {
             guard let tableView, tableView.clickedRow >= 0 else { return }
-            onShowInfo?()
+            onDoubleClick?()
         }
 
         // MARK: Menus

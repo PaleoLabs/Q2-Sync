@@ -142,7 +142,8 @@ struct LibraryCategoryView: View {
                         if let group = groups.first(where: { $0.id == groupID }) {
                             TrackTableView(tracks: snapshot.tracks(for: group.trackIDs), marks: marks,
                                            onSelect: { selectedSongs = $0 },
-                                           onShowInfo: { showSongInfo = true })
+                                           onShowInfo: { showSongInfo = true },
+                                           onDoubleClick: { showSongInfo.toggle() })
                         } else {
                             ContentUnavailableView("Select an Item", systemImage: "music.note",
                                                    description: Text("Choose one on the left to see its songs."))

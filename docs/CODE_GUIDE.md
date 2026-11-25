@@ -375,7 +375,7 @@ preview's album rows (by folder and album tag).
 | `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
 | `DeviceMonitor` | Watches mounts (NSWorkspace), recognizes the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel; the waiting drive is matched by `id`, not `==`, since free space differs between reads), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
 | `SyncCoordinator` | Sync state machine (idle → planning → preview → running → finished/failed); automatic mode consults `AutoSyncPolicy`. |
-| `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks; tells you about a new Q2 needing setup. Connect and setup notifications are only posted while Q2 Sync isn't in front (`isInFront`, checked 1.5 s after the event so a launching window counts), and notification permission is requested only when one is posted. |
+| `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks; tells you about a new Q2 needing setup. Connect, setup and failed-eject notifications are only posted while Q2 Sync isn't in front (`isInFront`, checked 1.5 s after the event so a launching window counts), and notification permission is requested only when one is posted. |
 | `NotificationManager` | Posts notifications; handles Sync Now / Eject / Verify Card / Open buttons. |
 | `FirmwareModel` | Firmware check state: Q2 Pod (opt-in, at most daily, cached) and Shanling stock (only when asked). |
 | `FirmwareInstaller` | Install sheet state and pipeline: find offers, download (`FileDownloader`), unzip, inspect, verify checksum, check free space, `CardFileSystem.placeFirmwareUpdate`, then remember `pendingFirmwareInstall` and ask on the next connection whether the Q2 installed it. |
@@ -403,9 +403,10 @@ removing thousands of them hung the app), `ConnectQ2View` (the sidebar's
 is on and the app doesn't open at login; `LoginItem` wraps `SMAppService`
 for it and `AppSettingsView`'s toggle, the real control),
 `SongInspectorView` (the
-browser's song inspector, opened by double-clicking a song, View › Show Song
-Info (⌘I; `SongInfoCommands`, enabled by the `offersSongInfo` focused value),
-the toolbar button or Show Info, and never closed automatically; artwork via
+browser's song inspector, opened or closed by double-clicking a song, View ›
+Show Song Info (⌘I; `SongInfoCommands`, enabled by the `offersSongInfo`
+focused value) or the toolbar button, opened by Show Info, and never closed
+automatically; artwork via
 `LibraryModel.artworkData(for:)`, one whole-library `LibraryArtworkReader`
 opened on first use), `HelpView` (the Help › Q2 Sync Help window,
 `HelpCommand`; draws `UserGuide` from the copy of the guide in the app's

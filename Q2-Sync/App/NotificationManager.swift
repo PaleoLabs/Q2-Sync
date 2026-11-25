@@ -4,7 +4,8 @@
 //
 //  PURPOSE
 //  Shows macOS notifications ("Q2 connected — sync now?", "Sync complete",
-//  "Sync needs your review") and handles their buttons (Sync Now, Eject).
+//  "Sync needs your review", "Wasn't ejected") and handles their buttons
+//  (Sync Now, Eject).
 //
 //  HOW IT FITS
 //  `AutoSyncController` asks this to post notifications, and gets a
@@ -79,6 +80,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     /// A finished (or failed) automatic sync.
     func postFinished(title: String, body: String, offerEject: Bool) {
         post(title: title, body: body, category: offerEject ? Category.finished : Category.review, id: "finished")
+    }
+
+    /// An eject failed while the main window couldn't show why.
+    func postEjectFailed(deviceName: String, message: String) {
+        post(title: "“\(deviceName)” Wasn't Ejected", body: message,
+             category: Category.review, id: "ejectFailed")
     }
 
     /// A drive that looks like a Q2 needs setting up.

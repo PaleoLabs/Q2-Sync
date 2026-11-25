@@ -187,8 +187,8 @@ unplugged:
   Q2, its tags (year, genre, composer…), its file (kind, size, bit rate,
   sample rate, where it is on your Mac, with **Show in Finder**), and plays
   and dates from Music. The panel follows your selection and stays open until
-  you click **Song Info** again or choose **View › Hide Song Info**
-  (**⌘I**).
+  you double-click a song again, click **Song Info** again or choose **View ›
+  Hide Song Info** (**⌘I**).
 - Hover over a song's title to see where its file is on your Mac, or
   right-click songs for **Show in Finder** and **Copy Path**. **File › Show
   in Finder** (**⇧⌘R**) does the same for the selected songs. A **File**
@@ -577,7 +577,9 @@ Always eject before unplugging:
 - **Device › Eject** (**⌘E**), or right-click your Q2 in the sidebar.
 
 If ejecting fails, Q2 Sync says so and the card stays connected. Close any
-Finder windows showing the card and try again.
+Finder windows showing the card and try again. If Q2 Sync's window isn't in
+front (you ejected from the menu bar item or a notification, say), it also
+sends a notification; click it to open Q2 Sync.
 
 Ejecting or plugging in a different drive (another card, a USB stick)
 while a sync runs doesn't affect the Q2 being synced, and the sidebar shows
