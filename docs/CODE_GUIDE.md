@@ -404,7 +404,7 @@ preview's album rows (by folder and album tag).
 `RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, Music/Settings tabs,
 `DeviceSettingsView`), `UpdateNoticeView` (a new version, up to date, or a failed check), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
 table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
-`CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
+`CapacityBarView` (its notes follow the same rule: outside a scroll view, `fixedSize(vertical:)` on wrapping text blanks the sidebar), `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NumberedSteps` (the next-steps list in the sync result
 and Install Firmware sheets), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 `FirmwareUpdateSection`,

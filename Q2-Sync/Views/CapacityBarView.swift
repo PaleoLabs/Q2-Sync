@@ -112,7 +112,12 @@ struct CapacityBarView: View {
                   systemImage: "info.circle")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                // Wraps to the width it's given. Never `fixedSize(vertical:)`
+                // outside a scroll view: measured narrow, this note asked for
+                // a minimum height of about 2,500 points, and the window's
+                // contents overflowed it (header pushed off the top, sidebar
+                // blank).
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         switch estimate.fit {
         case .fits:

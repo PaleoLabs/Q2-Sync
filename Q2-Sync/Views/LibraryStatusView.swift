@@ -33,7 +33,9 @@ struct LibraryStatusView: View {
             case .failed(let message):
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
+                    // No `fixedSize(vertical:)`: outside a scroll view it can
+                    // make the window ask for a huge minimum height (see
+                    // `CapacityBarView`). The box is already full width.
                 Button("Try Again") { Task { await library.load() } }
                     .controlSize(.small)
             case .loaded:

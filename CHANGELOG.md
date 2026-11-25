@@ -2,6 +2,11 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
+## Unreleased
+
+### Fixed
+- **Opening your Q2's page no longer blanks the sidebar.** When the note under the capacity bar about "Other" files was showing, the sidebar and the top and bottom of the page could disappear, including after cancelling an auto-sync from its notification.
+
 ## 0.3.0 (2026-11-25)
 
 ### Added
