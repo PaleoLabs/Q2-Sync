@@ -12,6 +12,7 @@
   },
   "files": [
     { "kind": "folder", "path": "Q2-Sync", "target-membership": [ "Q2-Sync" ] },
+    { "path": "docs/USER_GUIDE.md", "target-membership": [ "Q2-Sync/resources" ] },
     {
       "kind": "group",
       "name": "Products",

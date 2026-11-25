@@ -8,7 +8,8 @@
 //    • the main window (a single window, like Music or Finder),
 //    • the menu bar item (always shown: with the window closed it's the
 //      only way back, since the Dock icon is hidden then),
-//    • the Settings window (⌘,).
+//    • the Settings window (⌘,),
+//    • the help window (⌘?), showing the user guide.
 //
 //  HOW IT FITS
 //  It creates the long-lived models once (`LibraryModel`, `DeviceMonitor`,
@@ -26,6 +27,9 @@ struct Q2SyncApp: App {
 
     /// Identifier of the main window, used to reopen it.
     static let mainWindowID = "main"
+
+    /// Identifier of the help window.
+    static let helpWindowID = "help"
 
     // `@State` makes SwiftUI create each model once and keep it alive for
     // the app's lifetime (instead of recreating it on every redraw).
@@ -72,7 +76,19 @@ struct Q2SyncApp: App {
             SongListCommands(controller: autoSync)
             SongInfoCommands()
             AboutCommand()
+            HelpCommand()
         }
+
+        Window("Q2 Sync Help", id: Self.helpWindowID) {
+            HelpView()
+                .frame(minWidth: 620, minHeight: 400)
+        }
+        .defaultSize(width: 900, height: 700)
+        // Only Help › Q2 Sync Help opens it: not launching the app, and no
+        // extra item in the Window menu.
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+        .commandsRemoved()
 
         MenuBarExtra {
             MenuBarContent(controller: autoSync)
@@ -100,6 +116,18 @@ struct AboutCommand: Commands {
                     .version: "\(build) · \(commit)"
                 ])
             }
+        }
+    }
+}
+
+/// Help › Q2 Sync Help (⌘?): opens the user guide in its own window.
+struct HelpCommand: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button("Q2 Sync Help") { openWindow(id: Q2SyncApp.helpWindowID) }
+                .keyboardShortcut("?", modifiers: .command)
         }
     }
 }

@@ -216,9 +216,9 @@ Run the unit tests from the repository root:
 swift test
 ```
 
-New to the app? Read the [User Guide](docs/USER_GUIDE.md). Want to work on the
-code? Start with the [Code Guide](docs/CODE_GUIDE.md) and
-[Contributing](CONTRIBUTING.md).
+New to the app? Read the [User Guide](docs/USER_GUIDE.md), also in the app under
+**Help › Q2 Sync Help**. Want to work on the code? Start with the
+[Code Guide](docs/CODE_GUIDE.md) and [Contributing](CONTRIBUTING.md).
 
 ## Firmware compatibility
 

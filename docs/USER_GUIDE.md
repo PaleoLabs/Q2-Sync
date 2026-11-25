@@ -2,7 +2,8 @@
 
 Q2 Sync copies music from Apple Music on your Mac to your Shanling Q2, much like
 Finder used to sync an iPod. This guide walks you through everything, step by
-step. No technical knowledge needed.
+step. No technical knowledge needed. In the app, choose **Help › Q2 Sync
+Help** (**⌘?**) to read it; it works offline and matches your version.
 
 **What Q2 Sync can sync:** music stored as **local, DRM-free files** in the
 Music app on your Mac, such as MP3, AAC, Apple Lossless (ALAC), WAV and AIFF

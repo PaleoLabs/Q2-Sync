@@ -5,6 +5,7 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 ## Unreleased
 
 ### Added
+- **The user guide is in the Help menu.** **Help › Q2 Sync Help** (**⌘?**) opens it in its own window, with the sections in a sidebar. It works offline and matches the version you're running. ([#52](https://github.com/PaleoLabs/Q2-Sync/issues/52))
 - **Double-click a song to open Song Info.** **View › Show Song Info** (**⌘I**) shows or hides it.
 
 ### Changed

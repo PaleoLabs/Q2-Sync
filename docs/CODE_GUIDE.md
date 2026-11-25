@@ -78,6 +78,7 @@ flowchart TB
 | `Q2-Sync/Core/Library` | Reading Apple Music: `LibrarySource`, `ITunesLibrarySource` (also `LibraryArtworkReader`, which reads album artwork for covers, read-only), `FixtureLibrarySource`, `LibraryHealthCheck` |
 | `Q2-Sync/Core/Device` | Device facts: `DeviceProfile`, `ReservedItemRules`, `VolumeInfo`, `CardConnection`, `DeviceStore`, `FirmwareUpdates`, `FirmwareSources`, `FirmwareImage`, `ZipExtractor` |
 | `Q2-Sync/Core/SyncEngine` | Planning, diffing, copying, playlists, path guard, safety |
+| `Q2-Sync/Core/Help` | `UserGuide`: reading the user guide for the help window |
 | `Q2-Sync/App` | App entry point and UI-facing models (`@Observable` classes) |
 | `Q2-Sync/Views` | SwiftUI views |
 | `Tests/Q2SyncCoreTests` | Unit tests (Swift Testing) for Core |
@@ -233,6 +234,12 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `LibraryMarks` | The library browser's marks: per song `TrackPlacement` (on Q2 / next sync / not chosen / can't sync), per group `GroupMarks` counts | Built once per library read, card record and selection (it resolves the selection); compares against `CardContentsRecord`. |
 | `SongListCSV` | CSV text of the songs on the Q2 or chosen for it (`make(snapshot:marks:)`) | Pure text. File › Export Song List… (`SongListCommands` in `Q2SyncApp`) builds the marks for `devices.referenceContents` and saves it with an `NSSavePanel`. |
 | `SyncSelection` | What you ticked for a device | Stores *intent* (artist/album/genre/playlist IDs) so new albums by a ticked artist sync automatically. |
+
+### Help (`Core/Help`)
+
+| Type | Purpose | Notes |
+| --- | --- | --- |
+| `UserGuide` | `docs/USER_GUIDE.md` parsed into sections (one per `##` heading) and blocks | Foundation parses the Markdown. Link anchors are made the way GitHub makes them; links to other files open on GitHub at the build's commit (`main` for dirty or unknown builds). `problems` lists broken section links and content the window can't draw (images, HTML). `UserGuideTests` requires it to be empty for the real guide, so a new kind of content needs support here and in `HelpView` first. |
 
 ### Library (`Core/Library`)
 
@@ -392,7 +399,10 @@ browser's song inspector, opened by double-clicking a song, View › Show Song
 Info (⌘I; `SongInfoCommands`, enabled by the `offersSongInfo` focused value),
 the toolbar button or Show Info, and never closed automatically; artwork via
 `LibraryModel.artworkData(for:)`, one whole-library `LibraryArtworkReader`
-opened on first use), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
+opened on first use), `HelpView` (the Help › Q2 Sync Help window,
+`HelpCommand`; draws `UserGuide` from the copy of the guide in the app's
+resources, added to the target in the project file; the Dock icon stays while
+it's open), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
 
 ---
 
@@ -526,7 +536,7 @@ same time, as both share the same bundle identifier.
 xcodebuild -project Q2-Sync.xcodeproj -scheme Q2-Sync -configuration Debug -derivedDataPath build/DerivedData build
 ```
 
-**Run the unit tests** (Core only, about 230 tests, under a second):
+**Run the unit tests** (Core only, about 250 tests, under a second):
 
 ```bash
 swift test

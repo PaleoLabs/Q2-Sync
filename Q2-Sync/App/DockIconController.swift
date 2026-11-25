@@ -11,6 +11,8 @@
 //  HOW IT FITS
 //  Created once by `Q2SyncApp`. It watches AppKit's window notifications
 //  for the main window (Settings, the sync sheet and alerts don't count).
+//  The one exception: while the help window is open, the Dock icon stays
+//  until that window closes too.
 //  `AutoSyncController.showMainWindow()` calls `showDockIcon()` before
 //  bringing the window back.
 //
@@ -118,13 +120,27 @@ final class DockIconController {
     }
 
     private func windowWillClose(_ window: NSWindow?) {
+        /// Whether another window that `matches` is on screen or in the Dock.
+        func stillOpen(_ matches: (NSWindow) -> Bool) -> Bool {
+            NSApp.windows.contains {
+                $0 !== window && matches($0) && ($0.isVisible || $0.isMiniaturized)
+            }
+        }
         if Self.isMainWindow(window) {
-            hideDockIcon()
-        } else if Self.isSettingsWindow(window),
-                  !NSApp.windows.contains(where: { Self.isMainWindow($0) && $0.isVisible }) {
-            // Settings was opened from the menu bar with the window closed.
+            // The help window needs the Dock icon (and menu bar) to stay
+            // reachable while it's being read.
+            if !stillOpen(Self.isHelpWindow) { hideDockIcon() }
+        } else if Self.isSettingsWindow(window) || Self.isHelpWindow(window),
+                  !stillOpen({ Self.isMainWindow($0) || Self.isSettingsWindow($0)
+                      || Self.isHelpWindow($0) }) {
+            // Settings or help closed, leaving none of these windows.
             hideDockIcon()
         }
+    }
+
+    /// Whether `window` is the help window.
+    static func isHelpWindow(_ window: NSWindow?) -> Bool {
+        window?.identifier?.rawValue.hasPrefix(Q2SyncApp.helpWindowID) == true
     }
 
     /// Whether closing should first show the notice.
