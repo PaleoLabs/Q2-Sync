@@ -95,7 +95,7 @@ Every build also runs the **Stamp build number** script phase
 `CFBundleVersion` = `git rev-list --count HEAD` and `Q2SyncBuildCommit` =
 short hash (+ `-dirty` when `git status` isn't clean). Without git they fall
 back to `0` and `unknown`. `AboutCommand` (`AppCommands.swift`) shows them in
-the About panel. The phase needs `ENABLE_USER_SCRIPT_SANDBOXING = NO` (it
+the About panel, above its GitHub and license links. The phase needs `ENABLE_USER_SCRIPT_SANDBOXING = NO` (it
 runs git and edits the Info.plist). The number goes up by one per commit, so
 it "auto-increments as you push" without anyone editing a file.
 
@@ -381,10 +381,10 @@ preview's album rows (by folder and album tag).
 
 | Type | Purpose |
 | --- | --- |
-| `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra` (always shown; it's the way back while the Dock icon is hidden), `Settings`. `AppDelegate` keeps the app running when the window closes. |
+| `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra` (always shown; it's the way back while the Dock icon is hidden), `Settings`. `AppDelegate` keeps the app running when the window closes, asks before quitting while the card is in use, and adds Sync Now and Eject to the Dock menu (`applicationDockMenu`, with the menu bar item's enabled rules). |
 | `AppCommands` (file) | The menu bar menus and their shortcuts. A changed shortcut also goes in the user guide's "Keyboard shortcuts". |
 | `AppNavigation` | The sidebar selection, the Q2 page's tab, the selected songs, whether the main window is in front, the filter field Edit › Find focuses, and the Settings section a menu item scrolls to. Owned by `AutoSyncController`. |
-| `SupportActions` | Show Sync Logs, Show Card in Finder, the latest release's page and the Help menu's GitHub links (fixed addresses, no user data). |
+| `SupportActions` | Show Sync Logs, Show Card in Finder, the latest release's page and the Help menu's and About panel's GitHub links (fixed addresses, no user data). |
 | `AppUpdateModel` | New versions of Q2 Sync: checks at launch and every 24 hours (after a failure, in an hour) unless turned off, and Check for Updates…, which always answers. Both show `UpdateNoticeView`; an automatic find is shown on every check until the app is updated or the release is skipped (`skippedAppRelease`), after a 5 s settle delay and only once `AutoSyncController.isOccupied` is false (library or card in use, a modal panel, or a sheet in the visible main window), so it doesn't pile onto launch prompts and auto-sync. The menu bar item offers it while `available` is set. |
 | `UpdateWindow` | The floating, non-modal AppKit window for that notice, centered over the main window (on screen without one), so it can appear with no other window open and never holds up a sync or quitting. Takes the keyboard only when you asked for the check. |
 | `DockIconController` | Hides the Dock icon (`.accessory` activation policy) while the main window is closed and brings it back (`.regular`) in `showMainWindow()` or when the window becomes main. Settings, the sync sheet and alerts don't count. The help window and About panel keep the icon until they close. `openSettings` (the menu bar's Settings…) brings the Dock icon back while Settings is open, since an app without one can't reliably bring Settings to the front; it hides again when Settings closes with the main window still closed. A `CloseProxy` stands in front of SwiftUI's window delegate to answer `windowShouldClose` and show the "Still in the Menu Bar" notice (Keep in Menu Bar / Quit Q2 Sync / Don't show again, saved as `showMenuBarCloseNotice`; Settings › Messages › "Show Menu Bar Tip Again" turns it back on); every other delegate call is forwarded to SwiftUI's. |

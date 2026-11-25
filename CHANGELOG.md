@@ -5,6 +5,8 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 ## Unreleased
 
 ### Added
+- **Sync Now and Eject in the Dock menu.** Right-click (or click and hold) Q2 Sync's Dock icon.
+- **The About panel links to Q2 Sync on GitHub and to its license.**
 - **Q2 Sync tells you when a new version is out.** It checks GitHub when it starts, then once a day, and a window that stays on top offers **View on GitHub**, **Later** or **Skip This Version**. The menu bar item then offers **Get Q2 Sync …**. **Check for Updates…** is in the **Q2 Sync** menu and the menu bar item, and **Settings** can turn the automatic check off. Nothing is downloaded or installed for you.
 - **More menu commands and shortcuts.** **File › Refresh Music Library** (**⌘R**) and **Show in Finder** (**⇧⌘R**), **Edit › Find** (**⌘F**) for the filter on the Music tab or in the sync preview, **View** items for Artists to Playlists (**⌘1**–**⌘4**), your Q2 (**⌘5**), and **Window › Q2 Sync** (**⌘0**).
 - **Device** menu: **Check for Firmware Updates** (Q2 Pod or Shanling stock, whichever your Q2 runs), **Back Up Q2 Pod Data**, **Restore Q2 Pod Data…** and **Show Card in Finder**.

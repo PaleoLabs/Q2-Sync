@@ -54,7 +54,7 @@ struct Q2SyncApp: App {
         _sync = State(initialValue: sync)
         let autoSync = AutoSyncController(library: library, devices: devices, sync: sync)
         _autoSync = State(initialValue: autoSync)
-        AppDelegate.cardBusyActivity = { [weak autoSync] in autoSync?.cardBusyActivity }
+        AppDelegate.controller = autoSync
         // Starts hiding the Dock icon while the main window is closed.
         _ = DockIconController.shared
     }
@@ -118,15 +118,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
-    /// Describes what's using the card right now, if anything. Set by
-    /// `Q2SyncApp` (the delegate is created by AppKit, so it can't be
-    /// handed the controller directly).
-    @MainActor static var cardBusyActivity: (@MainActor () -> String?)?
+    /// For the Dock menu and the Quit warning. Set by `Q2SyncApp` (the
+    /// delegate is created by AppKit, so it can't be handed the controller
+    /// directly).
+    @MainActor static weak var controller: AutoSyncController?
+
+    /// Adds Sync Now and Eject to the Dock icon's menu, above macOS's own
+    /// items. Built each time the menu opens, so it's up to date. Enabled
+    /// by the same rules as the menu bar item's.
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        guard let controller = Self.controller else { return nil }
+        let connected = controller.devices.connected
+        let menu = NSMenu()
+        // `isEnabled` is set here, not worked out by AppKit.
+        menu.autoenablesItems = false
+
+        let sync = NSMenuItem(title: "Sync Now", action: #selector(syncFromDock), keyEquivalent: "")
+        sync.target = self
+        sync.isEnabled = controller.canStartCardOperation
+        menu.addItem(sync)
+
+        let title = connected.map { "Eject “\($0.device.name)”" } ?? "Eject"
+        let eject = NSMenuItem(title: title, action: #selector(ejectFromDock), keyEquivalent: "")
+        eject.target = self
+        eject.isEnabled = connected != nil && !controller.isCardBusy && !controller.devices.isEjecting
+        menu.addItem(eject)
+        return menu
+    }
+
+    @objc private func syncFromDock() {
+        Task { await Self.controller?.startSync(automatic: false) }
+    }
+
+    @objc private func ejectFromDock() {
+        Task { await Self.controller?.eject() }
+    }
 
     /// Asks before quitting while something is writing to the card, from
-    /// any Quit (⌘Q, the app menu or the menu bar item).
+    /// any Quit (⌘Q, the app menu, the Dock or the menu bar item).
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let activity = Self.cardBusyActivity?() else { return .terminateNow }
+        guard let activity = Self.controller?.cardBusyActivity else { return .terminateNow }
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Quit Q2 Sync?"

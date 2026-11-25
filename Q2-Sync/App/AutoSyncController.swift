@@ -204,9 +204,9 @@ final class AutoSyncController {
 
     /// Ejects the card, unless something is still using it. Every way to
     /// eject from outside a sheet comes through here: the sidebar, the Q2's
-    /// page, the menus, the menu bar item and the notification button. (The
-    /// sheets' own Eject buttons call `DeviceMonitor` with the window in
-    /// view.)
+    /// page, the menus, the menu bar item, the Dock menu and the
+    /// notification button. (The sheets' own Eject buttons call
+    /// `DeviceMonitor` with the window in view.)
     ///
     /// If the main window isn't there to show what happened, a notification
     /// says the card was ejected or, with the window's alert, why not.

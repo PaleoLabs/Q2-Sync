@@ -16,8 +16,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Replaces "About Q2 Sync" so the panel shows the build number and the git
-/// commit it was built from, e.g. "Version 0.1 (142 · 0e7d893)". Both are
-/// written into the built Info.plist by `Scripts/stamp-version.sh`.
+/// commit it was built from, e.g. "Version 0.1 (142 · 0e7d893)", with links
+/// to the project and its license. The number and commit are written into
+/// the built Info.plist by `Scripts/stamp-version.sh`.
 struct AboutCommand: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -31,8 +32,32 @@ struct AboutCommand: Commands {
         let build = info?["CFBundleVersion"] as? String ?? "?"
         let commit = info?["Q2SyncBuildCommit"] as? String ?? "unknown"
         DockIconController.shared.showAboutPanel(options: [
-            .version: "\(build) · \(commit)"
+            .version: "\(build) · \(commit)",
+            .credits: credits,
         ])
+    }
+
+    /// The links under the version, one per line.
+    @MainActor private static var credits: NSAttributedString {
+        let centered = NSMutableParagraphStyle()
+        centered.alignment = .center
+        centered.paragraphSpacing = 4
+        let plain: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .foregroundColor: NSColor.labelColor,
+            .paragraphStyle: centered,
+        ]
+        let links = [
+            ("Q2 Sync on GitHub", SupportActions.project),
+            ("GNU General Public License v3.0", SupportActions.license),
+        ]
+        let text = NSMutableAttributedString()
+        for (title, url) in links {
+            if text.length > 0 { text.append(NSAttributedString(string: "\n", attributes: plain)) }
+            let link = plain.merging([.link: url]) { $1 }
+            text.append(NSAttributedString(string: title, attributes: link))
+        }
+        return text
     }
 }
 

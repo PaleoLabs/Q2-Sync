@@ -18,6 +18,12 @@ import AppKit
 @MainActor
 enum SupportActions {
 
+    /// The About panel's link to the project.
+    static let project = URL(string: "https://github.com/PaleoLabs/Q2-Sync")!
+
+    /// The About panel's link to the license.
+    static let license = URL(string: "https://github.com/PaleoLabs/Q2-Sync/blob/main/LICENSE")!
+
     /// Help › Release Notes.
     static let releaseNotes = URL(string: "https://github.com/PaleoLabs/Q2-Sync/releases")!
 

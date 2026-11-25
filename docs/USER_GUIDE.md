@@ -471,7 +471,8 @@ else.
 
 The **menu bar item** shows whether your Q2 is connected and lets you **Sync
 Now**, **Eject**, **Open Q2 Sync**, open **Settings**, the help or the About
-panel, or **Quit**. It's always shown.
+panel, or **Quit**. It's always shown. While Q2 Sync has a Dock icon, the Dock
+menu (right-click the icon) has **Sync Now** and **Eject** too.
 
 While Q2 Sync's window is closed, its **Dock icon is hidden** and the app lives
 only in the menu bar; **Open Q2 Sync** there brings the window and the Dock icon
@@ -601,10 +602,11 @@ Always eject before unplugging:
 - the eject button next to your Q2 in the sidebar, or the **Eject** button on
   its page, or
 - **Eject** in the menu bar item, or
-- **Device › Eject** (**⌘E**), or right-click your Q2 in the sidebar.
+- **Device › Eject** (**⌘E**), or right-click your Q2 in the sidebar, or
+- **Eject** in the Dock menu (right-click Q2 Sync's Dock icon).
 
-If Q2 Sync's window isn't in front (you ejected from the menu bar item or a
-notification, say), a notification tells you whether the card was ejected;
+If Q2 Sync's window isn't in front (you ejected from the menu bar item, the
+Dock menu or a notification, say), a notification tells you whether the card was ejected;
 click it to open Q2 Sync.
 
 If ejecting fails, Q2 Sync says so and the card stays connected. Close any
@@ -620,7 +622,8 @@ the change straight away.
 
 **Which version of Q2 Sync do I have?** Choose **Q2 Sync › About Q2 Sync**.
 It shows the version and build, for example `Version 0.1 (142 · 0e7d893)`.
-Mention it when you report a problem. For a newer one, see
+Mention it when you report a problem. The same panel links to Q2 Sync on
+GitHub and to its license. For a newer version, see
 [New versions of Q2 Sync](#new-versions-of-q2-sync).
 
 **Can Q2 Sync damage my Apple Music library?**
