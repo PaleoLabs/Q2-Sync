@@ -168,15 +168,13 @@ struct FirmwareInstallSheet: View {
             .foregroundStyle(.green)
             .font(.headline)
 
-        VStack(alignment: .leading, spacing: 10) {
-            step(1, connection == .otherDrive
-                 ? "Eject the card and put it back in your Q2."
-                 : "Eject, then unplug the Q2 from your Mac.")
-            step(2, "Make sure the Q2 is well charged (the update checks the battery first).")
-            step(3, "On the Q2, choose \(menu), and confirm.")
-            step(4, "Leave the card in and don't turn the Q2 off until it restarts by itself.")
-            step(5, "Next time you connect the Q2, Q2 Sync will ask whether the update finished, and switch its settings to \(image.kind.displayName).")
-        }
+        NumberedSteps(steps: [
+            connection.ejectStep,
+            "Make sure the Q2 is well charged (the update checks the battery first).",
+            "On the Q2, choose \(menu), and confirm.",
+            "Leave the card in and don't turn the Q2 off until it restarts by itself.",
+            "Next time you connect the Q2, Q2 Sync will ask whether the update finished, and switch its settings to \(image.kind.displayName).",
+        ])
 
         Link("If the Q2 won't start up afterwards…", destination: FirmwareSources.recoveryHelpPage)
             .font(.callout)
@@ -190,14 +188,6 @@ struct FirmwareInstallSheet: View {
             }
             .keyboardShortcut(.defaultAction)
             .disabled(devices.connected == nil || devices.isEjecting)
-        }
-    }
-
-    private func step(_ number: Int, _ text: String) -> some View {
-        Label {
-            Text(text).fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: "\(number).circle.fill").foregroundStyle(.tint)
         }
     }
 

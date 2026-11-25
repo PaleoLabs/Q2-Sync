@@ -2,6 +2,16 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
+## Unreleased
+
+### Changed
+- **Sync Complete shows your next steps on the Q2 before you eject**, as a numbered list like the one in Install Firmware. Before, the steps appeared only after clicking **Eject** in that window, so ejecting any other way skipped them. The list includes the playlist and Cover Flow steps only when that sync calls for them.
+- **Eject now ejects and closes the window.** **Done** (previously **Not Now**) closes it with the card still connected, **Verify Card…** sits on the left, and **Show Log** is a link. The eject question and the separate cover note are gone.
+- The notification after an automatic sync now says to open Q2 Sync for next steps.
+
+### Fixed
+- With a card reader, the step after a sync said to unplug the Q2. It now says to put the card back in your Q2.
+
 ## 0.2.0 (2026-11-24)
 
 ### Changed

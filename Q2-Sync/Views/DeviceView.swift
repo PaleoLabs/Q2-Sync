@@ -226,11 +226,11 @@ struct DeviceSettingsView: View {
                            isBlocked: autoSync.isCardInUse(except: .podData))
 
             Section("After Each Sync") {
-                // The library steps, then (last) the cover rebuild, as the
-                // Sync Complete window shows when covers changed.
-                let profile = connected.device.profile
-                ForEach(Array((profile.libraryUpdateSteps + profile.coverRefreshSteps).enumerated()),
-                        id: \.offset) { index, step in
+                // Every step the Sync Complete window can show (it leaves
+                // out playlists and covers when they don't apply).
+                let steps = connected.device.profile.postSyncSteps(connection: connected.connection,
+                                                                   includePlaylists: true, includeCovers: true)
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     Label(step, systemImage: "\(index + 1).circle")
                 }
             }

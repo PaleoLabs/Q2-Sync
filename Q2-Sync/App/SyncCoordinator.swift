@@ -86,8 +86,10 @@ final class SyncCoordinator {
     /// The result once finished.
     private(set) var report: SyncReport?
 
-    /// Whether the user ejected the card from the result sheet.
-    private(set) var didEject = false
+    /// The card being synced, kept so the result sheet can word its steps
+    /// and tell whether that card is still connected.
+    private(set) var deviceUUID: String?
+    private(set) var connection = CardConnection.unknown
 
     /// `true` while ejecting from the result sheet.
     private(set) var isEjecting = false
@@ -145,7 +147,8 @@ final class SyncCoordinator {
         let generation = planningGeneration
         options = SyncOptions()
         report = nil
-        didEject = false
+        deviceUUID = connected.device.volumeUUID
+        connection = connected.connection
         isAutomatic = automatic
 
         phase = .planning("Reading your library…")
@@ -332,7 +335,7 @@ final class SyncCoordinator {
     }
 
     /// Records the result. On full success, saves the device state. The
-    /// card is NOT ejected automatically: the result sheet asks first, so
+    /// card is NOT ejected automatically: the result sheet offers Eject, so
     /// you can keep it connected to sync again.
     private func finish(with result: SyncReport, devices: DeviceMonitor) async {
         report = result
@@ -349,13 +352,14 @@ final class SyncCoordinator {
         phase = .finished
     }
 
-    /// Ejects the card when the user clicks Eject on the result sheet.
-    /// If ejecting fails, `DeviceMonitor` shows the error and the card
-    /// stays mounted.
+    /// Ejects the card when the user clicks Eject on the result sheet, then
+    /// closes the sheet. If ejecting fails, `DeviceMonitor` shows the error,
+    /// the card stays mounted and the sheet stays open.
     func ejectAfterSync(devices: DeviceMonitor) async {
         isEjecting = true
-        didEject = await devices.eject()
+        let ejected = await devices.eject()
         isEjecting = false
+        if ejected { close() }
     }
 
     /// Stops a running sync (finishes the current chunk, then stops), or

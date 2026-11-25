@@ -244,6 +244,9 @@ final class AutoSyncController {
                 if cardOnly > 0 {
                     body += " \(pluralized(cardOnly, "file")) on the card \(cardOnly == 1 ? "isn't" : "aren't") in your library; open Q2 Sync to review \(cardOnly == 1 ? "it" : "them")."
                 }
+                // The notification can eject the card without the window
+                // ever being seen, and the steps are there.
+                body += " Open Q2 Sync for next steps."
                 notifications.postFinished(title: "Sync Complete", body: body, offerEject: true)
             } else {
                 let reason = report.abortReason ?? (report.wasCancelled ? "It was cancelled."

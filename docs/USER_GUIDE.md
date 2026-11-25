@@ -234,13 +234,22 @@ marks above, so it works without the Q2 connected.
    950 album covers". You can click
    **Cancel** at any time; songs already copied stay, and the next sync carries
    on where it stopped.
-6. When it's done, you'll see **Sync Complete** with three choices:
-   **Eject** the card, **Verify Card…** to check every song on it first (see
-   "Verify the card" below; eject when it's done), or keep it connected
-   (**Not Now**).
+6. When it's done, you'll see **Sync Complete** with numbered steps for what
+   to do next on your Q2 (see
+   [Update the library on your Q2](#6-update-the-library-on-your-q2)). Read
+   them, then choose:
+   - **Eject**: ejects the card and closes the window.
+   - **Done**: closes the window and keeps the card connected, for example to
+     sync again.
+   - **Verify Card…**: checks every song on the card first (see "Verify the
+     card" below; eject when it's done).
 
-Every sync is recorded in a log. Click **Show Log** on the result, or go to
-your Q2's **Settings** tab → **Show Sync Logs**.
+   The window only closes on **Eject** if the card was ejected. If you eject
+   it another way (the menu bar or a notification) while the window is open,
+   the steps stay there until you click **Done**.
+
+Every sync is recorded in a log. Click the **Show Log** link on the result, or
+go to your Q2's **Settings** tab → **Show Sync Logs**.
 
 **Where things go on the card:** music goes in `Music/Artist/Album/`,
 playlists in `_explaylist_data/`, and Q2 Sync's own records in a hidden
@@ -261,8 +270,9 @@ The preview lists them under **Album Covers**.
 
 **Refresh Cover Flow after covers change (Q2 Pod).** Cover Flow keeps its
 own cache of covers, so after a sync that adds or removes covers (for
-example after turning the setting on or off), Q2 Sync reminds you to (the
-Q2's Settings tab also lists these last under **After Each Sync**):
+example after turning the setting on or off), the Sync Complete window adds
+steps to (the Q2's Settings tab also lists these last under **After Each
+Sync**):
 
 1. Update the library as usual (Library → Update Library → Scan music now).
    Refreshing Cover Flow doesn't rescan your music.
@@ -337,9 +347,14 @@ If you used that, the folder is still there: in Finder, open the card, press
 
 ## 6. Update the library on your Q2
 
-After every sync, your Q2 needs to scan the card before new music shows up:
+After every sync, your Q2 needs to scan the card before new music shows up.
+The Sync Complete window lists the steps that apply to that sync: the
+playlist step only when playlists are ready to import, and the Cover Flow
+steps only when covers changed. Your Q2's **Settings** tab lists them all under
+**After Each Sync** while the card is connected.
 
-1. Eject the card in Q2 Sync, then unplug the Q2.
+1. Eject the card in Q2 Sync, then unplug the Q2 (with a card reader, put the
+   card back in the Q2).
 2. On the Q2:
 
 | Firmware | Steps |
@@ -403,7 +418,10 @@ Automatic syncs follow every safety rule. They **never remove songs and never
 eject**. If anything needs your decision (the first sync with a card, songs
 you unticked, songs gone from your library, or not enough space), they stop,
 open the preview in Q2 Sync, and notify you. When an automatic sync finishes,
-a notification has **Eject** and **Verify Card** buttons.
+a notification has **Eject** and **Verify Card** buttons. The steps for your Q2
+are in the Sync Complete window, so open Q2 Sync to read them (**Verify Card**
+closes that window; the steps are also under **After Each Sync** while the card
+is connected).
 
 For auto-sync to work, Q2 Sync must be running. It stays in the **menu bar**
 when you close its window. To start it automatically, open **Q2 Sync ›

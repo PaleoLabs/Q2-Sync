@@ -80,8 +80,25 @@ struct ReservedItemTests {
         #expect(profile.playlistFolderName == "_explaylist_data")
         #expect(profile.maximumPlaylists == 100)
         #expect(profile.maximumPlaylistNameBytes == 63)
-        #expect(!profile.libraryUpdateSteps.isEmpty)
+        #expect(!profile.libraryScanStep.isEmpty)
+        #expect(!profile.playlistImportStep.isEmpty)
         #expect(profile.firmware.profile == profile)
+    }
+
+    @Test("After-sync steps include only what applies", arguments: profiles)
+    func postSyncSteps(profile: DeviceProfile) {
+        let basic = profile.postSyncSteps(connection: .q2, includePlaylists: false, includeCovers: false)
+        #expect(basic == [CardConnection.q2.ejectStep, profile.libraryScanStep])
+
+        let all = profile.postSyncSteps(connection: .q2, includePlaylists: true, includeCovers: true)
+        #expect(all == basic + [profile.playlistImportStep] + profile.coverRefreshSteps)
+    }
+
+    @Test("A card in a reader goes back in the Q2")
+    func ejectStep() {
+        #expect(CardConnection.otherDrive.ejectStep.contains("put it back in your Q2"))
+        #expect(CardConnection.q2.ejectStep.contains("unplug"))
+        #expect(CardConnection.unknown.ejectStep == CardConnection.q2.ejectStep)
     }
 }
 

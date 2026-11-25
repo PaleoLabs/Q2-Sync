@@ -211,9 +211,11 @@ sequenceDiagram
     every 30 seconds and always at the end, however the sync ends; after a
     crash, songs copied since the last save are adopted by the next sync. A
     log line is written for every change.
-13. **Finish.** The result sheet offers **Eject** (never automatic) and shows
-    the firmware-specific "update the library on your Q2" steps. On problems,
-    the card stays mounted and errors are listed.
+13. **Finish.** The result sheet shows the numbered steps for the Q2
+    (`DeviceProfile.postSyncSteps`) *before* any eject, so they're seen
+    however the card is ejected, and offers **Eject** (never automatic; closes
+    the sheet if it works). On problems, the card stays mounted and errors are
+    listed.
 
 ---
 
@@ -289,6 +291,10 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   names, disk vendor/model), tells a Q2 on a USB cable (Ingenic + Linux
   storage gadget) from a card reader. A hint for the UI only, never a safety
   check. Read by `DriveIdentityReader` (App, Disk Arbitration + I/O Kit).
+  `ejectStep` words "eject, then go to your Q2" for a cable or a card reader.
+- **`DeviceProfile.postSyncSteps(connection:includePlaylists:includeCovers:)`**
+  · the numbered steps after a sync: eject, scan the library, then playlist
+  import and cover refresh only when asked for.
 - **`FirmwareSources`** · builds a `FirmwareOffer` from the GitHub release
   (Q2 Pod) or Shanling's download page (stock: version + Google Drive link).
 - **`FirmwareImage.inspect(_:)`** · checks an `update.tar`: GNU tar whose
@@ -368,7 +374,8 @@ preview's album rows (by folder and album tag).
 `DeviceSettingsView`), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
 table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
 `CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
-`SyncResultView`), `NewDeviceSheet`, `FirstLaunchNoticeView`,
+`SyncResultView`), `NumberedSteps` (the next-steps list in the sync result
+and Install Firmware sheets), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 `FirmwareUpdateSection`,
 `LibraryCategoryView` + `GroupTableView` +
 `TrackTableView` (library browser with "can sync" and "On Q2 / next sync"
@@ -399,7 +406,8 @@ Nothing else in the code mentions a firmware by name.
 | `playlistFormat` | `.m3u`, UTF-8, CRLF, `#EXTM3U`/`#EXTINF`, `/mnt/mmc/…` paths (confirmed on Q2 Pod 1.8.9) | same (**unverified**) |
 | `maximumPlaylists` / `maximumPlaylistNameBytes` | 100 / 63 | 100 / 63 |
 | `reservedItems` | shared list (below) | shared list |
-| `libraryUpdateSteps` | Library → Update Library → Scan music now; Library → Playlists → Import | Local Songs → Update Library → Scan music now; Playlists → Import |
+| `libraryScanStep` / `playlistImportStep` | Library → Update Library → Scan music now; Library → Playlists → Import | Local Songs → Update Library → Scan music now; Playlists → Import |
+| `coverRefreshSteps` | System settings → Display → Coverflow → Refresh Coverflow, then open Cover Flow | none (**unverified**) |
 | `versionLocationHint`, `deviceMountPoint` | About › "CFW. Version"; `/mnt/mmc` | About; `/mnt/mmc` |
 
 **Reserved items** (`ReservedItemRules`, case-insensitive):

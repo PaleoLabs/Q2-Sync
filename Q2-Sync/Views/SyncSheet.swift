@@ -964,7 +964,7 @@ struct SyncProgressView: View {
 
 // MARK: - Result
 
-/// The outcome, with the "update your Q2's library" reminder.
+/// The outcome and, after a successful sync, what to do next on the Q2.
 struct SyncResultView: View {
 
     let report: SyncReport
@@ -1019,58 +1019,55 @@ struct SyncResultView: View {
                 .frame(maxHeight: 120)
             }
 
-            if coversChanged && !profile.coverRefreshSteps.isEmpty && !sync.didEject {
-                Label("Album covers changed. After ejecting, refresh Cover Flow on the Q2 (the steps show once the card is ejected).",
-                      systemImage: "photo.on.rectangle")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if report.succeeded && !sync.didEject {
-                Text("Eject the card now? You can also verify every song on it first, or keep it connected to sync again.")
-                    .fixedSize(horizontal: false, vertical: true)
-                    .fontWeight(.medium)
-            } else if report.succeeded {
-                Text("The card has been ejected. Next, on your Q2:")
-                    .fontWeight(.medium)
-                let steps = profile.libraryUpdateSteps + (coversChanged ? profile.coverRefreshSteps : [])
-                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                    Label(step, systemImage: "\(index + 1).circle")
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            if report.succeeded {
+                // Shown before ejecting, so they're seen however the card
+                // is ejected.
+                NumberedSteps(steps: profile.postSyncSteps(connection: sync.connection,
+                                                           includePlaylists: report.playlistsToImport > 0,
+                                                           includeCovers: coversChanged))
             } else {
                 Text("The card is still connected. Fix the problems above and sync again; songs already copied won't be copied twice.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            if let log = report.logURL {
+                Button("Show Log") { NSWorkspace.shared.activateFileViewerSelecting([log]) }
+                    .buttonStyle(.link)
+                    .font(.callout)
+            }
+
             HStack {
-                if let log = report.logURL {
-                    Button("Show Log") { NSWorkspace.shared.activateFileViewerSelecting([log]) }
-                }
-                Spacer()
-                if report.succeeded && !sync.didEject {
-                    Button("Not Now") { sync.close() }
-                        .keyboardShortcut(.cancelAction)
+                if report.succeeded {
                     Button("Verify Card…") {
                         // The Verify Card sheet opens once this one closes
                         // (RootView shows it only while no sync sheet is up).
                         autoSync.verifier.present()
                         sync.close()
                     }
-                    .disabled(sync.isEjecting)
+                    .disabled(!isCardConnected || sync.isEjecting)
                     .help("Compare every song on the card with your Mac's copy and fix damaged ones")
+                    Spacer()
+                    Button("Done") { sync.close() }
+                        .keyboardShortcut(.cancelAction)
+                    // Off if the card was already ejected another way (the
+                    // menu bar, a notification, Finder).
                     Button("Eject") { Task { await sync.ejectAfterSync(devices: devices) } }
                         .keyboardShortcut(.defaultAction)
-                        .disabled(sync.isEjecting)
+                        .disabled(!isCardConnected || sync.isEjecting)
                 } else {
+                    Spacer()
                     Button("Done") { sync.close() }.keyboardShortcut(.defaultAction)
                 }
             }
         }
         .padding(24)
         .frame(width: 480)
+    }
+
+    /// `true` while the card that was synced is still connected.
+    private var isCardConnected: Bool {
+        devices.connected != nil && devices.connected?.device.volumeUUID == sync.deviceUUID
     }
 
     /// `true` if this sync added or removed album covers, so Cover Flow

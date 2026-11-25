@@ -151,9 +151,11 @@ struct DeviceProfile: Hashable, Sendable {
 
     // MARK: User-facing text
 
-    /// Steps shown after every sync, telling the user how to make the Q2
-    /// pick up the new music and playlists.
-    let libraryUpdateSteps: [String]
+    /// How to make the Q2 pick up the new music, needed after every sync.
+    let libraryScanStep: String
+
+    /// How to import the playlists in the card's playlist folder.
+    let playlistImportStep: String
 
     /// Where the user finds the installed firmware version on the Q2.
     let versionLocationHint: String
@@ -170,6 +172,21 @@ struct DeviceProfile: Hashable, Sendable {
 
     /// Card path on the device itself (used for playlists and docs).
     let deviceMountPoint: String
+
+    /// What to do after a sync, in order: eject, update the Q2's library,
+    /// then whatever else applies.
+    ///
+    /// - Parameters:
+    ///   - connection: How the card is connected (words the eject step).
+    ///   - includePlaylists: `true` if there are playlists to import.
+    ///   - includeCovers: `true` if album covers changed on the card.
+    /// - Returns: The steps, ready to number.
+    func postSyncSteps(connection: CardConnection, includePlaylists: Bool, includeCovers: Bool) -> [String] {
+        var steps = [connection.ejectStep, libraryScanStep]
+        if includePlaylists { steps.append(playlistImportStep) }
+        if includeCovers { steps += coverRefreshSteps }
+        return steps
+    }
 }
 
 // MARK: - Built-in profiles
@@ -211,11 +228,8 @@ extension DeviceProfile {
             reservedNameFragments: ["librespot"],
             appOwnedHiddenNames: [".q2sync"]
         ),
-        libraryUpdateSteps: [
-            "Unplug the Q2 from your Mac.",
-            "On the Q2, choose Library → Update Library → Scan music now.",
-            "To bring in playlists, choose Library → Playlists → Import.",
-        ],
+        libraryScanStep: "On the Q2, choose Library → Update Library → Scan music now.",
+        playlistImportStep: "To bring in playlists, choose Library → Playlists → Import.",
         versionLocationHint: "On the Q2, open System settings → About and look for “CFW. Version”.",
         // Q2 Pod 1.4.3 and later (DiamondBond's): the Refresh tile at the end
         // of Cover Flow was removed; the Display setting does the same,
@@ -244,11 +258,8 @@ extension DeviceProfile {
             reservedNameFragments: ["librespot"],
             appOwnedHiddenNames: [".q2sync"]
         ),
-        libraryUpdateSteps: [
-            "Unplug the Q2 from your Mac.",
-            "On the Q2, choose Local Songs → Update Library → Scan music now.",
-            "To bring in playlists, open Playlists and choose Import.", // UNVERIFIED wording on stock
-        ],
+        libraryScanStep: "On the Q2, choose Local Songs → Update Library → Scan music now.",
+        playlistImportStep: "To bring in playlists, open Playlists and choose Import.", // UNVERIFIED wording on stock
         versionLocationHint: "On the Q2, open System Setting → About.",
         coverRefreshSteps: [], // UNVERIFIED: whether stock's album grid needs a refresh
         // UNVERIFIED wording on stock. Q2 Pod's docs say it reuses stock's

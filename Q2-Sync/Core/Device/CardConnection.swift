@@ -88,6 +88,14 @@ enum CardConnection: String, Equatable, Sendable {
         }
     }
 
+    /// The first step of "now go to your Q2" instructions.
+    var ejectStep: String {
+        switch self {
+        case .otherDrive: return "Eject the card and put it back in your Q2."
+        case .q2, .unknown: return "Eject, then unplug the Q2 from your Mac."
+        }
+    }
+
     /// `true` if the "Is this your Q2?" sheet should pop up for a new drive
     /// on this connection. Unknown drives still ask, as before.
     var promptsForSetUp: Bool { self != .otherDrive }
