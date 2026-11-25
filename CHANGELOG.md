@@ -16,6 +16,7 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 - **Double-click a song to open Song Info.** **View › Show Song Info** (**⌘I**) shows or hides it.
 
 ### Changed
+- **Setting up a new Q2 no longer preselects Q2 Pod.** Neither firmware is selected, **Shanling (stock)** is listed first, and **Continue…** waits until you choose. Q2s you've already set up keep their setting.
 - **Sync Complete shows your next steps on the Q2 before you eject**, as a numbered list like the one in Install Firmware. Before, the steps appeared only after clicking **Eject** in that window, so ejecting any other way skipped them. The list includes the playlist and Cover Flow steps only when that sync calls for them.
 - **Eject now ejects and closes the window.** **Done** (previously **Not Now**) closes it with the card still connected, **Verify Card…** sits on the left, and **Show Log** is a link. The eject question and the separate cover note are gone.
 - The notification after an automatic sync now says to open Q2 Sync for next steps.

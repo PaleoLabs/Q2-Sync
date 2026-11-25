@@ -4,8 +4,8 @@
 //
 //  PURPOSE
 //  The "Is this your Shanling Q2?" sheet shown the first time an eligible
-//  drive connects. The user confirms it's their Q2, picks its firmware,
-//  and then grants write access in an Open panel.
+//  drive connects. The user confirms it's their Q2, picks its firmware
+//  (neither is preselected), and then grants write access in an Open panel.
 //
 //  HOW IT FITS
 //  Presented by `RootView` whenever `DeviceMonitor.pendingVolume` is set.
@@ -29,8 +29,10 @@ struct NewDeviceSheet: View {
     let volume: VolumeInfo
     let devices: DeviceMonitor
 
-    /// The firmware the user selects. Q2 Pod is the default.
-    @State private var firmware: FirmwareKind = .q2Pod
+    /// The firmware the user selects. Nothing is preselected: a wrong
+    /// guess would name the wrong menus on the Q2 and check the wrong
+    /// firmware, so Continue waits for a choice.
+    @State private var firmware: FirmwareKind?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -57,12 +59,20 @@ struct NewDeviceSheet: View {
             Text("Q2 Sync will only ever write to a card you confirm here. It remembers this card by its unique ID, so other drives are never mistaken for it.")
                 .fixedSize(horizontal: false, vertical: true)
 
-            Picker("Firmware on this Q2:", selection: $firmware) {
-                ForEach(FirmwareKind.allCases) { kind in
-                    Text(kind.displayName).tag(kind)
+            VStack(alignment: .leading, spacing: 4) {
+                Picker("Firmware on this Q2:", selection: $firmware) {
+                    // Stock first: it’s what the Q2 ships with. The tags are
+                    // optional to match the selection, which starts empty.
+                    ForEach([FirmwareKind.stock, .q2Pod]) { kind in
+                        Text(kind.displayName).tag(Optional(kind))
+                    }
                 }
+                .pickerStyle(.radioGroup)
+                Text("Not sure? Q2 Pod looks like an iPod; stock is Shanling’s own look.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .pickerStyle(.radioGroup)
 
             Label("Next, macOS will show this card in an Open window. Click Grant Access to let Q2 Sync change files on this card only.",
                   systemImage: "info.circle")
@@ -79,10 +89,12 @@ struct NewDeviceSheet: View {
                 if formatAdvice == nil {
                     Button("Later") { devices.postpone(volume) }
                         .keyboardShortcut(.cancelAction)
-                    Button("Continue…") { devices.confirm(volume, firmware: firmware) }
+                    Button("Continue…") { confirm() }
                         .keyboardShortcut(.defaultAction)
+                        .disabled(firmware == nil)
                 } else {
-                    Button("Continue Anyway…") { devices.confirm(volume, firmware: firmware) }
+                    Button("Continue Anyway…") { confirm() }
+                        .disabled(firmware == nil)
                     Button("Later") { devices.postpone(volume) }
                         .keyboardShortcut(.defaultAction)
                 }
@@ -90,6 +102,12 @@ struct NewDeviceSheet: View {
         }
         .padding(24)
         .frame(width: 460)
+    }
+
+    /// Sets the drive up with the chosen firmware.
+    private func confirm() {
+        guard let firmware else { return }
+        devices.confirm(volume, firmware: firmware)
     }
 
     /// Whether the Disk Utility steps are shown.

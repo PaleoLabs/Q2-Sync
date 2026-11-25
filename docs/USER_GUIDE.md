@@ -92,8 +92,10 @@ in a card reader.
 5. When your Q2's card is connected, a window asks **"Is this your Shanling Q2?"**
    If Q2 Sync's window is closed (it keeps running in the menu bar), a
    notification says **Set Up Your Q2?**: click it to open the window.
-   - Choose which firmware it runs: **Q2 Pod** or **Shanling (stock)**. If
-     you're not sure: Q2 Pod looks like an iPod; stock is Shanling's own look.
+   - Choose which firmware it runs: **Shanling (stock)** or **Q2 Pod**.
+     Neither is selected to start with, and **Continue…** waits until you
+     choose. If you're not sure: Q2 Pod looks like an iPod; stock is
+     Shanling's own look.
    - This window pops up by itself only for a Q2 connected by USB cable. A
      card in a card reader (or any other drive) is listed in the sidebar under
      **Devices** instead: click **Set Up…** next to it. Once set up, your card
