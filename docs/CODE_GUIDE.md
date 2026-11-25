@@ -237,6 +237,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `Playlist` | One playlist: name, kind (regular/smart/folder), ordered track IDs | Smart playlists are their current contents. |
 | `LibrarySnapshot` | Immutable picture of the library | `artistGroups`, `albumGroups`, `genreGroups` build the selection lists, once per snapshot (`memoized`, shared by copies, lock-protected); `groupsByID` looks rows up. `SortKey` sorts like the Q2 (ignores leading The/A/An). |
 | `LibraryMarks` | The library browser's marks: per song `TrackPlacement` (on Q2 / next sync / not chosen / can't sync), per group `GroupMarks` counts | Built once per library read, card record and selection (it resolves the selection); compares against `CardContentsRecord`. |
+| `LibrarySearch` | The library browser's search (`results(in:of:includingSubtitles:)`): which groups stay listed, and the songs shown for each | Every word must be in the group's name, or in one song's title, artist, album artist or album (`localizedStandardContains`: case and accents ignored). Goes through every song, so the view runs it off the main thread. |
 | `SongListCSV` | CSV text of the songs on the Q2 or chosen for it (`make(snapshot:marks:)`) | Pure text. File › Export Song List… (`SongListCommands` in `AppCommands`) builds the marks for `devices.referenceContents` and saves it with an `NSSavePanel`. |
 | `SyncSelection` | What you ticked for a device | Stores *intent* (artist/album/genre/playlist IDs) so new albums by a ticked artist sync automatically. |
 
@@ -385,7 +386,7 @@ preview's album rows (by folder and album tag).
 | --- | --- |
 | `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra` (always shown; it's the way back while the Dock icon is hidden), `Settings`. `AppDelegate` keeps the app running when the window closes, asks before quitting while the card is in use, and adds Sync Now and Eject to the Dock menu (`applicationDockMenu`, with the menu bar item's enabled rules). |
 | `AppCommands` (file) | The menu bar menus and their shortcuts. A changed shortcut also goes in the user guide's "Keyboard shortcuts". |
-| `AppNavigation` | The sidebar selection, the Q2 page's tab, the selected songs, whether the main window is in front, the filter field Edit › Find focuses, and the Settings section a menu item scrolls to. Owned by `AutoSyncController`. |
+| `AppNavigation` | The sidebar selection, the Q2 page's tab, the selected songs, whether the main window is in front, the search or filter field Edit › Find focuses, and the Settings section a menu item scrolls to. Owned by `AutoSyncController`. |
 | `SupportActions` | Show Sync Logs, Show Card in Finder, the latest release's page and the Help menu's and About panel's GitHub links (fixed addresses, no user data). |
 | `AppUpdateModel` | New versions of Q2 Sync: checks at launch and every 24 hours (after a failure, in an hour) unless turned off, and Check for Updates…, which always answers. Both show `UpdateNoticeView`; an automatic find is shown on every check until the app is updated or the release is skipped (`skippedAppRelease`), after a 5 s settle delay and only once `AutoSyncController.isOccupied` is false (library or card in use, a modal panel, or a sheet in the visible main window), so it doesn't pile onto launch prompts and auto-sync. The menu bar item offers it while `available` is set. |
 | `UpdateWindow` | The floating, non-modal AppKit window for that notice, centered over the main window (on screen without one), so it can appear with no other window open and never holds up a sync or quitting. Takes the keyboard only when you asked for the check. |
@@ -418,7 +419,9 @@ two lists are AppKit `NSTableView`s with plain reused cells, built by
 removing thousands of them hung the app. The main window's minimum width in
 `Q2SyncApp` must fit the widest sidebar and Song Info plus the two lists at
 their narrowest, or SwiftUI centers the oversized content and clips both
-sides), `ConnectQ2View` (the sidebar's
+sides; the toolbar's search field narrows both lists with `LibrarySearch`,
+and the view clears the song selection when a search changes the songs listed,
+because `TrackTableView` drops it without reporting it), `ConnectQ2View` (the sidebar's
 "Connect Your Q2" page while no Q2 is connected; selected on first launch),
 `OpenAtLoginPrompt` (one line under a Q2's Auto-Sync picker while auto-sync
 is on and the app doesn't open at login; `LoginItem` wraps `SMAppService`

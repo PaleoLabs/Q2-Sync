@@ -4,6 +4,9 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 
 ## Unreleased
 
+### Added
+- **Search your library.** A search field in the toolbar on Artists, Albums, Genres and Playlists finds items by their name, or by a song's title, artist or album. **Edit › Find** (**⌘F**) puts the cursor there. ([#58](https://github.com/PaleoLabs/Q2-Sync/issues/58))
+
 ### Fixed
 - **Opening your Q2's page no longer blanks the sidebar.** When the note under the capacity bar about "Other" files was showing, the sidebar and the top and bottom of the page could disappear, including after cancelling an auto-sync from its notification.
 - **A renamed card shows its new name.** Rename your Q2's card in Finder, whether or not it's connected to Q2 Sync at the time, and the sidebar, menus and notifications use the new name. Before, they kept the name from when you set it up.

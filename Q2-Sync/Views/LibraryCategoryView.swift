@@ -8,6 +8,7 @@
 //  It shows the library as it relates to the Q2: what can be copied at all
 //  ("12 of 14 can sync") and, from the Mac-side record of the card, what's
 //  on the Q2 and what the next sync adds, even while the Q2 is unplugged.
+//  The toolbar's search field narrows both panes (see `LibrarySearch`).
 //  Read-only; choosing what to sync happens in `DeviceMusicView`.
 //
 //  HOW IT FITS
@@ -100,6 +101,15 @@ struct LibraryCategoryView: View {
     /// The songs selected in the song table, for the inspector.
     @State private var selectedSongs: [Track] = []
 
+    /// Text typed in the search field.
+    @State private var searchText = ""
+
+    /// Whether the cursor is in the search field.
+    @FocusState private var isSearchFocused: Bool
+
+    /// The last finished search, or `nil` while the field is empty.
+    @State private var found: FoundSongs?
+
     /// Tells the menus which songs are selected.
     @Environment(AutoSyncController.self) private var autoSync
     private static let listWidthRange: ClosedRange<Double> = 360...560
@@ -135,46 +145,32 @@ struct LibraryCategoryView: View {
     var body: some View {
         Group {
             if let snapshot = library.snapshot {
-                let groups = category.groups(in: snapshot)
-                HStack(spacing: 0) {
-                    // An AppKit table (see `GroupTableView`), so the marks and
-                    // counts sit in aligned columns and long lists scroll
-                    // without building a SwiftUI view per cell.
-                    let hasQ2 = marks?.hasQ2 ?? false
-                    let rows = groups.map { GroupRow(group: $0, marks: groupMarks[$0.id], hasQ2: hasQ2) }
-                    GroupTableView(rows: rows, title: category.singularTitle, selection: $groupID,
-                                   files: { snapshot.tracks(for: $0.trackIDs).compactMap(\.fileURL) })
-                    // The chosen width, or less if the songs would be left
-                    // with too little. The priority gives the list its width
-                    // first.
-                    .frame(minWidth: Self.narrowestListWidth,
-                           maxWidth: listWidth.clamped(to: Self.listWidthRange))
-                    .layoutPriority(1)
-                    .onGeometryChange(for: Double.self) { $0.size.width } action: { shownListWidth = $0 }
-
-                    splitDivider
-
-                    ZStack {
-                        if let group = groups.first(where: { $0.id == groupID }) {
-                            TrackTableView(tracks: snapshot.tracks(for: group.trackIDs), marks: marks,
-                                           onSelect: { selectedSongs = $0 },
-                                           onShowInfo: { showSongInfo = true },
-                                           onDoubleClick: { showSongInfo.toggle() })
-                        } else {
-                            ContentUnavailableView("Select an Item", systemImage: "music.note",
-                                                   description: Text("Choose one on the left to see its songs."))
-                        }
+                // A stack that stays put, so the search field is registered
+                // once however its contents change.
+                ZStack {
+                    let results = results(in: found)
+                    if let results, results.groups.isEmpty {
+                        ContentUnavailableView.search(text: searchText)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        lists(snapshot: snapshot, results: results)
                     }
-                    // Narrow enough that opening the inspector doesn't need a
-                    // wider window. The song table scrolls sideways.
-                    .frame(minWidth: Self.narrowestSongsWidth, maxWidth: .infinity, maxHeight: .infinity)
                 }
+                // Edit › Find (⌘F) puts the cursor in the search field.
+                .onAppear { autoSync.navigation.filterAppeared(.library) }
+                .onDisappear { autoSync.navigation.filterDisappeared(.library) }
             } else {
                 LibraryNotReadView(library: library)
             }
         }
         .navigationTitle(category.rawValue)
         .navigationSubtitle(comparisonSubtitle)
+        .searchable(text: $searchText, placement: .toolbar, prompt: "Search \(category.rawValue) and Songs")
+        .searchFocused($isSearchFocused)
+        .onChange(of: autoSync.navigation.findRequests) {
+            if autoSync.navigation.filterField == .library { isSearchFocused = true }
+        }
+        .task(id: searchKey) { await search(searchKey) }
         // Enables View › Show Song Info while this view is showing.
         .focusedSceneValue(\.offersSongInfo, true)
         .inspector(isPresented: $showSongInfo) {
@@ -193,7 +189,11 @@ struct LibraryCategoryView: View {
                 .help("Show or hide details of the selected song (⌘I)")
             }
         }
-        .onChange(of: category) { groupID = nil }
+        .onChange(of: category) {
+            groupID = nil
+            searchText = ""
+            found = nil
+        }
         .onChange(of: groupID) { selectedSongs = [] }
         // For File › Show in Finder.
         .onChange(of: selectedSongs, initial: true) {
@@ -205,6 +205,105 @@ struct LibraryCategoryView: View {
             await rebuildMarks(category: category, record: reference?.record,
                                selection: reference?.device.effectiveSelection)
         }
+    }
+
+    /// The group list and the selected group's songs.
+    ///
+    /// - Parameter results: The search's results, or `nil` to show everything.
+    private func lists(snapshot: LibrarySnapshot, results: LibrarySearch.Results?) -> some View {
+        let groups = results?.groups ?? category.groups(in: snapshot)
+        return HStack(spacing: 0) {
+            // An AppKit table (see `GroupTableView`), so the marks and
+            // counts sit in aligned columns and long lists scroll
+            // without building a SwiftUI view per cell.
+            let hasQ2 = marks?.hasQ2 ?? false
+            let rows = groups.map { GroupRow(group: $0, marks: groupMarks[$0.id], hasQ2: hasQ2) }
+            GroupTableView(rows: rows, title: category.singularTitle, selection: $groupID,
+                           files: { snapshot.tracks(for: $0.trackIDs).compactMap(\.fileURL) })
+            // The chosen width, or less if the songs would be left
+            // with too little. The priority gives the list its width
+            // first.
+            .frame(minWidth: Self.narrowestListWidth,
+                   maxWidth: listWidth.clamped(to: Self.listWidthRange))
+            .layoutPriority(1)
+            .onGeometryChange(for: Double.self) { $0.size.width } action: { shownListWidth = $0 }
+
+            splitDivider
+
+            ZStack {
+                if let group = groups.first(where: { $0.id == groupID }) {
+                    let songIDs = results?.trackIDs(for: group) ?? group.trackIDs
+                    TrackTableView(tracks: snapshot.tracks(for: songIDs), marks: marks,
+                                   onSelect: { selectedSongs = $0 },
+                                   onShowInfo: { showSongInfo = true },
+                                   onDoubleClick: { showSongInfo.toggle() })
+                } else {
+                    ContentUnavailableView("Select an Item", systemImage: "music.note",
+                                           description: Text("Choose one on the left to see its songs."))
+                }
+            }
+            // Narrow enough that opening the inspector doesn't need a
+            // wider window. The song table scrolls sideways.
+            .frame(minWidth: Self.narrowestSongsWidth, maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    // MARK: - Search
+
+    /// What a search depends on; a change runs it again.
+    private struct SearchKey: Equatable {
+        var text: String
+        var category: BrowseCategory
+        var loadCount: Int
+    }
+
+    /// A finished search and the list it was made for.
+    private struct FoundSongs {
+        var category: BrowseCategory
+        var results: LibrarySearch.Results
+    }
+
+    private var searchKey: SearchKey {
+        SearchKey(text: searchText, category: category, loadCount: library.loadCount)
+    }
+
+    /// The results to show. While you type, the previous ones stay until
+    /// the new ones are ready; another category's are never shown.
+    private func results(in found: FoundSongs?) -> LibrarySearch.Results? {
+        found?.category == category ? found?.results : nil
+    }
+
+    /// Searches off the main thread, then shows the results.
+    private func search(_ key: SearchKey) async {
+        guard let snapshot = library.snapshot, let query = LibrarySearch(key.text) else {
+            show(nil)
+            return
+        }
+        let category = key.category
+        let results = await Task.detached(priority: .userInitiated) {
+            query.results(in: category.groups(in: snapshot), of: snapshot,
+                          includingSubtitles: category != .playlists)
+        }.value
+        guard !Task.isCancelled else { return }
+        show(FoundSongs(category: category, results: results))
+    }
+
+    /// Shows a search's results (`nil`: everything). If that changes the
+    /// songs listed on the right, the song table drops its selection without
+    /// saying so, so the selection is cleared here too.
+    private func show(_ new: FoundSongs?) {
+        let changesSongs = shownSongIDs(in: found) != shownSongIDs(in: new)
+        found = new
+        if changesSongs { selectedSongs = [] }
+    }
+
+    /// The songs listed on the right for a set of results.
+    private func shownSongIDs(in found: FoundSongs?) -> [PersistentID]? {
+        guard let snapshot = library.snapshot, let groupID else { return nil }
+        let results = results(in: found)
+        let groups = results?.groups ?? category.groups(in: snapshot)
+        guard let group = groups.first(where: { $0.id == groupID }) else { return nil }
+        return results?.trackIDs(for: group) ?? group.trackIDs
     }
 
     /// A thin line with a wider grab area that resizes the group list.

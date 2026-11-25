@@ -228,6 +228,15 @@ unplugged:
 - Right-click an artist or album for **Show in Finder**. It's dimmed when the
   songs are too spread out to show in one Finder window, as for most genres
   and playlists.
+- **Search** with the field in the toolbar (**⌘F** puts the cursor there).
+  The list keeps the items whose name matches what you type (on Albums, the
+  album artist counts too), and those holding a matching song: by title,
+  artist, album artist or album. An item found by its name shows all its
+  songs; one found only through its songs shows just those. Every word has to
+  match, in any order ("help beatles"), and capitals and accents don't
+  matter. The song counts and marks on the left still cover the whole item.
+  Clear the field to see everything again; switching to another list clears
+  it too.
 
 These marks come from Q2 Sync's record of the card from the last time it was
 connected; the window's subtitle says which Q2 and when. If the card was
@@ -716,7 +725,7 @@ Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
 | **⌘5** | Show your Q2 |
 | **⌘R** | Refresh the Music library |
 | **⇧⌘R** | Show the selected songs in Finder |
-| **⌘F** | Filter the Music tab or the sync preview |
+| **⌘F** | Search your library, or filter the Music tab or the sync preview |
 | **⌘I** | Show or hide Song Info |
 | **⇧⌘S** | Sync Now |
 | **⌘E** | Eject |

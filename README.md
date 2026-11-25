@@ -68,9 +68,10 @@ syncs on its own.
 
 ### 🔎 Browse your library against your Q2
 The **Music Library** browser marks what's on your Q2, what the next sync adds
-and what can't be copied, even with the Q2 unplugged. Double-click a song or
-press **⌘I** to open or close **Song Info**: its artwork, tags, file details and plays,
-with **Show in Finder**.
+and what can't be copied, even with the Q2 unplugged. Search it by artist,
+album, genre, playlist or song (**⌘F**). Double-click a song or press **⌘I** to
+open or close **Song Info**: its artwork, tags, file details and plays, with
+**Show in Finder**.
 
 ### 👀 See every change before it happens
 The **Ready to Sync** preview lists every song that will be added, updated,

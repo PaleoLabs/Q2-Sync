@@ -113,8 +113,9 @@ struct LibraryCommands: Commands {
     }
 }
 
-/// Edit › Find (⌘F): puts the cursor in the filter field on screen (the
-/// Q2's Music tab or the sync preview). Dimmed where there's none.
+/// Edit › Find (⌘F): puts the cursor in the search or filter field on
+/// screen (the library browser, the Q2's Music tab or the sync preview).
+/// Dimmed where there's none.
 struct FindCommands: Commands {
     let controller: AutoSyncController
 
@@ -130,7 +131,7 @@ struct FindCommands: Commands {
     private var available: Bool {
         let navigation = controller.navigation
         guard navigation.isMainWindowFront, let field = navigation.filterField else { return false }
-        // Under another sheet, the Music tab's filter can't be reached.
+        // Under another sheet, the window's own fields can't be reached.
         return field == .syncPreview || !controller.isShowingSheet
     }
 }

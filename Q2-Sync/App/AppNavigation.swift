@@ -5,8 +5,8 @@
 //  PURPOSE
 //  Where you are in the main window, kept outside the views so the menus can
 //  read and change it: the selected sidebar row, the Q2 page's tab, the
-//  songs selected in the library browser, and the filter field Edit › Find
-//  would focus.
+//  songs selected in the library browser, and the search or filter field
+//  Edit › Find would focus.
 //
 //  HOW IT FITS
 //  Owned by `AutoSyncController`. `RootView` and `DeviceView` show what it
@@ -16,8 +16,10 @@
 import AppKit
 import Observation
 
-/// A filter field that Edit › Find can put the cursor in.
+/// A search or filter field that Edit › Find can put the cursor in.
 enum FilterField: Equatable {
+    /// The toolbar's search field in the library browser.
+    case library
     /// "Filter" on the Q2's Music tab.
     case musicTab
     /// The filter above the lists in the sync preview.
