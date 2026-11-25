@@ -90,6 +90,9 @@ struct LibraryCategoryView: View {
     /// it opens at the narrow width, drags like a divider, and is remembered.
     @AppStorage("libraryListWidth") private var listWidth: Double = Self.listWidthRange.lowerBound
     @State private var dragStartWidth: Double?
+    /// The group list's width on screen: less than `listWidth` when the
+    /// window has no room for that.
+    @State private var shownListWidth: Double = Self.listWidthRange.lowerBound
 
     /// Whether the song inspector is open (remembered across launches).
     @AppStorage("showSongInfo") private var showSongInfo = false
@@ -100,6 +103,13 @@ struct LibraryCategoryView: View {
     /// Tells the menus which songs are selected.
     @Environment(AutoSyncController.self) private var autoSync
     private static let listWidthRange: ClosedRange<Double> = 360...560
+
+    // How narrow the two lists get when space is short. With the widest
+    // sidebar and inspector they still fit the main window's minimum width
+    // (set in `Q2SyncApp`); if not, the whole window's content is clipped on
+    // both sides. Change these widths together.
+    private static let narrowestListWidth: Double = 240
+    private static let narrowestSongsWidth: Double = 220
 
     /// What the marks depend on; a change rebuilds them. Compared on every
     /// redraw, so it holds the card record's identity (which card, when it
@@ -134,7 +144,13 @@ struct LibraryCategoryView: View {
                     let rows = groups.map { GroupRow(group: $0, marks: groupMarks[$0.id], hasQ2: hasQ2) }
                     GroupTableView(rows: rows, title: category.singularTitle, selection: $groupID,
                                    files: { snapshot.tracks(for: $0.trackIDs).compactMap(\.fileURL) })
-                    .frame(width: listWidth.clamped(to: Self.listWidthRange))
+                    // The chosen width, or less if the songs would be left
+                    // with too little. The priority gives the list its width
+                    // first.
+                    .frame(minWidth: Self.narrowestListWidth,
+                           maxWidth: listWidth.clamped(to: Self.listWidthRange))
+                    .layoutPriority(1)
+                    .onGeometryChange(for: Double.self) { $0.size.width } action: { shownListWidth = $0 }
 
                     splitDivider
 
@@ -150,8 +166,8 @@ struct LibraryCategoryView: View {
                         }
                     }
                     // Narrow enough that opening the inspector doesn't need a
-                    // wider window.
-                    .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                    // wider window. The song table scrolls sideways.
+                    .frame(minWidth: Self.narrowestSongsWidth, maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else {
                 LibraryNotReadView(library: library)
@@ -166,7 +182,7 @@ struct LibraryCategoryView: View {
             SongInspectorView(track: song, selectedCount: selectedSongs.count,
                               placement: song.flatMap { marks?.placement(of: $0.id) },
                               library: library)
-                .inspectorColumnWidth(min: 220, ideal: 260, max: 360)
+                .inspectorColumnWidth(min: 220, ideal: 260, max: 300)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -202,9 +218,11 @@ struct LibraryCategoryView: View {
                 if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
             }
             .gesture(
-                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                // Not 0: a click alone mustn't replace the chosen width with
+                // the one that fits just now.
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
                     .onChanged { drag in
-                        let start = dragStartWidth ?? listWidth
+                        let start = dragStartWidth ?? shownListWidth
                         dragStartWidth = start
                         listWidth = (start + drag.translation.width).clamped(to: Self.listWidthRange)
                     }

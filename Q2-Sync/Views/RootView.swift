@@ -41,13 +41,19 @@ struct RootView: View {
     @AppStorage(FirstLaunchNoticeView.acknowledgedKey) private var noticeAcknowledged = false
 
     var body: some View {
-        NavigationSplitView {
+        // The sidebar can't be hidden (see `PinnedSidebar`).
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             sidebar
+                .toolbar(removing: .sidebarToggle)
+                .background(PinnedSidebar())
                 // The one-time "read-only, keep a backup" notice. It comes
                 // before anything else; the setup sheet waits for it.
                 .sheet(isPresented: Binding(get: { !noticeAcknowledged }, set: { _ in })) {
                     FirstLaunchNoticeView()
                 }
+                // Room for long card names, without crowding out the page.
+                // Keep this last: under `safeAreaInset` it was ignored.
+                .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 320)
         } detail: {
             detail
                 // The sync sheet (preview, progress, result). It's attached
@@ -188,7 +194,6 @@ struct RootView: View {
         }
         // Lets the other-drives row shrink to nothing when it's empty.
         .environment(\.defaultMinListRowHeight, 0)
-        .navigationSplitViewColumnWidth(min: 190, ideal: 220)
         .safeAreaInset(edge: .bottom) {
             LibraryStatusView(library: library)
                 .padding(10)
@@ -373,5 +378,5 @@ struct DeviceSidebarRow: View {
     RootView(library: library, devices: devices)
         .environment(sync)
         .environment(AutoSyncController(library: library, devices: devices, sync: sync))
-        .frame(width: 1000, height: 600)
+        .frame(width: 1100, height: 600)
 }

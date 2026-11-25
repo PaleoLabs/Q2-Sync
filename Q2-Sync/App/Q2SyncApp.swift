@@ -66,7 +66,9 @@ struct Q2SyncApp: App {
                 // which reads them with `@Environment`.
                 .environment(sync)
                 .environment(autoSync)
-                .frame(minWidth: 900, minHeight: 560)
+                // Wide enough for the library view with the sidebar and
+                // Song Info at their widest (see `LibraryCategoryView`).
+                .frame(minWidth: 1100, minHeight: 560)
                 .background(WindowOpenerBridge(controller: autoSync))
         }
         .windowToolbarStyle(.unified)
@@ -75,7 +77,6 @@ struct Q2SyncApp: App {
         .commands {
             LibraryCommands(controller: autoSync)
             FindCommands(controller: autoSync)
-            SidebarCommands()
             NavigationCommands(controller: autoSync)
             DeviceCommands(controller: autoSync)
             SongListCommands(controller: autoSync)

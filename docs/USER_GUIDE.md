@@ -673,7 +673,6 @@ Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
 | **⌘0** | Open the Q2 Sync window |
 | **⌘1** to **⌘4** | Show Artists, Albums, Genres or Playlists |
 | **⌘5** | Show your Q2 |
-| **⌃⌘S** | Show or hide the sidebar |
 | **⌘R** | Refresh the Music library |
 | **⇧⌘R** | Show the selected songs in Finder |
 | **⌘F** | Filter the Music tab or the sync preview |

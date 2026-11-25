@@ -389,7 +389,7 @@ preview's album rows (by folder and album tag).
 
 ### Views (`Q2-Sync/Views`)
 
-`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `DeviceView` (header, Music/Settings tabs,
+`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, Music/Settings tabs,
 `DeviceSettingsView`), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
 table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
 `CapacityBarView`, `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
@@ -401,7 +401,10 @@ and Install Firmware sheets), `NewDeviceSheet`, `FirstLaunchNoticeView`,
 marks, compared with the connected Q2 or the one read most recently; the
 two lists are AppKit `NSTableView`s with plain reused cells, built by
 `AppKitTableSupport`, because SwiftUI `Table` hosted a view per cell and
-removing thousands of them hung the app), `ConnectQ2View` (the sidebar's
+removing thousands of them hung the app. The main window's minimum width in
+`Q2SyncApp` must fit the widest sidebar and Song Info plus the two lists at
+their narrowest, or SwiftUI centers the oversized content and clips both
+sides), `ConnectQ2View` (the sidebar's
 "Connect Your Q2" page while no Q2 is connected; selected on first launch),
 `OpenAtLoginPrompt` (one line under a Q2's Auto-Sync picker while auto-sync
 is on and the app doesn't open at login; `LoginItem` wraps `SMAppService`
