@@ -126,12 +126,18 @@ your Mac, or delete it.
 
 ## A closer look
 
+![The Music Library browser, with the sidebar, an On Q2 column and the Song Info panel](docs/images/library-browse.png)
+
+<p align="center"><em>Browse your library against your Q2, with Song Info for any song</em></p>
+
 | | |
 | --- | --- |
 | ![Choosing what to sync](docs/images/device-music.png) | ![Sync preview](docs/images/sync-preview.png) |
 | *Choose artists, albums, genres and playlists* | *Preview every change before it happens* |
 | ![Capacity bar](docs/images/capacity-bar.png) | ![Q2 Sync settings](docs/images/app-settings.png) |
 | *Finder-style capacity bar* | *Menu bar item and open at login* |
+| ![Sync Complete window with the steps to follow on the Q2](docs/images/sync-complete.png) | ![Firmware settings showing the installed Q2 Pod version and release notes](docs/images/firmware-settings.png) |
+| *Clear next steps after every sync* | *Firmware updates and switching* |
 
 ## Safe by design
 
