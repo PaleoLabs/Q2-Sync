@@ -191,6 +191,34 @@ struct DeviceStoreTests {
         #expect(DeviceStore(directory: folder).knownDevices.isEmpty)
     }
 
+    @Test("A renamed card's new name is saved, keeping its identity and settings")
+    func renamedCard() throws {
+        let folder = try makeTempFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        var device = KnownDevice(volumeUUID: "UUID-1", name: "NO NAME", firmware: .q2Pod,
+                                 bookmarkData: Data([1, 2, 3]), addedDate: .now,
+                                 hasCompletedFirstSync: true)
+        let changed = device.followVolumeName("MY Q2")
+        #expect(changed)
+        try DeviceStore(directory: folder).upsert(device)
+
+        let reloaded = DeviceStore(directory: folder).device(withUUID: "UUID-1")
+        #expect(reloaded?.name == "MY Q2")
+        #expect(reloaded?.hasCompletedFirstSync == true)
+        #expect(reloaded?.bookmarkData == Data([1, 2, 3]))
+    }
+
+    @Test("An unchanged or blank volume name leaves the saved name alone",
+          arguments: ["Q2", "", "   "])
+    func nameNotFollowed(volumeName: String) {
+        var device = KnownDevice(volumeUUID: "UUID-1", name: "Q2", firmware: .q2Pod,
+                                 bookmarkData: Data(), addedDate: .now, hasCompletedFirstSync: false)
+        let changed = device.followVolumeName(volumeName)
+        #expect(!changed)
+        #expect(device.name == "Q2")
+    }
+
     @Test("Ignored drives are remembered; confirming one un-ignores it")
     func ignoring() throws {
         let folder = try makeTempFolder()

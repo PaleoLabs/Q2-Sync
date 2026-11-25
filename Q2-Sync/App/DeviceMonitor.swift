@@ -213,7 +213,17 @@ final class DeviceMonitor {
             connect(device: match.device, volume: match.volume)
         } else if let current = connected,
                   let volume = eligible.first(where: { $0.uuid == current.device.volumeUUID }) {
-            connected?.volume = volume // Update free space, name, etc.
+            if volume.name != current.volume.name || volume.url.path != current.volume.url.path {
+                // Renamed while connected. The mount point moves with the
+                // name, so the old access URL no longer leads to the card:
+                // resolve the bookmark again (which also takes the new name).
+                flushPendingSave()
+                current.accessURL?.stopAccessingSecurityScopedResource()
+                connect(device: current.device, volume: volume, connectedAt: current.connectedAt,
+                        isRestoring: true)
+            } else {
+                connected?.volume = volume // Update free space etc.
+            }
         }
         otherKnownVolumes = eligible.filter { volume in
             guard let uuid = volume.uuid else { return false }
@@ -325,14 +335,18 @@ final class DeviceMonitor {
     ///   - device: The saved record.
     ///   - volume: The mounted volume with the matching UUID.
     ///   - connectedAt: When the card was mounted; pass the old value when
-    ///     reconnecting after a failed eject.
-    ///   - isRestoring: `true` after a failed eject: the card never left, so
-    ///     `onDeviceConnected` isn't called.
+    ///     reconnecting after a failed eject or a rename.
+    ///   - isRestoring: `true` after a failed eject or a rename: the card
+    ///     never left, so `onDeviceConnected` isn't called.
     /// - Side effects: Starts security-scoped access (balanced in
-    ///   `disconnect()`); may refresh a stale bookmark in the store.
+    ///   `disconnect()`); may save a new card name or a refreshed bookmark
+    ///   in the store.
     private func connect(device: KnownDevice, volume: VolumeInfo, connectedAt: Date = .now,
                          isRestoring: Bool = false) {
         var device = device
+        if device.followVolumeName(volume.name) {
+            try? store.upsert(device)
+        }
         let connection = connection(for: volume)
         var isStale = false
         do {

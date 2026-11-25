@@ -114,6 +114,11 @@ and a spare card in a reader), one is shown (the one you just set up or last cli
 others are listed below it in grey. Click one to switch to it (not while a
 sync or Verify Card is running).
 
+Q2 Sync shows your card under its name in Finder. If you rename the card, the
+new name appears the next time it connects, or straight away if it's connected
+now. Your settings stay as they were. Don't rename it while a sync or Verify
+Card is running.
+
 ### New versions of Q2 Sync
 
 Q2 Sync checks GitHub for a new version when it starts, then once a day while
@@ -683,6 +688,12 @@ Q2 Sync always leaves 200 MB free for the Q2's own use.
 `_explaylist_data` holds playlists for the Q2 to import. Please don't edit
 `.q2sync/manifest.json`. If it ever gets damaged, delete it: the next sync
 rebuilds it without copying identical songs again.
+
+**Can I rename my card?**
+Yes. In Finder, Control-click the card in the sidebar, choose **Rename**, type
+the new name and press Return. Q2 Sync recognizes the card by its unique ID, not
+its name. Renaming doesn't erase anything; erasing the card in Disk Utility
+does, and Q2 Sync then sees it as a new card.
 
 **Can I use the same card with another Mac?**
 Yes. The record of what's on the card lives on the card itself.

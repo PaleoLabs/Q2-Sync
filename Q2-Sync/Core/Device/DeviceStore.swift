@@ -30,7 +30,8 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     /// The card's volume UUID. This is how we recognise it.
     let volumeUUID: String
 
-    /// A friendly name, initially the volume name.
+    /// The name the app shows: the card's volume name, kept up to date by
+    /// `followVolumeName` when the card connects or is renamed.
     var name: String
 
     /// Which firmware the Q2 runs. The user can change this later.
@@ -108,6 +109,19 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
 
     /// This device's firmware profile.
     var profile: DeviceProfile { firmware.profile }
+
+    /// Takes the card's current volume name, so a card renamed in Finder
+    /// is shown by its new name. The card is still recognised by its UUID.
+    ///
+    /// - Parameter volumeName: The name of the mounted volume with this
+    ///   device's UUID. A blank name is ignored.
+    /// - Returns: `true` if `name` changed (and so needs saving).
+    mutating func followVolumeName(_ volumeName: String) -> Bool {
+        guard volumeName != name,
+              !volumeName.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        name = volumeName
+        return true
+    }
 }
 
 /// A firmware file Q2 Sync placed on the card as `update.tar`.
