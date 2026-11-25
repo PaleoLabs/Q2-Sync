@@ -61,11 +61,13 @@ struct FirmwareOffer: Equatable, Sendable {
 enum FirmwareSourceError: LocalizedError, Equatable {
     case noUpdateFile
     case shanlingPageChanged
+    case shanlingHTTPStatus(Int)
 
     var errorDescription: String? {
         switch self {
         case .noUpdateFile: return "The latest Q2 Pod release has no update.tar to download."
         case .shanlingPageChanged: return "Shanling's download page has changed, so Q2 Sync can't find the firmware on it."
+        case .shanlingHTTPStatus(let code): return "Shanling's download page answered with an error (\(code)). Try again later."
         }
     }
 }
@@ -93,6 +95,25 @@ enum FirmwareSources {
         return FirmwareOffer(kind: .q2Pod, version: FirmwareVersion(release.tag)?.description ?? release.tag,
                              downloadURL: file.url, packaging: .tar, expectedSHA256: file.sha256,
                              expectedSize: file.size, infoPage: release.pageURL)
+    }
+
+    /// Reads Shanling's download page for the latest stock firmware
+    /// (read-only HTTPS request; nothing is downloaded).
+    ///
+    /// - Parameter session: The URL session (tests could inject one).
+    /// - Returns: The offer.
+    /// - Throws: Network errors or `FirmwareSourceError`.
+    /// - Side effects: One request to en.shanling.com. No personal details
+    ///   are sent; the User-Agent is just "Q2-Sync".
+    static func fetchStockOffer(session: URLSession = .shared) async throws -> FirmwareOffer {
+        var request = URLRequest(url: stockDownloadPage)
+        request.setValue("Q2-Sync", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 20
+        let (data, response) = try await session.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw FirmwareSourceError.shanlingHTTPStatus(http.statusCode)
+        }
+        return try stockOffer(fromShanlingPage: String(decoding: data, as: UTF8.self))
     }
 
     /// Finds the stock firmware's version and download on Shanling's page.

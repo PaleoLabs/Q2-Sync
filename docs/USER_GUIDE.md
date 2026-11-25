@@ -33,6 +33,7 @@ the source of truth, and the Q2 is simply one more device it syncs to.
 9. [Verify the card and back up Q2 Pod data](#9-verify-the-card-and-back-up-q2-pod-data)
 10. [Eject safely](#10-eject-safely)
 11. [Frequently asked questions](#11-frequently-asked-questions)
+12. [Keyboard shortcuts](#12-keyboard-shortcuts)
 
 ---
 
@@ -118,15 +119,16 @@ sync or Verify Card is running).
 1. Click your Q2 in the sidebar, then the **Music** tab.
 2. Q2 Sync reads your Music library when the window opens and whenever the
    Q2 connects. To re-read it (after adding music, say), click **Refresh
-   Library** at the top right.
+   Library** at the top right, or choose **File › Refresh Music Library**
+   (**⌘R**).
 3. Choose one (on a new Q2, nothing is chosen yet, and **Sync** waits until
    you choose):
    - **Entire music library**: everything that can be copied, plus all your
      playlists.
    - **Selected artists, albums, genres, and playlists**: tick what you want
      in the **Artists**, **Albums**, **Genres** and **Playlists** tabs. Use the
-     **Filter** box to find things quickly; click the **×** in it to clear
-     the search.
+     **Filter** box to find things quickly (**⌘F** puts the cursor there);
+     click the **×** in it to clear the search.
 
 Everything you tick is combined: a song is synced if its artist, album, genre
 or any of its playlists is ticked. When you tick an artist, their new albums
@@ -186,9 +188,13 @@ unplugged:
   you click **Song Info** again or choose **View › Hide Song Info**
   (**⌘I**).
 - Hover over a song's title to see where its file is on your Mac, or
-  right-click songs for **Show in Finder** and **Copy Path**. A **File**
+  right-click songs for **Show in Finder** and **Copy Path**. **File › Show
+  in Finder** (**⇧⌘R**) does the same for the selected songs. A **File**
   column is also available: right-click the column headers to show it, or to
   show and hide other columns.
+- Right-click an artist or album for **Show in Finder**. It's dimmed when the
+  songs are too spread out to show in one Finder window, as for most genres
+  and playlists.
 
 These marks come from Q2 Sync's record of the card from the last time it was
 connected; the window's subtitle says which Q2 and when. If the card was
@@ -435,8 +441,8 @@ Login** button under **When this Q2 connects**. Q2 Sync doesn't ask anywhere
 else.
 
 The **menu bar item** shows whether your Q2 is connected and lets you **Sync
-Now**, **Eject**, **Open Q2 Sync**, open **Settings** or **Quit**. It's always
-shown.
+Now**, **Eject**, **Open Q2 Sync**, open **Settings**, the help or the About
+panel, or **Quit**. It's always shown.
 
 While Q2 Sync's window is closed, its **Dock icon is hidden** and the app lives
 only in the menu bar; **Open Q2 Sync** there brings the window and the Dock icon
@@ -499,9 +505,17 @@ releases, with their notes and a link.
 
 - When a new release is out, click **Update to …** to put it on the card.
 
-**Shanling stock:** not checked automatically. **Install Firmware…** always
-finds Shanling's latest, and your Q2 can also check by itself: **System
-Setting → System Update → Network update**.
+**Shanling stock:** not checked automatically. Click **Check Now** under
+**Firmware Updates** to see the latest version on Shanling's download page,
+then compare it with yours (on the Q2: **System Setting → About**). **Install
+V…** puts it on the card. Your Q2 can also check by itself: **System Setting →
+System Update → Network update**.
+
+**Device › Check for Firmware Updates** checks whichever firmware your Q2 runs,
+even with automatic checking off. While the other firmware is on the card and
+you haven't said whether the Q2 installed it, it's dimmed: answer **Did the
+Firmware Update Finish?**, or click **Mark as Installed** or **Remove from
+Card** on the Settings tab.
 
 ---
 
@@ -541,6 +555,7 @@ Music folder or the card). **Use Default** goes back to Downloads. If the
 folder you chose is on a drive that isn't connected, Back Up Now waits until
 it is (or until you choose another). To put them on a card (for example a new one), click
 **Restore…**, choose a backup and tick what to restore, then restart the Q2.
+Both are also in the **Device** menu.
 
 - Restoring **Listens not yet scrobbled** is off by default: those listens
   may already have been sent, and would be sent twice.
@@ -556,7 +571,8 @@ Always eject before unplugging:
 - click **Eject** on the result after a sync, or
 - the eject button next to your Q2 in the sidebar, or the **Eject** button on
   its page, or
-- **Eject** in the menu bar item.
+- **Eject** in the menu bar item, or
+- **Device › Eject** (**⌘E**), or right-click your Q2 in the sidebar.
 
 If ejecting fails, Q2 Sync says so and the card stays connected. Close any
 Finder windows showing the card and try again.
@@ -635,7 +651,28 @@ rebuilds it without copying identical songs again.
 Yes. The record of what's on the card lives on the card itself.
 
 **Where are the logs?**
-Your Q2's **Settings** tab → **Show Sync Logs**.
+Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
+**Settings** tab.
 
 **I clicked "Not My Q2" by mistake.**
 **Q2 Sync › Settings → Ask Again About "Not My Q2" Drives**.
+
+---
+
+## 12. Keyboard shortcuts
+
+| Shortcut | What it does |
+| --- | --- |
+| **⌘0** | Open the Q2 Sync window |
+| **⌘1** to **⌘4** | Show Artists, Albums, Genres or Playlists |
+| **⌘5** | Show your Q2 |
+| **⌃⌘S** | Show or hide the sidebar |
+| **⌘R** | Refresh the Music library |
+| **⇧⌘R** | Show the selected songs in Finder |
+| **⌘F** | Filter the Music tab or the sync preview |
+| **⌘I** | Show or hide Song Info |
+| **⇧⌘S** | Sync Now |
+| **⌘E** | Eject |
+| **⌘,** | Settings |
+| **⌘?** | This guide |
+| **⌘Q** | Quit Q2 Sync |

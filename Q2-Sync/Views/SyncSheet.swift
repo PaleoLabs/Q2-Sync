@@ -83,6 +83,12 @@ struct SyncPreviewView: View {
     /// Filters every list in the preview (title, artist, album or path).
     @State private var searchText = ""
 
+    /// Whether the cursor is in the filter field.
+    @FocusState private var isSearchFocused: Bool
+
+    /// For Edit › Find.
+    @Environment(AutoSyncController.self) private var autoSync
+
     /// Sections the user opened or closed, by section ID. Untouched
     /// sections are open (see `isExpanded`).
     @State private var expansion: [String: Bool] = [:]
@@ -150,6 +156,19 @@ struct SyncPreviewView: View {
                 .padding(16)
         }
         .frame(width: 660, height: showsDetails && !hasNothingToList ? 680 : nil)
+        // Edit › Find (⌘F) opens Details if needed and puts the cursor in
+        // the filter.
+        .onAppear { if !hasNothingToList { autoSync.navigation.filterAppeared(.syncPreview) } }
+        .onDisappear { autoSync.navigation.filterDisappeared(.syncPreview) }
+        .onChange(of: autoSync.navigation.findRequests) {
+            guard !hasNothingToList else { return }
+            withAnimation(.snappy) { showsDetails = true }
+            Task {
+                // A field that was just added can't take the cursor yet.
+                try? await Task.sleep(for: .milliseconds(100))
+                isSearchFocused = true
+            }
+        }
         .confirmationDialog("Permanently delete \(pluralized(cardOnlyDeleteCount, "file")) from the card?",
                             isPresented: $confirmingDeletes) {
             Button("Delete \(cardOnlyDeleteCount) Files and Sync", role: .destructive) {
@@ -401,6 +420,7 @@ struct SyncPreviewView: View {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
             TextField("Filter by song, artist, album or path", text: $searchText)
                 .textFieldStyle(.plain)
+                .focused($isSearchFocused)
             if !searchText.isEmpty {
                 Button {
                     searchText = ""

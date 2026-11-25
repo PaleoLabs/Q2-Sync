@@ -30,6 +30,9 @@ struct DeviceMusicView: View {
     /// Text typed in the filter field.
     @State private var filterText = ""
 
+    /// Whether the cursor is in the filter field.
+    @FocusState private var isFilterFocused: Bool
+
     /// Controls the skipped-songs popover.
     @State private var showingSkipped = false
 
@@ -164,6 +167,7 @@ struct DeviceMusicView: View {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Filter", text: $filterText, prompt: Text("Filter \(section.rawValue)"))
                     .textFieldStyle(.plain)
+                    .focused($isFilterFocused)
                 if !filterText.isEmpty {
                     Button {
                         filterText = ""
@@ -181,6 +185,12 @@ struct DeviceMusicView: View {
             .frame(maxWidth: 220)
         }
         .onChange(of: section) { filterText = "" }
+        // Edit › Find (⌘F) puts the cursor in the filter.
+        .onAppear { autoSync.navigation.filterAppeared(.musicTab) }
+        .onDisappear { autoSync.navigation.filterDisappeared(.musicTab) }
+        .onChange(of: autoSync.navigation.findRequests) {
+            if autoSync.navigation.filterField == .musicTab { isFilterFocused = true }
+        }
     }
 
     /// e.g. "Artists" or "Artists (3)" when some are ticked.

@@ -93,7 +93,7 @@ Every build also runs the **Stamp build number** script phase
 (`Scripts/stamp-version.sh`), which writes into the built Info.plist
 `CFBundleVersion` = `git rev-list --count HEAD` and `Q2SyncBuildCommit` =
 short hash (+ `-dirty` when `git status` isn't clean). Without git they fall
-back to `0` and `unknown`. `AboutCommand` (`Q2SyncApp.swift`) shows them in
+back to `0` and `unknown`. `AboutCommand` (`AppCommands.swift`) shows them in
 the About panel. The phase needs `ENABLE_USER_SCRIPT_SANDBOXING = NO` (it
 runs git and edits the Info.plist). The number goes up by one per commit, so
 it "auto-increments as you push" without anyone editing a file.
@@ -232,7 +232,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `Playlist` | One playlist: name, kind (regular/smart/folder), ordered track IDs | Smart playlists are their current contents. |
 | `LibrarySnapshot` | Immutable picture of the library | `artistGroups`, `albumGroups`, `genreGroups` build the selection lists, once per snapshot (`memoized`, shared by copies, lock-protected); `groupsByID` looks rows up. `SortKey` sorts like the Q2 (ignores leading The/A/An). |
 | `LibraryMarks` | The library browser's marks: per song `TrackPlacement` (on Q2 / next sync / not chosen / can't sync), per group `GroupMarks` counts | Built once per library read, card record and selection (it resolves the selection); compares against `CardContentsRecord`. |
-| `SongListCSV` | CSV text of the songs on the Q2 or chosen for it (`make(snapshot:marks:)`) | Pure text. File › Export Song List… (`SongListCommands` in `Q2SyncApp`) builds the marks for `devices.referenceContents` and saves it with an `NSSavePanel`. |
+| `SongListCSV` | CSV text of the songs on the Q2 or chosen for it (`make(snapshot:marks:)`) | Pure text. File › Export Song List… (`SongListCommands` in `AppCommands`) builds the marks for `devices.referenceContents` and saves it with an `NSSavePanel`. |
 | `SyncSelection` | What you ticked for a device | Stores *intent* (artist/album/genre/playlist IDs) so new albums by a ticked artist sync automatically. |
 
 ### Help (`Core/Help`)
@@ -253,6 +253,9 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   JSON).
 - **`LibraryHealthCheck.evaluate(_:) -> LibraryHealth`** · the "Mac looks
   empty" guard. Threshold: `maximumMissingFraction = 0.10`.
+- **`FinderReveal.items(for:)`** · what "Show in Finder" selects for a group of
+  songs: the files if they share a folder, their folders if those share one,
+  otherwise nothing.
 
 ### Device (`Core/Device`)
 
@@ -303,7 +306,9 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   · the numbered steps after a sync: eject, scan the library, then playlist
   import and cover refresh only when asked for.
 - **`FirmwareSources`** · builds a `FirmwareOffer` from the GitHub release
-  (Q2 Pod) or Shanling's download page (stock: version + Google Drive link).
+  (Q2 Pod) or Shanling's download page (stock: version + Google Drive link;
+  `fetchStockOffer()` reads the page). `KnownDevice.knownFirmware` is `nil`
+  while the other firmware waits on the card to be installed.
 - **`FirmwareImage.inspect(_:)`** · checks an `update.tar`: GNU tar whose
   first entry `firmware_v20.info` says "Shanling Q2" and a version ("V1.36"
   = stock, "V1890" = Q2 Pod 1.8.9). Also `sha256(of:)`.
@@ -363,13 +368,16 @@ preview's album rows (by folder and album tag).
 | Type | Purpose |
 | --- | --- |
 | `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra` (always shown; it's the way back while the Dock icon is hidden), `Settings`. `AppDelegate` keeps the app running when the window closes. |
-| `DockIconController` | Hides the Dock icon (`.accessory` activation policy) while the main window is closed and brings it back (`.regular`) in `showMainWindow()` or when the window becomes main. Settings, the sync sheet and alerts don't count. `openSettings` (the menu bar's Settings…) brings the Dock icon back while Settings is open, since an app without one can't reliably bring Settings to the front; it hides again when Settings closes with the main window still closed. A `CloseProxy` stands in front of SwiftUI's window delegate to answer `windowShouldClose` and show the "Still in the Menu Bar" notice (Keep in Menu Bar / Quit Q2 Sync / Don't show again, saved as `showMenuBarCloseNotice`; Settings › Messages › "Show Menu Bar Tip Again" turns it back on); every other delegate call is forwarded to SwiftUI's. |
+| `AppCommands` (file) | The menu bar menus and their shortcuts. A changed shortcut also goes in the user guide's "Keyboard shortcuts". |
+| `AppNavigation` | The sidebar selection, the Q2 page's tab, the selected songs, whether the main window is in front, the filter field Edit › Find focuses, and the Settings section a menu item scrolls to. Owned by `AutoSyncController`. |
+| `SupportActions` | Show Sync Logs, Show Card in Finder and the Help menu's GitHub links (fixed addresses, no user data). |
+| `DockIconController` | Hides the Dock icon (`.accessory` activation policy) while the main window is closed and brings it back (`.regular`) in `showMainWindow()` or when the window becomes main. Settings, the sync sheet and alerts don't count. The help window and About panel keep the icon until they close. `openSettings` (the menu bar's Settings…) brings the Dock icon back while Settings is open, since an app without one can't reliably bring Settings to the front; it hides again when Settings closes with the main window still closed. A `CloseProxy` stands in front of SwiftUI's window delegate to answer `windowShouldClose` and show the "Still in the Menu Bar" notice (Keep in Menu Bar / Quit Q2 Sync / Don't show again, saved as `showMenuBarCloseNotice`; Settings › Messages › "Show Menu Bar Tip Again" turns it back on); every other delegate call is forwarded to SwiftUI's. |
 | `LibraryModel` | Loads the snapshot for the UI. Read when the window first shows and when the Q2 connects; never at app launch. |
 | `DeviceMonitor` | Watches mounts (NSWorkspace), recognizes the Q2 by UUID + bookmark, first-connection flow (`confirm` with an Open panel; the waiting drive is matched by `id`, not `==`, since free space differs between reads), eject, per-device settings, card manifest for the capacity bar. A connected card that misses a volume read (busy mid-sync when another drive unmounts) stays connected while `statfs` still shows it mounted (`isStillMounted`). |
 | `SyncCoordinator` | Sync state machine (idle → planning → preview → running → finished/failed); automatic mode consults `AutoSyncPolicy`. |
 | `AutoSyncController` | When the Q2 connects: ask (notification), sync automatically, or nothing; turns outcomes into notifications; firmware checks; tells you about a new Q2 needing setup. Connect and setup notifications are only posted while Q2 Sync isn't in front (`isInFront`, checked 1.5 s after the event so a launching window counts), and notification permission is requested only when one is posted. |
 | `NotificationManager` | Posts notifications; handles Sync Now / Eject / Verify Card / Open buttons. |
-| `FirmwareModel` | Firmware check state (opt-in, at most daily, cached). |
+| `FirmwareModel` | Firmware check state: Q2 Pod (opt-in, at most daily, cached) and Shanling stock (only when asked). |
 | `FirmwareInstaller` | Install sheet state and pipeline: find offers, download (`FileDownloader`), unzip, inspect, verify checksum, check free space, `CardFileSystem.placeFirmwareUpdate`, then remember `pendingFirmwareInstall` and ask on the next connection whether the Q2 installed it. |
 | `CardVerifyModel` | Verify Card sheet state: check in the background, re-copy failures with `SyncExecutor`. |
 | `PodDataModel` | Back Up Now, backups list, restore. |

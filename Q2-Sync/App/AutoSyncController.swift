@@ -36,6 +36,9 @@ final class AutoSyncController {
     let devices: DeviceMonitor
     let sync: SyncCoordinator
 
+    /// The main window's selection, shared with the menus.
+    let navigation: AppNavigation
+
     /// Posts notifications and reports their buttons.
     @ObservationIgnored let notifications = NotificationManager()
 
@@ -61,6 +64,7 @@ final class AutoSyncController {
         self.library = library
         self.devices = devices
         self.sync = sync
+        self.navigation = AppNavigation(hasKnownDevices: devices.hasKnownDevices)
         self.installer = FirmwareInstaller(devices: devices)
         self.verifier = CardVerifyModel(library: library, devices: devices)
         self.podData = PodDataModel(devices: devices)
@@ -278,6 +282,83 @@ final class AutoSyncController {
             verifier.present()
         }
     }
+
+    // MARK: - Menu actions
+
+    /// `true` while the main window has (or is about to show) a sheet or
+    /// alert. Menu navigation waits until it's gone.
+    var isShowingSheet: Bool {
+        sync.isPresentingSheet || installer.isPresentingSheet || installer.isAskingAboutPending
+            || verifier.isPresentingSheet || podData.restoring != nil
+            || devices.pendingVolume != nil || devices.errorMessage != nil
+    }
+
+    /// Shows a sidebar page, unless a sheet is open.
+    ///
+    /// - Returns: `true` if it's showing now.
+    @discardableResult
+    func show(_ item: SidebarItem) -> Bool {
+        // The window check also covers sheets only a view knows about, such
+        // as "Forget this Q2?".
+        let hasAttachedSheet = NSApp.windows.contains {
+            DockIconController.isMainWindow($0) && $0.attachedSheet != nil
+        }
+        guard !isShowingSheet, !hasAttachedSheet else { return false }
+        navigation.selection = item
+        return true
+    }
+
+    /// Shows the Q2's page (or "Connect Your Q2" with none connected).
+    ///
+    /// - Parameter tab: The tab to switch to; `nil` leaves it as it is.
+    /// - Returns: `true` if it's showing now.
+    @discardableResult
+    func showQ2(tab: DeviceTab? = nil) -> Bool {
+        guard let uuid = devices.connected?.device.volumeUUID else { return show(.connectQ2) }
+        guard show(.device(uuid: uuid)) else { return false }
+        if let tab { navigation.deviceTab = tab }
+        return true
+    }
+
+    /// Device › Check for Firmware Updates: checks Q2 Pod or Shanling's
+    /// stock firmware, whichever the Q2 runs. The result appears on the Q2's
+    /// Settings tab.
+    func checkForFirmwareUpdates() {
+        guard let kind = devices.connected?.device.knownFirmware else { return }
+        showMainWindow()
+        guard showQ2(tab: .settings) else { return }
+        navigation.sectionToReveal = .firmwareUpdates
+        Task { await firmware.checkOnRequest(for: kind) }
+    }
+
+    /// Device › Back Up Q2 Pod Data. The result appears on the Q2's
+    /// Settings tab.
+    func backUpPodData() {
+        showMainWindow()
+        guard showQ2(tab: .settings) else { return }
+        navigation.sectionToReveal = .podData
+        // The tab may not have been shown yet, so look at the card now.
+        podData.refresh()
+        guard !podData.filesOnCard.isEmpty else { return }
+        podData.backUp()
+    }
+
+    /// Device › Restore Q2 Pod Data…: asks which backup, from the Q2's
+    /// Settings tab.
+    func restorePodData() {
+        showMainWindow()
+        guard showQ2(tab: .settings) else { return }
+        navigation.sectionToReveal = .podData
+        Task {
+            // Let the window come forward before the Open panel covers it.
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !isShowingSheet, !isCardInUse(except: .podData) else { return }
+            podData.refresh()
+            podData.chooseBackup()
+        }
+    }
+
+    // MARK: - Windows
 
     /// Brings the app and its main window to the front: an open (or
     /// minimised) window is brought forward; a closed one is reopened.

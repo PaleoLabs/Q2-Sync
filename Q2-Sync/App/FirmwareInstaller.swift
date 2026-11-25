@@ -141,14 +141,7 @@ final class FirmwareInstaller {
 
     private nonisolated static func findStock() async -> OfferState {
         do {
-            var request = URLRequest(url: FirmwareSources.stockDownloadPage)
-            request.setValue("Q2-Sync", forHTTPHeaderField: "User-Agent")
-            request.timeoutInterval = 20
-            let (data, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                throw DownloadError.httpStatus(http.statusCode)
-            }
-            return .ready(try FirmwareSources.stockOffer(fromShanlingPage: String(decoding: data, as: UTF8.self)))
+            return .ready(try await FirmwareSources.fetchStockOffer())
         } catch {
             return .unavailable(error.localizedDescription)
         }

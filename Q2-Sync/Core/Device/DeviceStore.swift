@@ -62,6 +62,14 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     /// whether the update finished (the card can't tell us).
     var pendingFirmwareInstall: PendingFirmwareInstall?
 
+    /// The firmware this Q2 is known to run, or `nil` while that's in doubt:
+    /// the other firmware is on the card and you haven't said whether the Q2
+    /// installed it. (A waiting update of the same firmware leaves no doubt.)
+    var knownFirmware: FirmwareKind? {
+        if let pending = pendingFirmwareInstall, pending.image.kind != firmware { return nil }
+        return firmware
+    }
+
     /// Whether to put a `cover.jpg` in each album folder. Optional so
     /// older files load; `nil` means on (the default).
     var albumCovers: Bool?

@@ -229,7 +229,7 @@ struct PodDataSection: View {
                 Button("Back Up Now") { model.backUp() }
                     .disabled(model.filesOnCard.isEmpty || model.isBusy || isBlocked || connected.accessURL == nil
                               || model.backupFolder.folder == nil)
-                Button("Restore…") { chooseBackup() }
+                Button("Restore…") { model.chooseBackup() }
                     .disabled(model.isBusy || isBlocked || connected.accessURL == nil)
                 Spacer()
                 Button("Show Backups") {
@@ -240,26 +240,11 @@ struct PodDataSection: View {
                 .disabled(model.backupFolder.folder == nil)
             }
         } header: {
-            Text("Q2 Pod Data")
+            Text("Q2 Pod Data").id(SettingsSection.podData)
         } footer: {
             Text("Q2 Pod keeps your song ratings, listens waiting to be scrobbled, scrobbling and radio settings, EQ presets, custom App Store sources and Rockbox settings on the card. Back them up to a folder on your Mac (Downloads › Q2 Sync Backups unless you change it; the same folder for every Q2) in case the card is lost or reformatted. The Q2's own settings are stored inside the Q2, where a Mac can't reach them.")
         }
         .onAppear { model.refresh() }
-    }
-
-    /// Picks a backup folder, starting in the backups folder.
-    private func chooseBackup() {
-        let panel = NSOpenPanel()
-        panel.message = "Choose a Q2 Pod data backup to restore to “\(connected.device.name)”."
-        panel.prompt = "Choose Backup"
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        let folder = model.backupFolder.folder ?? PodDataBackup.backupsFolder
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        panel.directoryURL = model.backupsOfThisCard.first?.folder ?? folder
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.chooseBackup(at: url)
     }
 }
 

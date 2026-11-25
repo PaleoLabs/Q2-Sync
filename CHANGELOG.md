@@ -5,6 +5,13 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 ## Unreleased
 
 ### Added
+- **More menu commands and shortcuts.** **File › Refresh Music Library** (**⌘R**) and **Show in Finder** (**⇧⌘R**), **Edit › Find** (**⌘F**) for the filter on the Music tab or in the sync preview, **View** items for Artists to Playlists (**⌘1**–**⌘4**), your Q2 (**⌘5**) and the sidebar, and **Window › Q2 Sync** (**⌘0**).
+- **Device** menu: **Check for Firmware Updates** (Q2 Pod or Shanling stock, whichever your Q2 runs), **Back Up Q2 Pod Data**, **Restore Q2 Pod Data…** and **Show Card in Finder**.
+- **Help** menu: **Show Sync Logs**, **Release Notes** and **Report a Problem…**.
+- The menu bar item has **Q2 Sync Help** and **About Q2 Sync**, and shows **⌘,** beside **Settings…**.
+- Right-click your Q2 in the sidebar for **Sync Now**, **Eject** and **Show in Finder**, or an artist or album for **Show in Finder**.
+- **Shanling stock firmware can be checked too**: **Check Now** on the Settings tab shows the latest version on Shanling's download page.
+- The user guide has a **Keyboard shortcuts** section.
 - **The user guide is in the Help menu.** **Help › Q2 Sync Help** (**⌘?**) opens it in its own window, with the sections in a sidebar. It works offline and matches the version you're running. ([#52](https://github.com/PaleoLabs/Q2-Sync/issues/52))
 - **Double-click a song to open Song Info.** **View › Show Song Info** (**⌘I**) shows or hides it.
 

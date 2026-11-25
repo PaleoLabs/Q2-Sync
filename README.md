@@ -229,7 +229,7 @@ New to the app? Read the [User Guide](docs/USER_GUIDE.md), also in the app under
 | Album covers (`cover.jpg`, optional) | ✅ Cover Flow and Library (refresh Cover Flow after changes) | ✅ Now Playing and Album Wall (to verify on device) |
 | "Update the library on your Q2" steps | Library → Update Library → Scan music now | Local Songs → Update Library → Scan music now |
 | Install / switch firmware | ✅ latest GitHub release (checksum-verified) | ✅ latest from Shanling's download page |
-| Firmware update notices | ✅ from GitHub releases | Not checked automatically |
+| Firmware update notices | ✅ from GitHub releases | Checked when you ask |
 
 Firmware-specific behavior lives in one place, `DeviceProfile`, so other
 firmware can be added. Some details were documented before a Q2 was available

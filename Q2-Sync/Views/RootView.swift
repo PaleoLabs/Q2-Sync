@@ -40,16 +40,6 @@ struct RootView: View {
     /// `true` once the one-time first-launch notice has been acknowledged.
     @AppStorage(FirstLaunchNoticeView.acknowledgedKey) private var noticeAcknowledged = false
 
-    /// The selected sidebar row. Starts on "Connect Your Q2" until a Q2
-    /// has been set up on this Mac, then on Artists.
-    @State private var selection: SidebarItem?
-
-    init(library: LibraryModel, devices: DeviceMonitor) {
-        self.library = library
-        self.devices = devices
-        _selection = State(initialValue: devices.hasKnownDevices ? .library(.artists) : .connectQ2)
-    }
-
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -138,15 +128,18 @@ struct RootView: View {
         }
         // Select the Q2 automatically when it connects, like Finder does.
         .onChange(of: devices.connected?.device.volumeUUID) { _, uuid in
-            if let uuid { selection = .device(uuid: uuid) }
-            else if case .device = selection { selection = .connectQ2 }
+            autoSync.navigation.deviceChanged(to: uuid)
+        }
+        .onAppear {
+            autoSync.navigation.reconcile(connected: devices.connected?.device.volumeUUID)
         }
     }
 
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        List(selection: $selection) {
+        @Bindable var navigation = autoSync.navigation
+        return List(selection: $navigation.selection) {
             Section("Devices") {
                 if let connected = devices.connected {
                     DeviceSidebarRow(connected: connected, devices: devices)
@@ -187,7 +180,7 @@ struct RootView: View {
 
     @ViewBuilder
     private var detail: some View {
-        switch selection {
+        switch autoSync.navigation.selection {
         case .device:
             if let connected = devices.connected {
                 DeviceView(connected: connected, devices: devices, library: library)
@@ -280,6 +273,19 @@ struct DeviceSidebarRow: View {
     @Environment(AutoSyncController.self) private var autoSync
 
     var body: some View {
+        row
+            .contextMenu {
+                Button("Sync Now") { Task { await autoSync.startSync(automatic: false) } }
+                    .disabled(!autoSync.canStartCardOperation)
+                Button("Eject") { Task { await autoSync.eject() } }
+                    .disabled(devices.isEjecting || autoSync.isCardBusy)
+                Divider()
+                Button("Show in Finder") { SupportActions.showCardInFinder(connected) }
+                    .disabled(devices.isEjecting)
+            }
+    }
+
+    private var row: some View {
         HStack {
             Label {
                 Text(connected.device.name)

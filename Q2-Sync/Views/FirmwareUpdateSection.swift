@@ -9,6 +9,8 @@
 //    • Q2 Pod: an optional check of GitHub for new releases, your installed
 //      version (typed in, as the card doesn't record it), the latest
 //      release's notes, a link, Update…, and Dismiss.
+//    • Shanling stock: the latest version on Shanling's page, checked only
+//      when you ask, with a link and Install….
 //  Firmware is only downloaded when you click Install or Update.
 //
 //  HOW IT FITS
@@ -37,9 +39,11 @@ struct FirmwareUpdateSection: View {
             installContent
             if connected.device.firmware == .q2Pod {
                 q2PodContent
+            } else {
+                stockContent
             }
         } header: {
-            Text("Firmware Updates")
+            Text("Firmware Updates").id(SettingsSection.firmwareUpdates)
         } footer: {
             Text("Firmware is downloaded only when you click Install or Update. Q2 Sync checks it and copies it to the card as update.tar; your Q2 installs it when you choose TF card update.")
         }
@@ -95,7 +99,7 @@ struct FirmwareUpdateSection: View {
                 if text.isEmpty || FirmwareVersion(text) != nil { devices.setInstalledFirmwareVersion(text) }
             }
 
-        if checkEnabled {
+        if checkEnabled || firmware.wasCheckedOnRequest {
             HStack {
                 statusLabel
                 Spacer()
@@ -103,6 +107,7 @@ struct FirmwareUpdateSection: View {
                     ProgressView().controlSize(.small)
                 } else {
                     Button("Check Now") { Task { await firmware.checkNow() } }
+                        .disabled(connected.device.knownFirmware == nil)
                 }
             }
             if let error = firmware.errorMessage {
@@ -113,6 +118,47 @@ struct FirmwareUpdateSection: View {
             }
         }
     }
+
+    // MARK: Shanling stock
+
+    @ViewBuilder
+    private var stockContent: some View {
+        HStack {
+            if let version = firmware.latestStockVersion {
+                Label("The latest Shanling firmware is V\(version).", systemImage: "sparkles")
+                    .foregroundStyle(.blue)
+            } else {
+                Text("Latest Shanling firmware: not checked yet.").foregroundStyle(.secondary)
+            }
+            Spacer()
+            if firmware.isCheckingStock {
+                ProgressView().controlSize(.small)
+            } else {
+                Button("Check Now") { Task { await firmware.checkStockNow() } }
+                    .disabled(connected.device.knownFirmware == nil)
+            }
+        }
+        if let error = firmware.stockErrorMessage {
+            Text(error).font(.callout).foregroundStyle(.orange)
+        }
+        if let version = firmware.latestStockVersion {
+            VStack(alignment: .leading, spacing: 8) {
+                // Q2 Sync can't see the installed version, so say where it is.
+                Text("To see your version: \(connected.device.profile.versionLocationHint)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Link("View Shanling's Download Page", destination: FirmwareSources.stockDownloadPage)
+                    Spacer()
+                    Button("Install V\(version)…") { installer.present(selecting: .stock) }
+                        .disabled(connected.accessURL == nil || installer.isBusy)
+                }
+            }
+        }
+    }
+
+    // MARK: Q2 Pod status
 
     /// One line summarizing the status.
     @ViewBuilder

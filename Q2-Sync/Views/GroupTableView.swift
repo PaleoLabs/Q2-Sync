@@ -40,6 +40,8 @@ struct GroupTableView: NSViewRepresentable {
     let title: String
     /// The selected group's ID.
     @Binding var selection: String?
+    /// A group's song files, for the right-click menu's "Show in Finder".
+    var files: (TrackGroup) -> [URL] = { _ in [] }
 
     func makeCoordinator() -> Coordinator { Coordinator(selection: $selection) }
 
@@ -73,6 +75,9 @@ struct GroupTableView: NSViewRepresentable {
         tableView.dataSource = context.coordinator
         tableView.delegate = context.coordinator
         context.coordinator.tableView = tableView
+        let rowMenu = NSMenu()
+        rowMenu.delegate = context.coordinator
+        tableView.menu = rowMenu
 
         let scrollView = NSScrollView()
         scrollView.documentView = tableView
@@ -84,6 +89,7 @@ struct GroupTableView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let coordinator = context.coordinator
         coordinator.selection = $selection
+        coordinator.files = files
         coordinator.tableView?.tableColumns.first?.title = title
         coordinator.update(rows: rows, selection: selection)
     }
@@ -91,10 +97,11 @@ struct GroupTableView: NSViewRepresentable {
     // MARK: - Coordinator
 
     @MainActor
-    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSMenuDelegate {
 
         weak var tableView: NSTableView?
         var selection: Binding<String?>
+        var files: (TrackGroup) -> [URL] = { _ in [] }
         private var rows: [GroupRow] = []
         private var rowIDs: [String] = []
         /// `true` while applying an update from SwiftUI (see
@@ -154,6 +161,25 @@ struct GroupTableView: NSViewRepresentable {
             default:
                 return nil
             }
+        }
+
+        /// The right-click menu for a row. It acts on that row without
+        /// changing the selection.
+        func menuNeedsUpdate(_ menu: NSMenu) {
+            menu.removeAllItems()
+            guard let row = tableView?.clickedRow, rows.indices.contains(row) else { return }
+            // Dimmed when one Finder window can't show the whole group.
+            let items = FinderReveal.items(for: files(rows[row].group))
+            let finder = NSMenuItem(title: "Show in Finder", action: items == nil ? nil : #selector(showInFinder(_:)),
+                                    keyEquivalent: "")
+            finder.target = self
+            finder.representedObject = items
+            menu.addItem(finder)
+        }
+
+        @objc private func showInFinder(_ item: NSMenuItem) {
+            guard let urls = item.representedObject as? [URL] else { return }
+            NSWorkspace.shared.activateFileViewerSelecting(urls)
         }
 
         func tableViewSelectionDidChange(_ notification: Notification) {

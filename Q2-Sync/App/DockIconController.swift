@@ -11,8 +11,8 @@
 //  HOW IT FITS
 //  Created once by `Q2SyncApp`. It watches AppKit's window notifications
 //  for the main window (Settings, the sync sheet and alerts don't count).
-//  The one exception: while the help window is open, the Dock icon stays
-//  until that window closes too.
+//  The exception: while the help window or About panel is open, the Dock
+//  icon stays until that closes too.
 //  `AutoSyncController.showMainWindow()` calls `showDockIcon()` before
 //  bringing the window back.
 //
@@ -47,6 +47,9 @@ final class DockIconController {
     /// Keeps the proxy alive (a window holds its delegate weakly).
     private var proxy: CloseProxy?
 
+    /// The About panel, once shown.
+    private weak var aboutPanel: NSWindow?
+
     /// Starts watching the main window.
     private init() {
         UserDefaults.standard.register(defaults: [Self.closeNoticeKey: true])
@@ -80,6 +83,28 @@ final class DockIconController {
         showDockIcon()
         open()
         bringToFront(where: Self.isSettingsWindow)
+    }
+
+    /// Opens the help window from the menu bar item, like `openSettings`.
+    func openHelp(_ open: () -> Void) {
+        showDockIcon()
+        open()
+        bringToFront(where: Self.isHelpWindow)
+    }
+
+    /// Shows the About panel in front, with the Dock icon while it's open.
+    func showAboutPanel(options: [NSApplication.AboutPanelOptionKey: Any]) {
+        showDockIcon()
+        let visibleBefore = NSApp.windows.filter(\.isVisible)
+        NSApp.orderFrontStandardAboutPanel(options: options)
+        // AppKit doesn't hand the panel over: it's the window that appeared.
+        // Shown again while still open, nothing new appears and we keep it.
+        if let panel = NSApp.windows.first(where: { window in
+            window.isVisible && !visibleBefore.contains { $0 === window }
+        }) {
+            aboutPanel = panel
+        }
+        bringToFront { [weak self] in $0 === self?.aboutPanel }
     }
 
     /// Makes Q2 Sync the active app with the matching window in front, from
@@ -126,14 +151,17 @@ final class DockIconController {
                 $0 !== window && matches($0) && ($0.isVisible || $0.isMiniaturized)
             }
         }
+        /// The windows besides the main one that need the Dock icon.
+        func isExtraWindow(_ other: NSWindow) -> Bool {
+            Self.isHelpWindow(other) || other === aboutPanel
+        }
         if Self.isMainWindow(window) {
-            // The help window needs the Dock icon (and menu bar) to stay
-            // reachable while it's being read.
-            if !stillOpen(Self.isHelpWindow) { hideDockIcon() }
-        } else if Self.isSettingsWindow(window) || Self.isHelpWindow(window),
-                  !stillOpen({ Self.isMainWindow($0) || Self.isSettingsWindow($0)
-                      || Self.isHelpWindow($0) }) {
-            // Settings or help closed, leaving none of these windows.
+            // The help window and About panel need the Dock icon (and menu
+            // bar) to stay reachable while they're being read.
+            if !stillOpen(isExtraWindow) { hideDockIcon() }
+        } else if let window, Self.isSettingsWindow(window) || isExtraWindow(window),
+                  !stillOpen({ Self.isMainWindow($0) || Self.isSettingsWindow($0) || isExtraWindow($0) }) {
+            // Settings, help or About closed, leaving none of these windows.
             hideDockIcon()
         }
     }

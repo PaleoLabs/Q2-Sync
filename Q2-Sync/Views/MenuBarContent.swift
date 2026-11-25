@@ -4,8 +4,8 @@
 //
 //  PURPOSE
 //  The Q2 Sync menu in the menu bar: shows whether the Q2 is connected
-//  and any sync in progress, with Sync Now, Eject, Open Q2 Sync, Settings
-//  and Quit.
+//  and any sync in progress, with Sync Now, Eject, Open Q2 Sync, Settings,
+//  Help, About and Quit.
 //
 //  HOW IT FITS
 //  Declared as a `MenuBarExtra` scene in `Q2SyncApp`. Always shown.
@@ -19,6 +19,7 @@ struct MenuBarContent: View {
 
     let controller: AutoSyncController
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         let devices = controller.devices
@@ -43,6 +44,11 @@ struct MenuBarContent: View {
             // Without a Dock icon, Settings would open out of sight.
             DockIconController.shared.openSettings { openSettings() }
         }
+        .keyboardShortcut(",")
+        Button("Q2 Sync Help") {
+            DockIconController.shared.openHelp { openWindow(id: Q2SyncApp.helpWindowID) }
+        }
+        Button("About Q2 Sync") { AboutCommand.showAboutPanel() }
         Divider()
         Button("Quit Q2 Sync") { NSApp.terminate(nil) }
             .keyboardShortcut("q")

@@ -29,16 +29,17 @@ struct DeviceView: View {
     let devices: DeviceMonitor
     let library: LibraryModel
 
-    /// Which tab is showing. Starts on Music, like Finder.
-    @State private var tab: DeviceTab = .music
+    /// Holds which tab is showing, so the menus can switch it.
+    @Environment(AutoSyncController.self) private var autoSync
 
     var body: some View {
+        @Bindable var navigation = autoSync.navigation
         VStack(spacing: 0) {
-            DeviceHeaderView(connected: connected, devices: devices, showSettings: { tab = .settings })
+            DeviceHeaderView(connected: connected, devices: devices, showSettings: { navigation.deviceTab = .settings })
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
 
-            Picker("Tab", selection: $tab) {
+            Picker("Tab", selection: $navigation.deviceTab) {
                 ForEach(DeviceTab.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -48,7 +49,7 @@ struct DeviceView: View {
 
             Divider()
 
-            switch tab {
+            switch navigation.deviceTab {
             case .music:
                 DeviceMusicView(connected: connected, devices: devices, library: library)
             case .settings:
@@ -131,6 +132,21 @@ struct DeviceSettingsView: View {
     @Environment(AutoSyncController.self) private var autoSync
 
     var body: some View {
+        ScrollViewReader { proxy in
+            form
+                // Scrolls to where a menu item's result appears.
+                .task(id: autoSync.navigation.sectionToReveal) {
+                    guard let section = autoSync.navigation.sectionToReveal else { return }
+                    // Give a newly shown form a moment to lay out.
+                    try? await Task.sleep(for: .milliseconds(100))
+                    guard !Task.isCancelled else { return }
+                    withAnimation { proxy.scrollTo(section, anchor: .top) }
+                    autoSync.navigation.sectionToReveal = nil
+                }
+        }
+    }
+
+    private var form: some View {
         Form {
             if let problem = connected.accessProblem {
                 Section {
@@ -247,11 +263,7 @@ struct DeviceSettingsView: View {
                 Button("Verify Card…") { autoSync.verifier.present() }
                     .disabled(connected.accessURL == nil || autoSync.isCardInUse(except: .verifier))
                     .help("Compare every song on the card with your Mac's copy and fix damaged ones")
-                Button("Show Sync Logs") {
-                    let folder = SyncLog.logsDirectory
-                    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                    NSWorkspace.shared.open(folder)
-                }
+                Button("Show Sync Logs") { SupportActions.showSyncLogs() }
                 Button("Forget This Q2…", role: .destructive) { confirmingForget = true }
             } header: {
                 Text("Card")

@@ -60,6 +60,22 @@ struct FirmwareTests {
         #expect(!(FirmwareVersion("1.9")! < FirmwareVersion("1.8.9")!))
     }
 
+    @Test("The firmware is in doubt only while the other one waits to be installed")
+    func knownFirmware() {
+        var device = KnownDevice(volumeUUID: "U", name: "Q2", firmware: .q2Pod, bookmarkData: Data(),
+                                 addedDate: .now, hasCompletedFirstSync: false)
+        #expect(device.knownFirmware == .q2Pod)
+        func pending(_ kind: FirmwareKind) -> PendingFirmwareInstall {
+            PendingFirmwareInstall(image: FirmwareImageInfo(kind: kind, version: "1.36", size: 1), placedAt: .now)
+        }
+        device.pendingFirmwareInstall = pending(.q2Pod)
+        #expect(device.knownFirmware == .q2Pod)
+        device.pendingFirmwareInstall = pending(.stock)
+        #expect(device.knownFirmware == nil)
+        device.firmware = .stock
+        #expect(device.knownFirmware == .stock)
+    }
+
     @Test("Status with a known installed version")
     func withInstalled() {
         #expect(FirmwareUpdateChecker.status(latest: release("1.8.5"), installed: "1.8.4", dismissedTag: nil) == .updateAvailable)

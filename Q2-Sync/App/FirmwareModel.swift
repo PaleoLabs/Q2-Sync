@@ -3,14 +3,18 @@
 //  Q2-Sync › App
 //
 //  PURPOSE
-//  Holds the optional Q2 Pod update check for the UI: whether checking is
-//  on, the latest release found, when it last checked, and any error.
+//  Holds the firmware checks for the UI:
+//    • Q2 Pod: an optional automatic check (whether it's on, the latest
+//      release found, when it last checked, and any error);
+//    • Shanling stock: the latest version, checked only when you ask.
 //
 //  HOW IT FITS
 //  Owned by `AutoSyncController`, which checks (at most once a day) when a
 //  Q2 Pod device connects, and posts a notification for a new release.
-//  The device's Settings tab shows the details and a "Check Now" button.
-//  The actual request and comparison live in Core (`FirmwareUpdateChecker`).
+//  The device's Settings tab shows the details and a "Check Now" button;
+//  Device › Check for Firmware Updates checks whichever firmware the Q2
+//  runs. The requests live in Core (`FirmwareUpdateChecker`,
+//  `FirmwareSources`).
 //
 //  It only reads release information; `FirmwareInstaller` downloads
 //  firmware, and only when you ask.
@@ -29,6 +33,7 @@ final class FirmwareModel {
     private static let latestKey = "latestFirmwareRelease"
     private static let lastCheckedKey = "lastFirmwareCheck"
     private static let notifiedKey = "notifiedFirmwareRelease"
+    private static let latestStockKey = "latestStockFirmwareVersion"
 
     /// How often automatic checks may run.
     static let checkInterval: TimeInterval = 24 * 60 * 60
@@ -45,6 +50,20 @@ final class FirmwareModel {
     /// The last check's error, if it failed.
     private(set) var errorMessage: String?
 
+    /// `true` once Check for Firmware Updates was chosen from the menu, so
+    /// the result shows even with automatic checking off.
+    private(set) var wasCheckedOnRequest = false
+
+    /// The latest Shanling stock version found, e.g. "1.36" (kept between
+    /// launches).
+    private(set) var latestStockVersion: String?
+
+    /// `true` while checking Shanling's page.
+    private(set) var isCheckingStock = false
+
+    /// The last stock check's error, if it failed.
+    private(set) var stockErrorMessage: String?
+
     private let defaults = UserDefaults.standard
 
     /// Whether checking is turned on (off until the user turns it on).
@@ -55,12 +74,46 @@ final class FirmwareModel {
             latest = try? JSONDecoder().decode(FirmwareRelease.self, from: data)
         }
         lastChecked = defaults.object(forKey: Self.lastCheckedKey) as? Date
+        latestStockVersion = defaults.string(forKey: Self.latestStockKey)
     }
 
     /// Checks if checking is on and the last check was over a day ago.
     func checkIfDue() async {
         guard isEnabled else { return }
         if let lastChecked, Date.now.timeIntervalSince(lastChecked) < Self.checkInterval { return }
+        await checkNow()
+    }
+
+    /// `true` while the check for this firmware is running.
+    func isChecking(_ kind: FirmwareKind) -> Bool {
+        kind == .q2Pod ? isChecking : isCheckingStock
+    }
+
+    /// Device › Check for Firmware Updates: checks the firmware the Q2 runs.
+    func checkOnRequest(for kind: FirmwareKind) async {
+        switch kind {
+        case .q2Pod: await checkOnRequest()
+        case .stock: await checkStockNow()
+        }
+    }
+
+    /// Looks up the latest stock version on Shanling's page.
+    func checkStockNow() async {
+        guard !isCheckingStock else { return }
+        isCheckingStock = true
+        defer { isCheckingStock = false }
+        do {
+            latestStockVersion = try await FirmwareSources.fetchStockOffer().version
+            stockErrorMessage = nil
+            defaults.set(latestStockVersion, forKey: Self.latestStockKey)
+        } catch {
+            stockErrorMessage = "Couldn't check for updates: \(error.localizedDescription)"
+        }
+    }
+
+    /// Checks right away because the user asked from the menu.
+    private func checkOnRequest() async {
+        wasCheckedOnRequest = true
         await checkNow()
     }
 

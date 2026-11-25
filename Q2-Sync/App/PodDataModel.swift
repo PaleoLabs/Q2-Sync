@@ -11,7 +11,7 @@
 //  section and `RestorePodDataSheet`. Syncing waits while it works.
 //
 
-import Foundation
+import AppKit
 import Observation
 
 /// Backing up and restoring Q2 Pod's card data.
@@ -84,6 +84,23 @@ final class PodDataModel {
             status = error.localizedDescription
         }
         refresh()
+    }
+
+    /// Asks which backup to restore (starting in the backups folder), then
+    /// opens the restore sheet for it.
+    func chooseBackup() {
+        guard let name = devices.connected?.device.name else { return }
+        let panel = NSOpenPanel()
+        panel.message = "Choose a Q2 Pod data backup to restore to “\(name)”."
+        panel.prompt = "Choose Backup"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        let folder = backupFolder.folder ?? PodDataBackup.backupsFolder
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        panel.directoryURL = backupsOfThisCard.first?.folder ?? folder
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        chooseBackup(at: url)
     }
 
     /// Opens the restore sheet for a backup folder.

@@ -96,6 +96,9 @@ struct LibraryCategoryView: View {
 
     /// The songs selected in the song table, for the inspector.
     @State private var selectedSongs: [Track] = []
+
+    /// Tells the menus which songs are selected.
+    @Environment(AutoSyncController.self) private var autoSync
     private static let listWidthRange: ClosedRange<Double> = 360...560
 
     /// What the marks depend on; a change rebuilds them. Compared on every
@@ -129,7 +132,8 @@ struct LibraryCategoryView: View {
                     // without building a SwiftUI view per cell.
                     let hasQ2 = marks?.hasQ2 ?? false
                     let rows = groups.map { GroupRow(group: $0, marks: groupMarks[$0.id], hasQ2: hasQ2) }
-                    GroupTableView(rows: rows, title: category.singularTitle, selection: $groupID)
+                    GroupTableView(rows: rows, title: category.singularTitle, selection: $groupID,
+                                   files: { snapshot.tracks(for: $0.trackIDs).compactMap(\.fileURL) })
                     .frame(width: listWidth.clamped(to: Self.listWidthRange))
 
                     splitDivider
@@ -174,6 +178,11 @@ struct LibraryCategoryView: View {
         }
         .onChange(of: category) { groupID = nil }
         .onChange(of: groupID) { selectedSongs = [] }
+        // For File › Show in Finder.
+        .onChange(of: selectedSongs, initial: true) {
+            autoSync.navigation.selectedSongFiles = selectedSongs.compactMap(\.fileURL)
+        }
+        .onDisappear { autoSync.navigation.selectedSongFiles = [] }
         .task(id: marksKey) {
             let reference = devices.referenceContents
             await rebuildMarks(category: category, record: reference?.record,

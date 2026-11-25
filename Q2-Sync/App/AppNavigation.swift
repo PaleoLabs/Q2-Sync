@@ -1,0 +1,131 @@
+//
+//  AppNavigation.swift
+//  Q2-Sync › App
+//
+//  PURPOSE
+//  Where you are in the main window, kept outside the views so the menus can
+//  read and change it: the selected sidebar row, the Q2 page's tab, the
+//  songs selected in the library browser, and the filter field Edit › Find
+//  would focus.
+//
+//  HOW IT FITS
+//  Owned by `AutoSyncController`. `RootView` and `DeviceView` show what it
+//  says; the commands in `AppCommands.swift` use it.
+//
+
+import AppKit
+import Observation
+
+/// A filter field that Edit › Find can put the cursor in.
+enum FilterField: Equatable {
+    /// "Filter" on the Q2's Music tab.
+    case musicTab
+    /// The filter above the lists in the sync preview.
+    case syncPreview
+}
+
+/// A part of the Q2's Settings tab that a menu item can scroll to.
+enum SettingsSection: Hashable {
+    case firmwareUpdates
+    case podData
+}
+
+/// The main window's selection, shared by its views and the menu bar.
+@MainActor
+@Observable
+final class AppNavigation {
+
+    /// The selected sidebar row. Starts on "Connect Your Q2" until a Q2
+    /// has been set up on this Mac, then on Artists.
+    var selection: SidebarItem? {
+        didSet {
+            // The Q2's page opens on Music, like Finder: forget the tab
+            // when you leave it.
+            if case .device = selection { return }
+            deviceTab = .music
+        }
+    }
+
+    /// Which tab of the Q2's page is showing.
+    var deviceTab: DeviceTab = .music
+
+    /// The part of the Settings tab to scroll into view, set by a menu
+    /// item whose result appears there. The tab clears it once there.
+    var sectionToReveal: SettingsSection?
+
+    /// Files of the songs selected in the library browser, for File › Show
+    /// in Finder.
+    var selectedSongFiles: [URL] = []
+
+    /// `true` while the main window (or a sheet on it) is the one in use.
+    /// `false` while it's closed or the help or Settings window is in front.
+    private(set) var isMainWindowFront = false
+
+    /// The filter fields on screen.
+    private var filterFields: [FilterField] = []
+
+    /// Goes up each time Find is chosen; the filter field on top watches it.
+    private(set) var findRequests = 0
+
+    /// The filter field Edit › Find would focus, if any is on screen. The
+    /// sync preview's comes first: it opens over the Music tab.
+    var filterField: FilterField? {
+        filterFields.contains(.syncPreview) ? .syncPreview : filterFields.first
+    }
+
+    /// Creates the state and starts watching which window is in front.
+    ///
+    /// - Parameter hasKnownDevices: Whether a Q2 has been set up before.
+    init(hasKnownDevices: Bool) {
+        selection = hasKnownDevices ? .library(.artists) : .connectQ2
+        let center = NotificationCenter.default
+        // A sheet never becomes the "main" window; its parent stays main.
+        center.addObserver(forName: NSWindow.didBecomeMainNotification, object: nil, queue: .main) { [weak self] note in
+            let window = note.object as? NSWindow
+            MainActor.assumeIsolated {
+                self?.isMainWindowFront = DockIconController.isMainWindow(window)
+            }
+        }
+        center.addObserver(forName: NSWindow.didResignMainNotification, object: nil, queue: .main) { [weak self] note in
+            let window = note.object as? NSWindow
+            MainActor.assumeIsolated {
+                if DockIconController.isMainWindow(window) { self?.isMainWindowFront = false }
+            }
+        }
+    }
+
+    /// Selects the Q2 when it connects, like Finder, and leaves its page
+    /// when it goes.
+    ///
+    /// - Parameter uuid: The connected card, or `nil` if none is.
+    func deviceChanged(to uuid: String?) {
+        if let uuid { selection = .device(uuid: uuid) }
+        else if case .device = selection { selection = .connectQ2 }
+    }
+
+    /// Puts the sidebar right when the window appears: a Q2 may have come
+    /// or gone while it was closed. A library row stays selected.
+    func reconcile(connected uuid: String?) {
+        switch selection {
+        case .device(let shown) where shown != uuid: deviceChanged(to: uuid)
+        case .connectQ2 where uuid != nil: deviceChanged(to: uuid)
+        default: break
+        }
+    }
+
+    /// A filter field came on screen.
+    func filterAppeared(_ field: FilterField) {
+        filterDisappeared(field)
+        filterFields.append(field)
+    }
+
+    /// A filter field left the screen.
+    func filterDisappeared(_ field: FilterField) {
+        filterFields.removeAll { $0 == field }
+    }
+
+    /// Asks the filter field on top to take the cursor.
+    func find() {
+        findRequests += 1
+    }
+}
