@@ -55,6 +55,7 @@ struct RootView: View {
                 // view should present only one sheet.
                 .sheet(isPresented: Binding(get: { sync.isPresentingSheet }, set: { _ in })) {
                     SyncSheet(sync: sync, devices: devices)
+                        .deviceErrorAlert(devices) { sync.isPresentingSheet }
                 }
                 // The firmware sheets, each on its own invisible view so
                 // every view presents only one sheet.
@@ -63,6 +64,7 @@ struct RootView: View {
                         get: { autoSync.installer.isPresentingSheet && !sync.isPresentingSheet },
                         set: { if !$0 { autoSync.installer.close() } })) {
                         FirmwareInstallSheet(installer: autoSync.installer, devices: devices)
+                            .deviceErrorAlert(devices) { autoSync.installer.isPresentingSheet }
                     }
                 }
                 .background {
@@ -70,6 +72,7 @@ struct RootView: View {
                         get: { autoSync.verifier.isPresentingSheet && !sync.isPresentingSheet },
                         set: { if !$0 { autoSync.verifier.close() } })) {
                         VerifyCardSheet(model: autoSync.verifier, devices: devices)
+                            .deviceErrorAlert(devices) { autoSync.verifier.isPresentingSheet }
                     }
                 }
                 .background {
@@ -78,14 +81,15 @@ struct RootView: View {
                         set: { if $0 == nil { autoSync.podData.restoring = nil } })) { request in
                         RestorePodDataSheet(model: autoSync.podData, backup: request.backup,
                                             deviceName: devices.connected?.device.name ?? "your Q2")
+                            .deviceErrorAlert(devices) { autoSync.podData.restoring != nil }
                     }
                 }
                 .background {
                     Color.clear.sheet(isPresented: Binding(
-                        get: { noticeAcknowledged && autoSync.installer.isAskingAboutPending
-                               && !autoSync.installer.isPresentingSheet && !sync.isPresentingSheet },
+                        get: { isAskingAboutPendingFirmware },
                         set: { _ in })) {
                         FirmwareFinishedSheet(installer: autoSync.installer, devices: devices)
+                            .deviceErrorAlert(devices) { isAskingAboutPendingFirmware }
                     }
                 }
         }
@@ -115,17 +119,12 @@ struct RootView: View {
         // The "Is this your Q2?" sheet appears whenever a new drive is pending.
         // `Binding(get:set:)` adapts the optional volume to the sheet's
         // `item:` parameter.
-        .sheet(item: Binding(get: { noticeAcknowledged && !autoSync.installer.isBusy ? devices.pendingVolume : nil },
+        .sheet(item: Binding(get: { volumeToSetUp },
                              set: { devices.pendingVolume = $0 })) { volume in
             NewDeviceSheet(volume: volume, devices: devices)
+                .deviceErrorAlert(devices) { volumeToSetUp != nil }
         }
-        .alert("Something Went Wrong",
-               isPresented: Binding(get: { devices.errorMessage != nil },
-                                    set: { if !$0 { devices.errorMessage = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(devices.errorMessage ?? "")
-        }
+        .deviceErrorAlert(devices) { !isSheetShowingDeviceError }
         // Select the Q2 automatically when it connects, like Finder does.
         .onChange(of: devices.connected?.device.volumeUUID) { _, uuid in
             autoSync.navigation.deviceChanged(to: uuid)
@@ -133,6 +132,26 @@ struct RootView: View {
         .onAppear {
             autoSync.navigation.reconcile(connected: devices.connected?.device.volumeUUID)
         }
+    }
+
+    /// `true` while "Did the Firmware Update Finish?" should be showing.
+    private var isAskingAboutPendingFirmware: Bool {
+        noticeAcknowledged && autoSync.installer.isAskingAboutPending
+            && !autoSync.installer.isPresentingSheet && !sync.isPresentingSheet
+    }
+
+    /// The drive the "Is this your Q2?" sheet should be asking about.
+    private var volumeToSetUp: VolumeInfo? {
+        noticeAcknowledged && !autoSync.installer.isBusy ? devices.pendingVolume : nil
+    }
+
+    /// `true` while a sheet that presents the device error alert itself is
+    /// open: every sheet but the first-launch notice, when there's no card to
+    /// have errors about. The window's own alert stays out of the way then.
+    private var isSheetShowingDeviceError: Bool {
+        sync.isPresentingSheet || autoSync.installer.isPresentingSheet
+            || autoSync.verifier.isPresentingSheet || autoSync.podData.restoring != nil
+            || isAskingAboutPendingFirmware || volumeToSetUp != nil
     }
 
     // MARK: - Sidebar
@@ -256,6 +275,44 @@ private struct OtherDrivesSidebarRow: View {
         // No extra padding: with the row's insets removed (so an empty
         // row takes no space), the sidebar already lines these up with
         // the rows above and below.
+    }
+}
+
+extension View {
+
+    /// The "Something Went Wrong" alert for `DeviceMonitor.errorMessage`.
+    ///
+    /// An alert waits behind a sheet attached to the same window, so each
+    /// sheet presents it itself, and the window only while none is open.
+    ///
+    /// - Parameter isActive: Whether this view is the one to show it. It's
+    ///   read live: a sheet that's closing must neither show the error nor
+    ///   clear it, so the window can show it next.
+    func deviceErrorAlert(_ devices: DeviceMonitor,
+                          isActive: @escaping @MainActor () -> Bool) -> some View {
+        modifier(DeviceErrorAlert(devices: devices, isActive: isActive))
+    }
+}
+
+/// Backs `deviceErrorAlert`.
+///
+/// A `ViewModifier` so that the error is read in a `body` of its own: a
+/// change then redraws the view presenting the alert, without relying on a
+/// `.sheet`'s content closure being run again.
+private struct DeviceErrorAlert: ViewModifier {
+
+    let devices: DeviceMonitor
+    let isActive: @MainActor () -> Bool
+
+    func body(content: Content) -> some View {
+        let message = devices.errorMessage
+        content.alert("Something Went Wrong",
+                      isPresented: Binding(get: { isActive() && devices.errorMessage != nil },
+                                           set: { if !$0 && isActive() { devices.errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(message ?? "")
+        }
     }
 }
 

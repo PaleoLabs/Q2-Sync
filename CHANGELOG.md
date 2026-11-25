@@ -24,6 +24,7 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 
 ### Fixed
 - **A failed eject no longer goes unnoticed.** If Q2 Sync's window isn't in front, for example when you eject from the menu bar item or a notification, a notification says the card wasn't ejected and why.
+- **Error messages now show over the window you're in.** If ejecting fails while a window such as Sync Complete, Install Firmware, Verify Card or **Did the Firmware Update Finish?** is open, the reason shows right away. The same goes for choosing the wrong folder while setting up a Q2. Before, the message appeared only after you closed that window.
 - With a card reader, the step after a sync said to unplug the Q2. It now says to put the card back in your Q2.
 - A failed eject no longer counts as your Q2 connecting again, which could start an automatic sync, ask whether to sync, or ask whether a firmware update had finished.
 

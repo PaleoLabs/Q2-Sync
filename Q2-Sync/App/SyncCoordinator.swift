@@ -353,8 +353,8 @@ final class SyncCoordinator {
     }
 
     /// Ejects the card when the user clicks Eject on the result sheet, then
-    /// closes the sheet. If ejecting fails, `DeviceMonitor` shows the error,
-    /// the card stays mounted and the sheet stays open.
+    /// closes the sheet. If ejecting fails, the card stays mounted and the
+    /// sheet stays open, showing `DeviceMonitor`'s error.
     func ejectAfterSync(devices: DeviceMonitor) async {
         isEjecting = true
         let ejected = await devices.eject()

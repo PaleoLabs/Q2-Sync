@@ -256,9 +256,10 @@ marks above, so it works without the Q2 connected.
    - **Verify Card…**: checks every song on the card first (see "Verify the
      card" below; eject when it's done).
 
-   The window only closes on **Eject** if the card was ejected. If you eject
-   it another way (the menu bar or a notification) while the window is open,
-   the steps stay there until you click **Done**.
+   The window only closes on **Eject** if the card was ejected; if it
+   couldn't be, a message says why. If you eject it another way (the menu bar
+   or a notification) while the window is open, the steps stay there until you
+   click **Done**.
 
 Every sync is recorded in a log. Click the **Show Log** link on the result, or
 go to your Q2's **Settings** tab → **Show Sync Logs**.

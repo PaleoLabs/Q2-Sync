@@ -216,7 +216,11 @@ sequenceDiagram
     (`DeviceProfile.postSyncSteps`) *before* any eject, so they're seen
     however the card is ejected, and offers **Eject** (never automatic; closes
     the sheet if it works). On problems, the card stays mounted and errors are
-    listed.
+    listed. While this or any other sheet but the first-launch notice is open,
+    the sheet (not the window behind it) presents the
+    `DeviceMonitor.errorMessage` alert (`deviceErrorAlert`, attached in
+    `RootView`), so an error such as a failed eject shows at once. A new sheet
+    needs the alert too, and a place in `isSheetShowingDeviceError`.
 
 ---
 
