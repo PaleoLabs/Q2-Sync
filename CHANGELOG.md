@@ -2,6 +2,11 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
+## Unreleased
+
+### Added
+- **Tick or untick a whole list at once.** On the Music tab, **⌘**-click a checkbox and every item in that tab takes its new state. With a filter, only the items shown change. ([#59](https://github.com/PaleoLabs/Q2-Sync/issues/59))
+
 ## 0.3.1 (2026-11-25)
 
 ### Added

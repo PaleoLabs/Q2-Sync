@@ -212,8 +212,8 @@ struct DeviceMusicView: View {
         } else {
             // AppKit, not a SwiftUI `List`: plain reused rows however long
             // the list (see `ChecklistTableView`).
-            ChecklistTableView(rows: rows, ticked: ticked) { rowID, isOn in
-                setTicked(rowID, isOn, in: section)
+            ChecklistTableView(rows: rows, ticked: ticked) { rowIDs, isOn in
+                setTicked(rowIDs, isOn, in: section)
             }
         }
     }
@@ -252,20 +252,20 @@ struct DeviceMusicView: View {
         }
     }
 
-    /// Ticks or unticks a row and saves the selection.
+    /// Ticks or unticks rows and saves the selection once.
     ///
     /// - Parameters:
-    ///   - rowID: The row's group ID (`"playlist:<id>"` for playlists).
+    ///   - rowIDs: The rows' group IDs (`"playlist:<id>"` for playlists).
     ///   - isOn: The new state.
-    ///   - category: The section the row is in.
-    private func setTicked(_ rowID: String, _ isOn: Bool, in category: BrowseCategory) {
+    ///   - category: The section the rows are in.
+    private func setTicked(_ rowIDs: [String], _ isOn: Bool, in category: BrowseCategory) {
         update { selection in
             switch category {
-            case .artists:   selection.artistIDs.toggle(rowID, on: isOn)
-            case .albums:    selection.albumIDs.toggle(rowID, on: isOn)
-            case .genres:    selection.genreIDs.toggle(rowID, on: isOn)
+            case .artists:   selection.artistIDs.toggle(rowIDs, on: isOn)
+            case .albums:    selection.albumIDs.toggle(rowIDs, on: isOn)
+            case .genres:    selection.genreIDs.toggle(rowIDs, on: isOn)
             case .playlists:
-                selection.playlistIDs.toggle(String(rowID.dropFirst("playlist:".count)), on: isOn)
+                selection.playlistIDs.toggle(rowIDs.map { String($0.dropFirst("playlist:".count)) }, on: isOn)
             }
         }
     }
@@ -372,10 +372,10 @@ struct SkippedSummaryView: View {
 }
 
 extension Set {
-    /// Inserts or removes an element depending on `on`. Makes checkbox
-    /// code read naturally: `ids.toggle(id, on: isChecked)`.
-    mutating func toggle(_ element: Element, on: Bool) {
-        if on { insert(element) } else { remove(element) }
+    /// Inserts or removes elements depending on `on`. Makes checkbox
+    /// code read naturally: `ids.toggle(clicked, on: isChecked)`.
+    mutating func toggle(_ elements: [Element], on: Bool) {
+        if on { formUnion(elements) } else { subtract(elements) }
     }
 }
 

@@ -24,8 +24,10 @@ struct ChecklistTableView: NSViewRepresentable {
     let rows: [TrackGroup]
     /// The IDs of ticked rows.
     let ticked: Set<String>
-    /// Called when a checkbox is clicked: the row's ID and its new state.
-    let onToggle: (String, Bool) -> Void
+    /// Called when a checkbox is clicked: the IDs of the rows to change and
+    /// their new state. That's the clicked row, or with ⌘ held every row in
+    /// `rows`, so items the filter hides are left alone.
+    let onToggle: ([String], Bool) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -68,7 +70,7 @@ struct ChecklistTableView: NSViewRepresentable {
     final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
 
         weak var tableView: NSTableView?
-        var onToggle: (String, Bool) -> Void = { _, _ in }
+        var onToggle: ([String], Bool) -> Void = { _, _ in }
         private var rows: [TrackGroup] = []
         private var rowIDs: [String] = []
         private var ticked: Set<String> = []
@@ -87,9 +89,15 @@ struct ChecklistTableView: NSViewRepresentable {
             } else if newTicked != ticked || newRows != rows {
                 rows = newRows
                 ticked = newTicked
-                tableView.reloadData(forRowIndexes: IndexSet(integersIn: 0..<rows.count),
-                                     columnIndexes: IndexSet(integersIn: 0..<tableView.numberOfColumns))
+                redrawRows()
             }
+        }
+
+        /// Redraws every row where it is, without scrolling.
+        private func redrawRows() {
+            guard let tableView else { return }
+            tableView.reloadData(forRowIndexes: IndexSet(integersIn: 0..<rows.count),
+                                 columnIndexes: IndexSet(integersIn: 0..<tableView.numberOfColumns))
         }
 
         func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
@@ -168,12 +176,18 @@ struct ChecklistTableView: NSViewRepresentable {
 
         @objc private func toggled(_ sender: NSButton) {
             guard rows.indices.contains(sender.tag) else { return }
-            let id = rows[sender.tag].id
             let isOn = sender.state == .on
+            // ⌘-click: every listed row takes this box's new state, as in
+            // Finder's iPod sync.
+            let isForAll = NSApp.currentEvent?.modifierFlags.contains(.command) == true
+            let ids = isForAll ? rowIDs : [rows[sender.tag].id]
             // Keep our copy in step so a redraw before SwiftUI's update
             // doesn't flip the box back.
-            if isOn { ticked.insert(id) } else { ticked.remove(id) }
-            onToggle(id, isOn)
+            if isOn { ticked.formUnion(ids) } else { ticked.subtract(ids) }
+            // `update` will find nothing changed, so redraw the other boxes
+            // here.
+            if isForAll { redrawRows() }
+            onToggle(ids, isOn)
         }
     }
 }

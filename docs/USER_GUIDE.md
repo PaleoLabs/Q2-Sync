@@ -163,6 +163,11 @@ are kept.
      **Filter** box to find things quickly (**⌘F** puts the cursor there);
      click the **×** in it to clear the search.
 
+To tick everything in a tab at once, hold **⌘** and click an unticked box.
+**⌘**-click a ticked box to untick everything. Only that tab changes. With
+something in the **Filter** box, only the items shown change. This ticks what's
+listed now, so an artist you add to your library later still needs ticking.
+
 Everything you tick is combined: a song is synced if its artist, album, genre
 or any of its playlists is ticked. When you tick an artist, their new albums
 sync automatically next time.
@@ -726,6 +731,7 @@ Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
 | **⌘R** | Refresh the Music library |
 | **⇧⌘R** | Show the selected songs in Finder |
 | **⌘F** | Search your library, or filter the Music tab or the sync preview |
+| **⌘**-click a checkbox | On the Music tab, tick or untick every item shown |
 | **⌘I** | Show or hide Song Info |
 | **⇧⌘S** | Sync Now |
 | **⌘E** | Eject |
