@@ -152,6 +152,15 @@ struct AudiobookPlan: Sendable, Equatable {
     /// Books to add or update, counted once each.
     var booksToCopy: Int { Set(copies.map(\.bookID)).count }
     var booksToRemove: Int { Set(bookRemovals.map(\.bookID)).count }
+    /// Books being updated: any part copied over an older one, or any old
+    /// part replaced. Each book counted once.
+    var booksToUpdate: Int { updatedBookIDs.count }
+    /// Books copied for the first time.
+    var booksToAdd: Int { Set(copies.map(\.bookID)).subtracting(updatedBookIDs).count }
+
+    private var updatedBookIDs: Set<String> {
+        Set(copies.filter { $0.kind == .update }.map(\.bookID)).union(replacedFiles.map(\.bookID))
+    }
 
     var isEmpty: Bool {
         copies.isEmpty && removals.isEmpty && adoptions.isEmpty && forgotten.isEmpty

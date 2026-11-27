@@ -41,6 +41,16 @@ struct PlaylistPlanTests {
         #expect(plan.writes.first { $0.id == "1" }?.nameWasChanged == false)
     }
 
+    @Test("A playlist Q2 Sync hasn't written before is new; one it has is not")
+    func isNew() {
+        var manifest = SyncManifest()
+        manifest.playlistFiles["1"] = "_explaylist_data/Road Trip.m3u"
+        let plan = PlaylistWriter.plan(playlists: [makePlaylist("1", "Road Trip"), makePlaylist("2", "Gym")],
+                                       manifest: manifest, folderFiles: folderFiles(["Road Trip.m3u"]), profile: profile)
+        #expect(plan.writes.first { $0.id == "1" }?.isNew == false)
+        #expect(plan.writes.first { $0.id == "2" }?.isNew == true)
+    }
+
     @Test("Names are limited to 63 bytes, including numbered variants")
     func nameLimit() {
         let long = String(repeating: "é", count: 40) // 80 bytes

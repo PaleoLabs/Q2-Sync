@@ -42,6 +42,9 @@ struct PlannedPlaylist: Sendable, Hashable, Identifiable {
     let path: CardPath
     /// `true` if the name had to be shortened or changed for the card.
     let nameWasChanged: Bool
+    /// `true` if Q2 Sync hasn't written this playlist to the card before
+    /// (counted as Add in the sync preview; the rest are Update).
+    var isNew = false
     var id: PersistentID { playlist.id }
 
     /// The name the playlist will have on the Q2 (file name without extension).
@@ -178,7 +181,8 @@ enum PlaylistWriter {
             guard let path = assigned[playlist.id] else { continue }
             let plain = "\(profile.playlistFolderName)/\(playlist.name).\(profile.playlistFormat.fileExtension)"
             result.writes.append(PlannedPlaylist(playlist: playlist, path: path,
-                                                 nameWasChanged: path != plain))
+                                                 nameWasChanged: path != plain,
+                                                 isNew: manifest.playlistFiles[playlist.id] == nil))
         }
 
         // Our files for playlists no longer written are removed, along

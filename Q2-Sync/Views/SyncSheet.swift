@@ -113,6 +113,27 @@ struct SyncPreviewView: View {
         plan.cardOnly.filter { sync.options.cardOnlyActions[$0.path] == .delete }.count
     }
 
+    /// Everything you no longer sync that's still on the card, all kinds
+    /// together (songs, audiobooks). One Remove choice covers them all.
+    private var noLongerSyncedCount: Int {
+        plan.removals.count + plan.audiobooks.booksToRemove
+    }
+
+    /// e.g. "47 songs, 2 audiobooks". Add new kinds of content here.
+    private var noLongerSyncedList: String {
+        var parts: [String] = []
+        if !plan.removals.isEmpty { parts.append(pluralized(plan.removals.count, "song")) }
+        if plan.audiobooks.booksToRemove > 0 { parts.append(pluralized(plan.audiobooks.booksToRemove, "audiobook")) }
+        return parts.joined(separator: ", ")
+    }
+
+    /// What Sync will take off the card with the current choices: items
+    /// you no longer sync (if Remove is ticked) and card-only files set
+    /// to Delete. Shown on the Sync button.
+    private var removeCountOnSync: Int {
+        (sync.options.applyRemovals ? noLongerSyncedCount : 0) + cardOnlyDeleteCount
+    }
+
     /// `true` if the user chose any action other than Leave for card-only files.
     private var hasCardOnlyWork: Bool {
         plan.cardOnly.contains { (sync.options.cardOnlyActions[$0.path] ?? .leave) != .leave }
@@ -158,7 +179,7 @@ struct SyncPreviewView: View {
             footer
                 .padding(16)
         }
-        .frame(width: 660, height: showsDetails && !hasNothingToList ? 680 : nil)
+        .frame(width: 660, height: showsDetails && !hasNothingToList ? detailsHeight : nil)
         // Edit › Find (⌘F) opens Details if needed and puts the cursor in
         // the filter.
         .onAppear { if !hasNothingToList { autoSync.navigation.filterAppeared(.syncPreview) } }
@@ -266,175 +287,261 @@ struct SyncPreviewView: View {
         CardOnlyGroup.allCases.filter { group in plan.cardOnly.contains { CardOnlyGroup($0) == group } }
     }
 
-    /// A box for what needs a choice: songs you no longer sync, music only
-    /// on the card (one pop-up per group), and playlists waiting in the
-    /// import folder (only with "only changed playlists" on). Shown only when there's
-    /// something to decide.
+    /// What needs a choice. Removing what you no longer sync comes first,
+    /// in its own tinted box (the only choice that deletes anything, so
+    /// it must be hard to miss). Below it, a grey box for music only on
+    /// the card (one pop-up per group) and playlists waiting in the import
+    /// folder (only with "only changed playlists" on). Shown only when
+    /// there's something to decide.
     @ViewBuilder
     private var decisions: some View {
-        if !plan.removals.isEmpty || plan.audiobooks.booksToRemove > 0 || !cardOnlyGroups.isEmpty || asksAboutPlaylistImport {
-            VStack(alignment: .leading, spacing: 10) {
-                if plan.audiobooks.booksToRemove > 0 {
-                    HStack {
-                        Image(systemName: "minus.circle").foregroundStyle(.red)
-                        Text(plan.audiobooks.booksToRemove == 1
-                             ? "1 audiobook you no longer sync is still on the card."
-                             : "\(plan.audiobooks.booksToRemove.formatted()) audiobooks you no longer sync are still on the card.")
-                        Spacer()
-                        Toggle("Remove Them", isOn: Binding(get: { sync.options.applyRemovals },
-                                                            set: { sync.options.applyRemovals = $0 }))
-                            .toggleStyle(.checkbox)
-                    }
+        let hasOtherChoices = !cardOnlyGroups.isEmpty || asksAboutPlaylistImport
+        if noLongerSyncedCount > 0 || hasOtherChoices {
+            VStack(alignment: .leading, spacing: 8) {
+                if noLongerSyncedCount > 0 {
+                    removalChoice
                 }
-                if !plan.removals.isEmpty {
-                    HStack {
-                        Image(systemName: "minus.circle").foregroundStyle(.red)
-                        Text("\(pluralized(plan.removals.count, "song")) you no longer sync \(plan.removals.count == 1 ? "is" : "are") still on the card.")
-                        Spacer()
-                        Toggle(plan.removals.count == 1 ? "Remove It" : "Remove Them", isOn: Binding(get: { sync.options.applyRemovals },
-                                                            set: { sync.options.applyRemovals = $0 }))
-                            .toggleStyle(.checkbox)
-                    }
-                    if assessment.needsLargeRemovalConfirmation {
-                        Label("That's \(removalPercent)% of the songs on this card. You'll be asked to confirm.",
-                              systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                    }
+                if hasOtherChoices {
+                    otherChoices
+                    // The removal box says what will happen itself; this
+                    // is for the pop-ups and the import checkbox.
+                    Text("Nothing on the card changes unless you choose.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                if asksAboutPlaylistImport {
-                    let waiting = plan.playlistPlan.waitingForImport
-                    HStack {
-                        Image(systemName: "music.note.list").foregroundStyle(.pink)
-                        Text(waiting == 1
-                             ? "1 playlist from an earlier sync is still in the Q2's import folder."
-                             : "\(waiting.formatted()) playlists from an earlier sync are still in the Q2's import folder.")
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer()
-                        Toggle("I imported them on the Q2", isOn: Binding(
-                            get: { sync.options.playlistsWereImported },
-                            set: { sync.options.playlistsWereImported = $0 }))
-                            .toggleStyle(.checkbox)
-                            .fixedSize()
-                    }
-                }
-                ForEach(cardOnlyGroups) { group in
-                    HStack {
-                        Image(systemName: "sdcard").foregroundStyle(.teal)
-                        Text(group.summary(count: plan.cardOnly.filter { CardOnlyGroup($0) == group }.count))
-                        Spacer()
-                        cardOnlyGroupPicker(group)
-                    }
-                }
-                Text("Nothing on the card changes unless you choose.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-            .padding(12)
-            .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
         }
     }
 
-    /// The counts, in one box per topic (Songs, Not Copied, Playlists,
-    /// Album Covers), each a short list with the numbers lined up on the
-    /// right. Boxes sit side by side; with all four, two by two.
-    private var counts: some View {
-        let playlists = plan.playlistPlan
-        let showsPlaylists = !playlists.writes.isEmpty || !playlists.removals.isEmpty || !playlists.leavingImport.isEmpty
-        let showsCovers = !plan.coverWrites.isEmpty || !plan.coverRemovals.isEmpty
-        let songs = countBox("Songs") {
-            countLine("Add", addCount, "plus.circle.fill", .green)
-            countLine("Update", plan.copies.count - addCount, "arrow.triangle.2.circlepath", .blue)
-            countLine("Rename", plan.moves.count, "pencil.circle.fill", .purple)
-            countLine("Remove", sync.options.applyRemovals ? plan.removals.count : 0, "minus.circle.fill", .red)
-        }
-        let notCopied = countBox("Not Copied") {
-            countLine("Already on card", plan.unchangedCount + plan.adoptions.count, "checkmark.circle.fill", .secondary)
-            countLine("On card only", plan.cardOnly.count, "sdcard", .teal)
-            countLine("Can't sync", plan.skipped.count, "exclamationmark.circle.fill", .orange)
-        }
-        let playlistBox = countBox("Playlists") {
-            countLine("Playlists", playlists.writes.count, "music.note.list", .pink)
-            countLine("Remove playlists", playlists.removals.count, "minus.circle", .red)
-            countLine("Already imported", sync.options.playlistsWereImported ? playlists.leavingImport.count : 0, "tray.and.arrow.up", .secondary)
-        }
-        let books = plan.audiobooks
-        let showsAudiobooks = !books.isEmpty || !books.skipped.isEmpty || books.unchangedBooks > 0
-        let audiobookBox = countBox("Audiobooks") {
-            countLine("Copy", books.booksToCopy, "plus.circle.fill", .green)
-            countLine("Remove", sync.options.applyRemovals ? books.booksToRemove : 0, "minus.circle.fill", .red)
-            countLine("Already on card", books.unchangedBooks + books.adoptions.count, "checkmark.circle.fill", .secondary)
-            countLine("Can't sync", books.skipped.count, "exclamationmark.circle.fill", .orange)
-        }
-        let coverBox = countBox("Album Covers") {
-            countLine("Album covers", plan.coverWrites.count, "photo", .indigo)
-            countLine("Remove covers", plan.coverRemovals.count, "minus.circle", .red)
-        }
-        return VStack(alignment: .leading, spacing: 10) {
+    /// One line and one checkbox for every kind of content you no longer
+    /// sync (#65), tinted red when ticked and orange when not, with a line
+    /// saying what will happen (#63).
+    private var removalChoice: some View {
+        let removing = sync.options.applyRemovals
+        let tint: Color = removing ? .red : .orange
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "minus.circle")
+                    .font(.title3)
+                    .foregroundStyle(.red)
+                Text("No longer synced, still on the card: \(noLongerSyncedList)")
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Toggle(noLongerSyncedCount == 1 ? "Remove It" : "Remove Them",
+                       isOn: Binding(get: { sync.options.applyRemovals },
+                                     set: { sync.options.applyRemovals = $0 }))
+                    .toggleStyle(.checkbox)
+                    .fontWeight(.semibold)
+                    .fixedSize()
+            }
             Group {
-                if showsPlaylists && showsCovers {
-                    Grid(horizontalSpacing: 10, verticalSpacing: 10) {
-                        GridRow { songs; notCopied }
-                        GridRow { playlistBox; coverBox }
-                    }
-                } else {
-                    HStack(alignment: .top, spacing: 10) {
-                        songs
-                        notCopied
-                        if showsPlaylists { playlistBox }
-                        if showsCovers { coverBox }
-                        if showsAudiobooks { audiobookBox }
-                    }
+                Text(removing
+                     ? (noLongerSyncedCount == 1
+                        ? "Will be deleted from the card. It stays in your library."
+                        : "Will be deleted from the card. They stay in your library.")
+                     : "Will stay on the card unless you tick \(noLongerSyncedCount == 1 ? "Remove It" : "Remove Them").")
+                    .foregroundStyle(removing ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                if !plan.playlistPlan.removals.isEmpty {
+                    Text("Playlists you no longer sync are removed either way; that never removes their songs.")
+                        .foregroundStyle(.secondary)
                 }
-                if showsAudiobooks && showsPlaylists && showsCovers {
-                    HStack(alignment: .top, spacing: 10) { audiobookBox }
+                if assessment.needsLargeRemovalConfirmation {
+                    Label("That's \(removalPercent)% of the songs on this card. You'll be asked to confirm.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
                 }
             }
+            .font(.callout)
             .fixedSize(horizontal: false, vertical: true)
-            Text(spaceSummary)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            .padding(.leading, 26)
         }
+        .padding(12)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(tint.opacity(0.55), lineWidth: 1))
     }
 
-    /// One topic's counts in a light rounded box, its name on top.
-    private func countBox<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            content()
+    /// Choices that don't remove what you no longer sync, in a grey box.
+    private var otherChoices: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if asksAboutPlaylistImport {
+                let waiting = plan.playlistPlan.waitingForImport
+                HStack {
+                    Image(systemName: "music.note.list").foregroundStyle(.pink)
+                    Text(waiting == 1
+                         ? "1 playlist from an earlier sync is still in the Q2's import folder."
+                         : "\(waiting.formatted()) playlists from an earlier sync are still in the Q2's import folder.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Toggle("I imported them on the Q2", isOn: Binding(
+                        get: { sync.options.playlistsWereImported },
+                        set: { sync.options.playlistsWereImported = $0 }))
+                        .toggleStyle(.checkbox)
+                        .fixedSize()
+                }
+            }
+            ForEach(cardOnlyGroups) { group in
+                HStack {
+                    Image(systemName: "sdcard").foregroundStyle(.teal)
+                    Text(group.summary(count: plan.cardOnly.filter { CardOnlyGroup($0) == group }.count))
+                    Spacer()
+                    cardOnlyGroupPicker(group)
+                }
+            }
         }
-        .font(.callout)
-        .padding(10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
     }
 
-    /// One count: icon, name, and the number on the right. Zero counts
-    /// stay (so "Remove 0" still reassures) but are greyed out.
-    private func countLine(_ title: String, _ count: Int, _ symbol: String, _ color: Color) -> some View {
-        let dimmed = count == 0
-        return HStack(spacing: 6) {
+    /// One cell in a counts row: a number, or a dash when the action can't
+    /// happen for that kind of content (e.g. renaming an album cover).
+    private enum CountCell {
+        case count(Int)
+        /// A removal the user turned off with Remove Them: shown as "Kept".
+        case kept(Int)
+        case notApplicable
+    }
+
+    /// The counts (#64): one full-width grey row per kind of content that
+    /// has something to do, each with the same five columns (Add, Update,
+    /// Rename, Remove, Can't Sync) so they line up down the sheet. A zero
+    /// is dimmed; a dash means the action doesn't apply. The sheet grows by
+    /// one row per kind, never by action.
+    private var counts: some View {
+        let removing = sync.options.applyRemovals
+        let playlists = plan.playlistPlan
+        let books = plan.audiobooks
+        let newPlaylists = playlists.writes.filter(\.isNew).count
+
+        let songCells: [CountCell] = [
+            .count(addCount), .count(plan.copies.count - addCount), .count(plan.moves.count),
+            removing || plan.removals.isEmpty ? .count(plan.removals.count) : .kept(plan.removals.count),
+            .count(plan.skipped.count),
+        ]
+        let bookCells: [CountCell] = [
+            .count(books.booksToAdd), .count(books.booksToUpdate), .notApplicable,
+            removing || books.booksToRemove == 0 ? .count(books.booksToRemove) : .kept(books.booksToRemove),
+            .count(books.skipped.count),
+        ]
+        let playlistCells: [CountCell] = [
+            .count(newPlaylists), .count(playlists.writes.count - newPlaylists), .notApplicable,
+            .count(playlists.removals.count), .count(playlists.overLimit.count),
+        ]
+        let coverCells: [CountCell] = [
+            .count(plan.coverWrites.count), .notApplicable, .notApplicable,
+            .count(plan.coverRemovals.count), .notApplicable,
+        ]
+
+        return VStack(alignment: .leading, spacing: 6) {
+            if hasWork(songCells) { countRow("Songs", songCells) }
+            if hasWork(bookCells) { countRow("Audiobooks", bookCells) }
+            if hasWork(playlistCells) { countRow("Playlists", playlistCells) }
+            if hasWork(coverCells) { countRow("Album Covers", coverCells) }
+            // Sizes and free space are in the summary at the top, so
+            // they're not repeated here.
+            if let line = notCopiedSummary {
+                Text(line)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    /// `true` if any cell has a number above zero.
+    private func hasWork(_ cells: [CountCell]) -> Bool {
+        cells.contains {
+            switch $0 {
+            case .count(let n), .kept(let n): n > 0
+            case .notApplicable: false
+            }
+        }
+    }
+
+    /// One kind of content across the sheet: its name, then the five
+    /// columns, each the same width in every row.
+    private func countRow(_ title: String, _ cells: [CountCell]) -> some View {
+        let columns: [(title: String, symbol: String, color: Color)] = [
+            ("Add", "plus.circle.fill", .green),
+            ("Update", "arrow.triangle.2.circlepath", .blue),
+            ("Rename", "pencil.circle.fill", .purple),
+            ("Remove", "minus.circle.fill", .red),
+            ("Can't Sync", "exclamationmark.circle.fill", .orange),
+        ]
+        return HStack(spacing: 8) {
+            Text(title)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .frame(width: 92, alignment: .leading)
+            ForEach(columns.indices, id: \.self) { index in
+                countCell(columns[index].title, cells[index], columns[index].symbol, columns[index].color)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .font(.callout)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// Icon, action and number. Zero, kept and dash are dimmed.
+    private func countCell(_ title: String, _ cell: CountCell, _ symbol: String, _ color: Color) -> some View {
+        let label: String
+        let value: String
+        let dimmed: Bool
+        switch cell {
+        case .count(let n):
+            (label, value, dimmed) = (title, n.formatted(), n == 0)
+        case .kept(let n):
+            (label, value, dimmed) = ("Kept", n.formatted(), true)
+        case .notApplicable:
+            (label, value, dimmed) = (title, "–", true)
+        }
+        return HStack(spacing: 4) {
             Image(systemName: symbol)
                 .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(color))
-                .frame(width: 16)
-            Text(title)
-                .lineLimit(1)
+            Text(label)
                 .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
-            Spacer(minLength: 8)
-            Text(count.formatted())
+            Text(value)
                 .monospacedDigit()
                 .fontWeight(dimmed ? .regular : .semibold)
                 .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .help(helpText(title, cell))
     }
 
-    /// e.g. "Copies 1.2 GB · 230.4 GB free afterwards".
-    private var spaceSummary: String {
-        let style = ByteCountFormatStyle(style: .file)
-        let copy = plan.allBytesToCopy == 0 ? "Nothing to copy" : "Copies \(Int64(plan.allBytesToCopy).formatted(style))"
-        let free = max(0, assessment.projectedFreeBytes).formatted(style)
-        return "\(copy) · about \(free) free on the card afterwards"
+    private func helpText(_ title: String, _ cell: CountCell) -> String {
+        switch cell {
+        case .count: ""
+        case .kept(let n): "\(n.formatted()) no longer synced, kept on the card because Remove Them is off"
+        case .notApplicable: "\(title) doesn't apply here"
+        }
+    }
+
+    /// e.g. "Already on the card: 1,203 songs, 4 audiobooks · 12 songs only
+    /// on the card". `nil` when there's nothing to say.
+    private var notCopiedSummary: String? {
+        let books = plan.audiobooks
+        var onCard: [String] = []
+        let songs = plan.unchangedCount + plan.adoptions.count
+        if songs > 0 { onCard.append(pluralized(songs, "song")) }
+        let unchangedBooks = books.unchangedBooks + books.adoptions.count
+        if unchangedBooks > 0 { onCard.append(pluralized(unchangedBooks, "audiobook")) }
+        var parts: [String] = []
+        if !onCard.isEmpty { parts.append("Already on the card: " + onCard.joined(separator: ", ")) }
+        if !plan.cardOnly.isEmpty { parts.append("\(pluralized(plan.cardOnly.count, "song")) only on the card") }
+        let imported = sync.options.playlistsWereImported ? plan.playlistPlan.leavingImport.count : 0
+        if imported > 0 { parts.append("\(pluralized(imported, "playlist")) already imported") }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// Sheet height with Details open: 760 pt, less on a short screen
+    /// (never under 600) so the sheet stays inside the window it hangs from.
+    private var detailsHeight: CGFloat {
+        let screen = NSScreen.main?.visibleFrame.height ?? 900
+        return min(760, max(600, screen - 140))
     }
 
     // MARK: Details
@@ -588,7 +695,7 @@ struct SyncPreviewView: View {
         if !plan.removals.isEmpty {
             let expanded = isExpanded("remove")
             Section {
-                Toggle("Remove the \(pluralized(plan.removals.count, "song")) you no longer sync",
+                Toggle("Remove the \(noLongerSyncedList.replacingOccurrences(of: ", ", with: " and ")) you no longer sync",
                        isOn: Binding(get: { sync.options.applyRemovals },
                                      set: { sync.options.applyRemovals = $0 }))
                 if assessment.needsLargeRemovalConfirmation {
@@ -959,7 +1066,7 @@ struct SyncPreviewView: View {
                     .keyboardShortcut(.cancelAction)
             }
             if !isUpToDate {
-                Button(cardOnlyDeleteCount > 0 ? "Sync (Deletes \(cardOnlyDeleteCount.formatted()))" : "Sync") {
+                Button(removeCountOnSync > 0 ? "Sync and Remove \(removeCountOnSync.formatted())" : "Sync") {
                     continueApplying()
                 }
                     .keyboardShortcut(.defaultAction)

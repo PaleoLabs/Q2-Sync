@@ -140,6 +140,29 @@ struct AudiobookPlannerTests {
         #expect(p.removals.isEmpty)
     }
 
+    @Test("Books are counted once each as added or updated")
+    func addAndUpdateCounts() {
+        func copy(_ id: String, _ kind: AudiobookCopy.Kind, _ name: String) -> AudiobookCopy {
+            AudiobookCopy(kind: kind, bookID: id, bookTitle: id, folder: "Audiobooks/\(id)",
+                          source: URL(fileURLWithPath: "/tmp/\(name)"), sourceSize: 1,
+                          destination: "Audiobooks/\(id)/\(name)")
+        }
+        var p = AudiobookPlan()
+        // "new": two parts, both new. "changed": one part updated, one new.
+        // "trimmed": only an old part replaced, plus a new part.
+        p.copies = [copy("new", .add, "1.m4b"), copy("new", .add, "2.m4b"),
+                    copy("changed", .update, "1.m4b"), copy("changed", .add, "2.m4b"),
+                    copy("trimmed", .add, "3.m4b")]
+        p.removals = [AudiobookRemoval(bookID: "trimmed", bookTitle: "trimmed", path: "Audiobooks/trimmed/old.m4b",
+                                       cardSize: 1, isReplaced: true),
+                      AudiobookRemoval(bookID: "gone", bookTitle: "gone", path: "Audiobooks/gone/a.m4b",
+                                       cardSize: 1, isReplaced: false)]
+        #expect(p.booksToCopy == 3)
+        #expect(p.booksToAdd == 1)
+        #expect(p.booksToUpdate == 2)
+        #expect(p.booksToRemove == 1)
+    }
+
     @Test("Off, or nothing ticked under Selected: nothing to copy")
     func nothingChosen() throws {
         let card = try TestCard(); defer { card.cleanUp() }
