@@ -75,7 +75,7 @@ Books, like Finder does for an iPod. Each book gets its own folder in
 (DRM) books are listed but can't be ticked. Browse them in the sidebar's
 **Audiobooks › Books** section, which shows each book's length, size and
 whether it's on your Q2, with search and **Book Info** (**⌘I**). Needs Q2 Pod
-firmware. *Preview: new in 0.4.0; please report anything that looks wrong.*
+firmware.
 
 ### 🔎 Browse your library against your Q2
 The **Music Library** browser marks what's on your Q2, what the next sync adds
@@ -258,7 +258,7 @@ New to the app? Read the [User Guide](docs/USER_GUIDE.md), also in the app under
 | | Q2 Pod (custom) | Shanling stock |
 | --- | --- | --- |
 | Syncing music | ✅ | ✅ |
-| Audiobooks (`Audiobooks/`, preview) | ✅ Library › Audiobooks, with chapters and your place | ❌ needs Q2 Pod |
+| Audiobooks (`Audiobooks/`) | ✅ Library › Audiobooks, with chapters and your place | ❌ needs Q2 Pod |
 | Playlists (`_explaylist_data/*.m3u`) | ✅ confirmed on Q2 Pod 1.8.9 | ✅ same folder, to verify on device |
 | Album covers (`cover.jpg`, optional) | ✅ Cover Flow and Library (refresh Cover Flow after changes) | ✅ Now Playing and Album Wall (to verify on device) |
 | "Update the library on your Q2" steps | Library → Update Library → Scan music now | Local Songs → Update Library → Scan music now |

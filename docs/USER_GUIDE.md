@@ -219,12 +219,6 @@ choices you applied.
 
 ### Audiobooks (Q2 Pod)
 
-> **Preview.** Audiobooks are new in 0.4.0. Q2 Sync finds your books by
-> reading how Apple Books stores them, which Apple doesn't document and could
-> change in a macOS update. If a book is missing, listed wrongly or doesn't
-> play on your Q2, please
-> [report it](https://github.com/PaleoLabs/Q2-Sync/issues).
-
 Q2 Sync copies audiobooks from **Apple Books**, the way Finder syncs them to
 an iPod. They go in the card's `Audiobooks` folder, one folder per book, where
 Q2 Pod lists them under **Library › Audiobooks**: they remember your place,
