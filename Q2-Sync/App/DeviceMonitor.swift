@@ -550,6 +550,13 @@ final class DeviceMonitor {
         !(cardManifest?.entries.isEmpty ?? true)
     }
 
+    /// `true` if the connected card holds anything Q2 Sync put there
+    /// (songs, audiobooks…). A sync that chooses nothing then still has
+    /// something to do: offer to remove it.
+    var cardHasQ2SyncContent: Bool {
+        cardHasQ2SyncSongs || !(cardManifest?.audiobooks?.isEmpty ?? true)
+    }
+
     // MARK: - Unapplied changes (Revert / Apply)
 
     /// Edits made on the Q2's page and not applied yet, like Finder's

@@ -80,3 +80,22 @@ struct Audiobook: Codable, Hashable, Identifiable, Sendable {
     /// limit, so this is only a warning: a 16-hour book has played fine.
     static let longPartWarningSeconds: Double = 35 * 3600
 }
+
+/// The Audiobooks tab's search field.
+enum AudiobookSearch {
+
+    /// The books whose title or author contains the text (ignoring case
+    /// and accents), in the order given. Blank text matches every book.
+    ///
+    /// - Parameters:
+    ///   - books: The books to search.
+    ///   - text: What was typed.
+    /// - Returns: The matching books.
+    static func filter(_ books: [Audiobook], matching text: String) -> [Audiobook] {
+        let query = text.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return books }
+        return books.filter {
+            $0.title.localizedStandardContains(query) || ($0.author?.localizedStandardContains(query) ?? false)
+        }
+    }
+}

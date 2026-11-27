@@ -22,6 +22,8 @@ enum FilterField: Equatable {
     case library
     /// "Filter" on the Q2's Music tab.
     case musicTab
+    /// "Search" on the Q2's Audiobooks tab.
+    case audiobooksTab
     /// The filter above the lists in the sync preview.
     case syncPreview
 }

@@ -3,9 +3,9 @@
 //  Q2-Sync › Views
 //
 //  PURPOSE
-//  The "Music" tab of the device page: choose "Entire music library" or
-//  tick individual artists, albums, genres and playlists, like Finder's
-//  iPod sync. A summary line shows how many songs and bytes will sync and
+//  The "Music" tab of the device page: "Sync music onto [Q2]", then
+//  "Entire music library" or tick individual artists, albums, genres and
+//  playlists, like Finder's iPod sync. A summary line shows how many songs and bytes will sync and
 //  how many will be skipped (cloud-only, protected, missing).
 //
 //  HOW IT FITS
@@ -25,16 +25,14 @@ struct DeviceMusicView: View {
     let library: LibraryModel
 
     /// The shown selection, resolved against the library by `DeviceView`.
-    let resolved: ResolvedSelection
+    /// `nil` while the library hasn't been read.
+    let resolved: ResolvedSelection?
 
     /// Which section's checkboxes are showing.
     @State private var section: BrowseCategory = .artists
 
     /// Text typed in the filter field.
     @State private var filterText = ""
-
-    /// Whether the cursor is in the filter field.
-    @FocusState private var isFilterFocused: Bool
 
     /// Controls the skipped-songs popover.
     @State private var showingSkipped = false
@@ -48,11 +46,70 @@ struct DeviceMusicView: View {
     }
 
     var body: some View {
-        if let snapshot = library.snapshot {
-            content(snapshot: snapshot)
-        } else {
-            LibraryNotReadView(library: library)
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            if let snapshot = library.snapshot, let resolved {
+                content(snapshot: snapshot)
+                    // Like Finder: music off dims everything below the box.
+                    .disabled(!selection.isEnabled)
+                Divider()
+                summaryBar(resolved)
+            } else if selection.isEnabled {
+                LibraryNotReadView(library: library)
+            } else {
+                ContentUnavailableView("Music Is Off", systemImage: "music.note",
+                                       description: Text("Q2 Sync doesn't read your Apple Music library or put music on this Q2. Tick “Sync music” to choose music again."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
+    }
+
+    // MARK: - Header
+
+    /// "Sync music onto [Q2]", then entire library or selected items, like
+    /// Finder, then a note.
+    private var header: some View {
+        SyncSectionHeader(
+            title: "Sync music onto \(connected.device.name)",
+            isEnabled: Binding(get: { selection.isEnabled },
+                               set: { on in update { $0.isEnabled = on } }),
+            choice: Binding(get: { selection.mode },
+                            set: { mode in update { $0.mode = mode } }),
+            options: [
+                SyncChoiceOption(label: "Entire music library", value: .entireLibrary),
+                SyncChoiceOption(label: "Selected artists, albums, genres, and playlists", value: .selectedItems),
+            ]) {
+            headerNote
+        }
+    }
+
+    /// The note under the choices. Always laid out (invisible when there's
+    /// nothing to say), so the list below doesn't jump when it goes.
+    private var headerNote: some View {
+        let note: SyncSectionNote? = if !selection.isEnabled {
+            // Nothing happens until Apply and the review sheet's Remove Them.
+            hasQ2SyncSongs
+                ? SyncSectionNote(text: "Music is off. When you sync, the review lets you remove the songs and playlists Q2 Sync put on this card.",
+                                  systemImage: "exclamationmark.triangle", color: .orange)
+                : nil
+        } else if selection.isEmpty {
+            // The first step on a new Q2: nothing is chosen yet.
+            hasQ2SyncSongs
+                ? SyncSectionNote(text: "Nothing is chosen. Syncing now would remove the songs Q2 Sync put on this card.",
+                                  systemImage: "exclamationmark.triangle", color: .orange)
+                : SyncSectionNote(text: "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want. ⌘-click a box to tick or untick the whole list.",
+                                  systemImage: "hand.point.down", color: .accentColor)
+        } else {
+            nil
+        }
+        return ZStack(alignment: .topLeading) {
+            // Holds the space of the longest note so nothing moves.
+            SyncSectionNote(text: "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want. ⌘-click a box to tick or untick the whole list.",
+                            systemImage: "hand.point.down")
+                .hidden()
+            if let note { note }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: - Main content
@@ -60,39 +117,6 @@ struct DeviceMusicView: View {
     @ViewBuilder
     private func content(snapshot: LibrarySnapshot) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            // The first step on a new Q2: nothing is chosen yet.
-            // Always laid out, and just made invisible once something is
-            // ticked, so the list below doesn't jump up when it goes.
-            do {
-                Label(hasQ2SyncSongs
-                      ? "Nothing is chosen. Syncing now would remove the songs Q2 Sync put on this card."
-                      : "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want. ⌘-click a box to tick or untick the whole list.",
-                      systemImage: hasQ2SyncSongs ? "exclamationmark.triangle" : "hand.point.down")
-                    .foregroundStyle(hasQ2SyncSongs ? .orange : .accentColor)
-                    // Wraps to the width it's given. Not `fixedSize(vertical:)`:
-                    // measured narrow, that made the line ask for a huge
-                    // minimum height, and right after a card was set up the
-                    // page overflowed the window (header pushed off the top,
-                    // sidebar blank) until the first click (#43).
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                    .opacity(selection.isEmpty ? 1 : 0)
-                    .accessibilityHidden(!selection.isEmpty)
-            }
-
-            // "Entire library" vs "Selected items", like Finder.
-            Picker("Sync", selection: Binding(
-                get: { selection.mode },
-                set: { mode in update { $0.mode = mode } })) {
-                Text("Entire music library").tag(SyncSelection.Mode.entireLibrary)
-                Text("Selected artists, albums, genres, and playlists").tag(SyncSelection.Mode.selectedItems)
-            }
-            .pickerStyle(.radioGroup)
-            .labelsHidden()
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
             if selection.mode == .selectedItems {
                 sectionPicker
                     .padding(.horizontal, 20)
@@ -105,9 +129,6 @@ struct DeviceMusicView: View {
                     // Fill the space so the summary and Sync bars sit at the bottom.
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-
-            Divider()
-            summaryBar(resolved)
         }
     }
 
@@ -127,34 +148,9 @@ struct DeviceMusicView: View {
 
             Spacer()
 
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Filter", text: $filterText, prompt: Text("Filter \(section.rawValue)"))
-                    .textFieldStyle(.plain)
-                    .focused($isFilterFocused)
-                if !filterText.isEmpty {
-                    Button {
-                        filterText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Clear the filter")
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: .separatorColor)))
-            .frame(maxWidth: 220)
+            FilterTextField(text: $filterText, prompt: "Filter \(section.rawValue)", field: .musicTab)
         }
         .onChange(of: section) { filterText = "" }
-        // Edit › Find (⌘F) puts the cursor in the filter.
-        .onAppear { autoSync.navigation.filterAppeared(.musicTab) }
-        .onDisappear { autoSync.navigation.filterDisappeared(.musicTab) }
-        .onChange(of: autoSync.navigation.findRequests) {
-            if autoSync.navigation.filterField == .musicTab { isFilterFocused = true }
-        }
     }
 
     /// e.g. "Artists" or "Artists (3)" when some are ticked.
@@ -286,7 +282,8 @@ struct DeviceMusicView: View {
 
             if selection.mode == .selectedItems && selection.tickedItemCount > 0 {
                 Button("Deselect All") {
-                    update { $0 = SyncSelection(mode: .selectedItems) }
+                    // Clears the ticks only; "Sync music" stays as it is.
+                    update { $0 = SyncSelection(isEnabled: $0.isEnabled, mode: .selectedItems) }
                 }
                 .help("Untick everything on every tab. To tick or untick only this tab, ⌘-click a checkbox.")
             }

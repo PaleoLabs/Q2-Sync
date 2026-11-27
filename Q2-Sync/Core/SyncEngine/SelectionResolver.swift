@@ -62,6 +62,10 @@ enum SelectionResolver {
     /// - Returns: Tracks to sync, tracks skipped, and playlists.
     /// - Side effects: None. Pure computation.
     static func resolve(_ selection: SyncSelection, in snapshot: LibrarySnapshot) -> ResolvedSelection {
+        // Music switched off: nothing is chosen, whatever is ticked.
+        guard selection.isEnabled else {
+            return ResolvedSelection(tracksToSync: [], skippedTracks: [], playlists: [], missingSelectionCount: 0)
+        }
         let userPlaylists = snapshot.playlists.filter { $0.kind != .folder }
 
         // Step 1: work out which track IDs are selected, and which playlists.

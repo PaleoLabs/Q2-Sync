@@ -71,7 +71,7 @@ struct DeviceSyncBar: View {
             }
             .buttonStyle(.borderedProminent)
             .disabled(!canSync)
-            .help(nothingChosen ? "Choose some music first" : "Review the changes, then copy them to the Q2")
+            .help(nothingChosen ? "Choose some music or audiobooks first" : "Review the changes, then copy them to the Q2")
         }
     }
 
@@ -86,11 +86,12 @@ struct DeviceSyncBar: View {
         }
     }
 
-    /// `true` when nothing is chosen and the card holds no Q2 Sync songs
-    /// to remove, so a sync would do nothing.
+    /// `true` when no kind of content (music, audiobooks…) chooses
+    /// anything and the card holds nothing Q2 Sync put there to remove,
+    /// so a sync would do nothing.
     private var nothingChosen: Bool {
         let shown = devices.shownSyncSettings ?? connected.device.syncSettings
-        return shown.music.isEmpty && !devices.cardHasQ2SyncSongs
+        return shown.choosesNothing && !devices.cardHasQ2SyncContent
     }
 
     /// `true` if a sync could start now with the shown choices.

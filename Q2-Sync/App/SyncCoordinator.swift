@@ -151,23 +151,41 @@ final class SyncCoordinator {
         connection = connected.connection
         isAutomatic = automatic
 
-        phase = .planning("Reading your library…")
-        await library.load()
-        guard isCurrentPlanning(generation) else { return }
-        // A failed (or timed-out) read leaves the previous snapshot in place;
-        // never sync from that stale copy.
-        if case .failed(let message) = library.state {
-            fail(message + " Nothing was synced.")
-            return
-        }
-        guard let snapshot = library.snapshot, let health = library.health else {
-            fail("Your Apple Music library couldn't be read, so nothing was synced.")
-            return
-        }
-        // The "Mac looks empty" guard: stop before even looking at the card.
-        if case .unsafe(let reason) = health {
-            fail(reason + " Nothing on the card was changed.")
-            return
+        let musicSelection = connected.device.effectiveSelection
+        let snapshot: LibrarySnapshot
+        let health: LibraryHealth
+        if musicSelection.isEnabled {
+            phase = .planning("Reading your library…")
+            await library.load()
+            guard isCurrentPlanning(generation) else { return }
+            // A failed (or timed-out) read leaves the previous snapshot in place;
+            // never sync from that stale copy.
+            if case .failed(let message) = library.state {
+                fail(message + " Nothing was synced.")
+                return
+            }
+            guard let loaded = library.snapshot, let loadedHealth = library.health else {
+                fail("Your Apple Music library couldn't be read, so nothing was synced.")
+                return
+            }
+            // The "Mac looks empty" guard: stop before even looking at the card.
+            if case .unsafe(let reason) = loadedHealth {
+                fail(reason + " Nothing on the card was changed.")
+                return
+            }
+            snapshot = loaded
+            health = loadedHealth
+        } else {
+            // "Sync music" is off: the library isn't read, so an
+            // audiobooks-only Q2 needs no Apple Music library. Nothing is
+            // chosen; the songs Q2 Sync put on the card are planned as
+            // removals, applied only with Remove Them (and auto-sync
+            // stops for review). The "Mac looks empty" check guards
+            // against a library that failed to read, which can't happen
+            // here. The media folder from an earlier read stays protected.
+            snapshot = LibrarySnapshot(tracks: [], playlists: [],
+                                       mediaFolderURL: library.snapshot?.mediaFolderURL)
+            health = .healthy
         }
         guard let cardRoot = connected.accessURL else {
             fail(connected.accessProblem ?? "Q2 Sync doesn't have access to the card.")
@@ -204,12 +222,13 @@ final class SyncCoordinator {
                 profile: connected.device.profile,
                 extraProtectedFolders: [snapshot.mediaFolderURL].compactMap { $0 })
             let fileSystem = CardFileSystem(pathGuard: pathGuard)
-            let selection = SelectionResolver.resolve(connected.device.effectiveSelection, in: snapshot)
+            let selection = SelectionResolver.resolve(musicSelection, in: snapshot)
             let allSelectedIDs = Set((selection.tracksToSync + selection.skippedTracks).map(\.id))
 
             // Scanning thousands of card files happens off the main thread.
             let (manifest, plan) = try await Self.buildPlan(selection: selection, allSelectedIDs: allSelectedIDs,
-                                                            snapshot: snapshot, fileSystem: fileSystem,
+                                                            snapshot: snapshot, musicEnabled: musicSelection.isEnabled,
+                                                            fileSystem: fileSystem,
                                                             profile: connected.device.profile,
                                                             albumCovers: connected.device.effectiveAlbumCovers,
                                                             onlyChangedPlaylists: connected.device.effectiveImportOnlyChangedPlaylists,
@@ -232,7 +251,9 @@ final class SyncCoordinator {
                                   deviceName: connected.device.name, profile: connected.device.profile,
                                   protectedFolders: [PathGuard.defaultHomeMusicFolder]
                                       + [snapshot.mediaFolderURL].compactMap { $0 },
-                                  artwork: library.artworkReader(for: Set(plan.coverWrites.map(\.trackID))))
+                                  // Music off: no covers to write, and the library isn't opened.
+                                  artwork: musicSelection.isEnabled
+                                      ? library.artworkReader(for: Set(plan.coverWrites.map(\.trackID))) : nil)
             phase = .preview
             if automatic, let preview { decideAutomatically(preview, devices: devices) }
         } catch {
@@ -277,7 +298,7 @@ final class SyncCoordinator {
     /// music (reading its tags), on a background thread.
     @concurrent
     private static func buildPlan(selection: ResolvedSelection, allSelectedIDs: Set<PersistentID>,
-                                  snapshot: LibrarySnapshot,
+                                  snapshot: LibrarySnapshot, musicEnabled: Bool,
                                   fileSystem: CardFileSystem, profile: DeviceProfile,
                                   albumCovers: Bool, onlyChangedPlaylists: Bool,
                                   reimportAllPlaylists: Bool,
@@ -292,7 +313,9 @@ final class SyncCoordinator {
         let playlistFiles = CardScanner.files(in: profile.playlistFolderName, from: wholeCard)
         let plan = SyncPlanner.plan(selection: selection, allSelectedIDs: allSelectedIDs, manifest: manifest,
                                     cardFiles: cardFiles, playlistFolderFiles: playlistFiles,
-                                    libraryIDs: Set(snapshot.tracks.map(\.id)),
+                                    // Music off: every Q2 Sync song is a removal, not an
+                                    // "orphan" missing from an (unread) library.
+                                    libraryIDs: musicEnabled ? Set(snapshot.tracks.map(\.id)) : nil,
                                     layout: CardLayout(profile: profile), albumCovers: albumCovers)
         var adjusted = plan
 

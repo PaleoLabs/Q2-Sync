@@ -72,3 +72,9 @@ struct AudiobookSelection: Codable, Hashable, Sendable {
         bookIDs = try c.decodeIfPresent(Set<String>.self, forKey: .bookIDs) ?? []
     }
 }
+
+extension AudiobookSelection: ContentSyncChoice {
+
+    /// `true` if audiobooks are off, or on with "Selected" and no ticks.
+    var choosesNothing: Bool { !isEnabled || (!includesAll && bookIDs.isEmpty) }
+}

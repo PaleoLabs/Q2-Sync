@@ -21,6 +21,12 @@ import Foundation
 /// The user's choice of what to sync to one device.
 struct SyncSelection: Codable, Hashable, Sendable {
 
+    /// "Sync music onto [Q2]". On by default: a new Q2 syncs music, as
+    /// before this setting existed. Off means no music on the card: the
+    /// songs and playlists Q2 Sync put there are removed (with Remove
+    /// Them), and the Apple Music library isn't read at all.
+    var isEnabled = true
+
     /// The two modes offered in the UI.
     enum Mode: String, Codable, Sendable {
         /// Every song in the library (and every playlist).
@@ -44,7 +50,8 @@ struct SyncSelection: Codable, Hashable, Sendable {
     /// Ticked playlists, by playlist persistent ID.
     var playlistIDs: Set<PersistentID> = []
 
-    /// `true` if nothing at all is selected (and not entire-library mode).
+    /// `true` if nothing at all is ticked (and not entire-library mode).
+    /// Says nothing about `isEnabled`; see `choosesNothing`.
     var isEmpty: Bool {
         mode == .selectedItems && artistIDs.isEmpty && albumIDs.isEmpty
             && genreIDs.isEmpty && playlistIDs.isEmpty
@@ -54,4 +61,33 @@ struct SyncSelection: Codable, Hashable, Sendable {
     var tickedItemCount: Int {
         artistIDs.count + albumIDs.count + genreIDs.count + playlistIDs.count
     }
+}
+
+// MARK: - Loading saved selections
+
+extension SyncSelection {
+
+    private enum CodingKeys: String, CodingKey {
+        case isEnabled, mode, artistIDs, albumIDs, genreIDs, playlistIDs
+    }
+
+    /// Missing keys decode to their defaults, so selections saved before
+    /// a property existed (such as `isEnabled`) load with their ticks
+    /// intact instead of failing.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        mode = try c.decodeIfPresent(Mode.self, forKey: .mode) ?? .selectedItems
+        artistIDs = try c.decodeIfPresent(Set<String>.self, forKey: .artistIDs) ?? []
+        albumIDs = try c.decodeIfPresent(Set<String>.self, forKey: .albumIDs) ?? []
+        genreIDs = try c.decodeIfPresent(Set<String>.self, forKey: .genreIDs) ?? []
+        playlistIDs = try c.decodeIfPresent(Set<PersistentID>.self, forKey: .playlistIDs) ?? []
+    }
+}
+
+extension SyncSelection: ContentSyncChoice {
+
+    /// `true` if music is off, or on with nothing ticked.
+    var choosesNothing: Bool { !isEnabled || isEmpty }
 }

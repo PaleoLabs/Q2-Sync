@@ -172,6 +172,13 @@ sequenceDiagram
 5. **Resolve the selection.** `SelectionResolver.resolve` turns what you ticked
    into tracks to sync, tracks to skip (cloud-only, DRM, missing) and
    playlists.
+   **Music off** (`SyncSelection.isEnabled == false`, the Music tab's "Sync
+   music onto" box): steps 2 and 3 are skipped, the selection resolves to
+   nothing against an empty snapshot, and the planner gets `libraryIDs: nil`
+   so every song in the manifest is a removal (Remove Them, and auto-sync
+   stops for review) rather than an orphan. Each kind of content's selection
+   has the same `isEnabled` switch (`ContentSyncChoice`); see
+   `DeviceSyncSettings.swift` for adding one (podcasts…).
 6. **Read the card.** `SyncManifest.load` reads `.q2sync/manifest.json`;
    `CardScanner.scan` lists the whole card once (reserved items are skipped)
    and `CardScanner.files(in:from:)` takes `Music/` and `_explaylist_data/`

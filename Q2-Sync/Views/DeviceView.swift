@@ -57,11 +57,7 @@ struct DeviceView: View {
             Group {
                 switch navigation.deviceTab {
                 case .music:
-                    if let resolved {
-                        DeviceMusicView(connected: connected, devices: devices, library: library, resolved: resolved)
-                    } else {
-                        LibraryNotReadView(library: library)
-                    }
+                    DeviceMusicView(connected: connected, devices: devices, library: library, resolved: resolved)
                 case .audiobooks:
                     DeviceAudiobooksView(connected: connected, devices: devices)
                 case .settings:
@@ -93,8 +89,11 @@ struct DeviceView: View {
     /// - Returns: `nil` for the selection before the library has been
     ///   read; the estimate then shows only what the card holds.
     private func resolvedSelection() -> (ResolvedSelection?, CapacityEstimate) {
-        guard let snapshot = library.snapshot else { return (nil, capacity(for: nil)) }
         let selection = devices.shownSyncSettings?.music ?? connected.device.effectiveSelection
+        // With music off the library isn't needed: nothing is chosen.
+        guard let snapshot = library.snapshot ?? (selection.isEnabled ? nil : .empty) else {
+            return (nil, capacity(for: nil))
+        }
         let key = MusicTabCache.Key(
             selection: selection, libraryLoad: library.loadCount, trackCount: snapshot.tracks.count,
             manifestSavedAt: devices.cardManifest?.updatedAt, manifestCount: devices.cardManifest?.entries.count,

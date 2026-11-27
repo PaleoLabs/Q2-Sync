@@ -154,7 +154,8 @@ are kept.
    Q2 connects. To re-read it (after adding music, say), click **Refresh
    Library** at the top right, or choose **File › Refresh Music Library**
    (**⌘R**).
-3. Choose one (on a new Q2, nothing is chosen yet, and **Sync** waits until
+3. **Sync music onto** your Q2 is ticked to start with. Under **Sync:**,
+   choose one (on a new Q2, nothing is chosen yet, and **Sync** waits until
    you choose):
    - **Entire music library**: everything that can be copied, plus all your
      playlists.
@@ -162,6 +163,15 @@ are kept.
      in the **Artists**, **Albums**, **Genres** and **Playlists** tabs. Use the
      **Filter** box to find things quickly (**⌘F** puts the cursor there);
      click the **×** in it to clear the search.
+
+**Don't want music on your Q2?** Untick **Sync music onto** your Q2 (for
+example, to sync only audiobooks). Everything below it dims, and Q2 Sync no
+longer reads your Apple Music library when it syncs, so it works even if Music
+can't be read. Your ticks are kept for when you turn it back on. If the card
+holds songs Q2 Sync put there, an orange note says so: nothing is removed
+until you click **Apply**, and then only if you choose **Remove Them** in the
+preview (auto-sync stops and asks). Music you copied onto the card another way
+is never touched.
 
 To tick everything in a tab at once, hold **⌘** and click an unticked box.
 **⌘**-click a ticked box to untick everything. Only that tab changes. With
@@ -218,8 +228,10 @@ have chapters, and stay out of your music and shuffle.
 2. The first time, click **Allow Access to Books…**. A window opens at Apple
    Books' folder, already selected: click **Allow Access**. Q2 Sync only reads
    it, and remembers the permission.
-3. Tick **Sync audiobooks onto** your Q2, then choose **All audiobooks** or
-   **Selected audiobooks** and tick the books you want.
+3. Tick **Sync audiobooks onto** your Q2, then under **Sync:** choose **All
+   audiobooks** or **Selected audiobooks** and tick the books you want. The
+   **Search Audiobooks** box finds books by title or author (**⌘F** puts the
+   cursor there). **⌘**-click a box to tick or untick every book shown.
 4. Click **Apply**, as for music.
 
 - **Protected books can't be synced.** Most audiobooks bought in the Apple

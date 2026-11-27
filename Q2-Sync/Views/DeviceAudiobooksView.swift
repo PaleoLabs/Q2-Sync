@@ -4,7 +4,8 @@
 //
 //  PURPOSE
 //  The Q2's Audiobooks tab, like Finder's: "Sync audiobooks onto <Q2>",
-//  then all audiobooks or only the ticked ones, from Apple Books.
+//  then all audiobooks or only the ticked ones, from Apple Books, with a
+//  search field above the list.
 //
 //  HOW IT FITS
 //  Shown by `DeviceView`. Changes are edits until Apply (the Sync bar
@@ -26,6 +27,7 @@ struct DeviceAudiobooksView: View {
 
     @State private var accessProblem: String?
     @State private var showingSkipped = false
+    @State private var searchText = ""
 
     private var model: AudiobookLibraryModel { autoSync.audiobooks }
 
@@ -101,15 +103,33 @@ struct DeviceAudiobooksView: View {
                 Button("Check Again") { Task { await model.load() } }
             }
         case .loaded(let books):
+            let shown = filtered(books)
             VStack(spacing: 0) {
                 header
-                Divider()
-                List(books) { book in
-                    AudiobookRow(book: book, settings: settings) { ticked in
-                        devices.editSyncSettings { $0.audiobooks.setTicked(ticked, ids: [book.id], in: books) }
+                VStack(spacing: 0) {
+                    HStack {
+                        Spacer()
+                        FilterTextField(text: $searchText, prompt: "Search Audiobooks", field: .audiobooksTab)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
+                    Divider()
+                    if shown.isEmpty {
+                        ContentUnavailableView.search(text: searchText)
+                    } else {
+                        List(shown) { book in
+                            AudiobookRow(book: book, settings: settings) { ticked in
+                                // ⌘-click: every book shown takes this box's
+                                // new state, like the Music tab and Finder.
+                                let isForAll = NSApp.currentEvent?.modifierFlags.contains(.command) == true
+                                let ids = isForAll ? Set(shown.map(\.id)) : [book.id]
+                                devices.editSyncSettings { $0.audiobooks.setTicked(ticked, ids: ids, in: books) }
+                            }
+                        }
+                        .listStyle(.inset(alternatesRowBackgrounds: true))
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
+                // Like Finder: audiobooks off dims everything below the box.
                 .disabled(!settings.isEnabled)
                 Divider()
                 footer(books)
@@ -117,29 +137,38 @@ struct DeviceAudiobooksView: View {
         }
     }
 
+    /// "Sync audiobooks onto [Q2]", then all or selected, like Finder.
     private var header: some View {
-        HStack(spacing: 20) {
-            Toggle("Sync audiobooks onto \(connected.device.name)", isOn: Binding(
-                get: { settings.isEnabled },
-                set: { on in devices.editSyncSettings { $0.audiobooks.isEnabled = on } }))
-            Picker("Audiobooks", selection: Binding(
-                get: { settings.includesAll },
-                set: { all in devices.editSyncSettings { $0.audiobooks.includesAll = all } })) {
-                Text("All audiobooks").tag(true)
-                Text("Selected audiobooks").tag(false)
+        SyncSectionHeader(
+            title: "Sync audiobooks onto \(connected.device.name)",
+            isEnabled: Binding(get: { settings.isEnabled },
+                               set: { on in devices.editSyncSettings { $0.audiobooks.isEnabled = on } }),
+            choice: Binding(get: { settings.includesAll },
+                            set: { all in devices.editSyncSettings { $0.audiobooks.includesAll = all } }),
+            options: [
+                SyncChoiceOption(label: "All audiobooks", value: true),
+                SyncChoiceOption(label: "Selected audiobooks", value: false),
+            ]) {
+            if !settings.isEnabled && hasQ2SyncBooks {
+                SyncSectionNote(text: "Audiobooks are off. When you sync, the review lets you remove the books Q2 Sync put on this card.",
+                                systemImage: "exclamationmark.triangle", color: .orange)
+            } else {
+                Text("Only books downloaded to this Mac are listed.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .help("Apple Books doesn't list books that are only in iCloud. Download a book in Apple Books to sync it.")
             }
-            .pickerStyle(.radioGroup)
-            .horizontalRadioGroupLayout()
-            .labelsHidden()
-            .disabled(!settings.isEnabled)
-            Spacer()
-            Text("Only books downloaded to this Mac are listed.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .help("Apple Books doesn't list books that are only in iCloud. Download a book in Apple Books to sync it.")
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
+    }
+
+    /// `true` if the card holds audiobooks Q2 Sync copied there.
+    private var hasQ2SyncBooks: Bool {
+        !(devices.cardManifest?.audiobooks?.isEmpty ?? true)
+    }
+
+    /// The books matching the search text (title or author).
+    private func filtered(_ books: [Audiobook]) -> [Audiobook] {
+        AudiobookSearch.filter(books, matching: searchText)
     }
 
     private func footer(_ books: [Audiobook]) -> some View {

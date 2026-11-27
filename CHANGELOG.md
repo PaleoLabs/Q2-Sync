@@ -6,11 +6,14 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 
 ### Added
 - **Audiobooks from Apple Books (Q2 Pod).** A new **Audiobooks** tab on your Q2's page syncs all your audiobooks or only the ones you tick, like Finder does for an iPod. Each book gets its own folder in the card's `Audiobooks` folder, where Q2 Pod remembers your place and shows chapters. The first time, allow Q2 Sync to read Apple Books' folder (read-only). Protected (DRM) and not-downloaded books are listed with the reason and can't be ticked. Books you untick are removed only if you choose **Remove Them** in the preview, and only books Q2 Sync copied. The capacity bar shows audiobooks. Not on stock firmware. ([#48](https://github.com/PaleoLabs/Q2-Sync/issues/48))
+- **Sync music on or off, like Finder.** The Music tab starts with a **Sync music onto** your Q2 checkbox. Untick it to sync only audiobooks: Q2 Sync then doesn't read your Apple Music library at all, and the songs and playlists it put on the card are removed only if you choose **Remove Them** in the preview. Your ticks are kept for when you turn it back on. Q2s you've already set up keep syncing music.
+- **Search your audiobooks.** A **Search Audiobooks** box on the Audiobooks tab finds books by title or author, and **⌘**-click ticks or unticks every book shown.
 - **Tick or untick a whole list at once.** On the Music tab, **⌘**-click a checkbox and every item in that tab takes its new state. With a filter, only the items shown change. ([#59](https://github.com/PaleoLabs/Q2-Sync/issues/59))
 
 ### Changed
 - **Revert and Apply, like Finder.** Ticking boxes or choosing Entire music library on your Q2's page no longer saves straight away. **Sync** becomes **Revert** and **Apply**: Apply saves your choices and starts the sync, Revert puts back what you had. Changes you haven't applied are thrown away if you leave your Q2's page, switch to another Q2, unplug it or quit. While a sync runs, the button reads **Stop**.
 - **The capacity bar and Sync button are at the bottom of every tab** of your Q2's page, not only Music. The button lines up with the bar, as in Finder.
+- **The Music and Audiobooks tabs are laid out like Finder's**: the **Sync … onto** checkbox on its own line, then **Sync:** with the choices one under the other. **Sync** is available when only audiobooks are chosen.
 - **Hints for ⌘-click.** The first-time note on the Music tab and the **Deselect All** button's hover text mention it.
 
 ## 0.3.1 (2026-11-25)

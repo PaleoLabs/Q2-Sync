@@ -13,13 +13,32 @@
 //  `DeviceMonitor` holds an `UnappliedChanges` and saves on Apply; the
 //  device page shows `settings(for:)` and edits through `edit(_:_:)`.
 //
-//  ADDING A KIND OF CONTENT (audiobooks, podcasts…)
-//  Add a property to `DeviceSyncSettings`, read it from `KnownDevice` in
-//  `syncSettings`, and save it in `DeviceMonitor.saveSyncSettings`.
-//  Revert, Apply and "thrown away when you leave" then cover it as well.
+//  ADDING A KIND OF CONTENT (podcasts…)
+//  1. A selection type like `AudiobookSelection`: `isEnabled` ("Sync
+//     podcasts onto [Q2]") plus its choices, Codable with
+//     `decodeIfPresent` for every key, conforming to `ContentSyncChoice`.
+//  2. A property here, added to `contentChoices`.
+//  3. An optional field on `KnownDevice` (nil = default), read in
+//     `syncSettings`, saved in `DeviceMonitor.saveSyncSettings`.
+//  4. A `DeviceTab` case whose view starts with `SyncSectionHeader`.
+//  Revert, Apply, "thrown away when you leave" and the Sync button's
+//  "nothing chosen" check then cover it as well.
 //
 
 import Foundation
+
+/// What every kind of content's tab has in common, like Finder's: a
+/// "Sync … onto [Q2]" checkbox, then what to sync when it's on.
+protocol ContentSyncChoice: Hashable, Sendable {
+
+    /// The tab's "Sync … onto [Q2]" checkbox.
+    var isEnabled: Bool { get }
+
+    /// `true` if this kind of content puts nothing on the card: switched
+    /// off, or on with nothing chosen. (Off can still remove what Q2 Sync
+    /// put there earlier.)
+    var choosesNothing: Bool { get }
+}
 
 /// Everything a Q2 is set to sync. Edits on the Q2's page are a copy of
 /// this until Apply saves them.
@@ -31,6 +50,12 @@ struct DeviceSyncSettings: Hashable, Sendable {
 
     /// The Audiobooks tab: on or off, all or the ticked books.
     var audiobooks: AudiobookSelection = AudiobookSelection()
+
+    /// Every kind of content's settings. A new kind is added here.
+    var contentChoices: [any ContentSyncChoice] { [music, audiobooks] }
+
+    /// `true` if no kind of content puts anything on the card.
+    var choosesNothing: Bool { contentChoices.allSatisfy(\.choosesNothing) }
 }
 
 extension KnownDevice {

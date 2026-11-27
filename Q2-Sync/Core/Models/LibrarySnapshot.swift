@@ -67,6 +67,9 @@ struct LibrarySnapshot: Sendable {
         memo.value(key, make)
     }
 
+    /// A library with nothing in it, for syncing with music switched off.
+    static var empty: LibrarySnapshot { LibrarySnapshot(tracks: [], playlists: [], mediaFolderURL: nil) }
+
     /// Creates a snapshot and builds the ID lookup table.
     ///
     /// - Parameters:
