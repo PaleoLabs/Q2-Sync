@@ -53,7 +53,7 @@ struct LibraryStatusView: View {
     private var loadedSummary: some View {
         if let snapshot = library.snapshot {
             let counts = snapshot.availabilityCounts
-            Text("\(snapshot.tracks.count.formatted()) songs · \(snapshot.playlists.count.formatted()) playlists")
+            Text("\(pluralized(snapshot.tracks.count, "song")) · \(pluralized(snapshot.playlists.count, "playlist"))")
                 .fontWeight(.medium)
 
             // Show every category that isn't zero, e.g. "Not downloaded: 12".

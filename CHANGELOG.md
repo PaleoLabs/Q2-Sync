@@ -17,6 +17,9 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 - **The Settings tab is now General, and comes first**, as in Finder: General | Music | Audiobooks. Your Q2's page opens on it. **View › Show Q2 Settings** is now **Show Q2 General**. Q2 Sync's own Settings (**⌘,**) keeps its name. ([#66](https://github.com/PaleoLabs/Q2-Sync/issues/66))
 - **Hints for ⌘-click.** The first-time note on the Music tab and the **Deselect All** button's hover text mention it.
 
+### Fixed
+- **"1 album cover", not "1 album covers".** Counts of one now read correctly in the sync window, the Sync Complete summary, the sync preview ("1 song you no longer sync is still on the card"), the Music tab and the library status. ([#55](https://github.com/PaleoLabs/Q2-Sync/issues/55))
+
 ## 0.3.1 (2026-11-25)
 
 ### Added

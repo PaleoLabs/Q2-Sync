@@ -251,7 +251,7 @@ struct DeviceMusicView: View {
         HStack(spacing: 12) {
             Image(systemName: "music.note")
                 .foregroundStyle(.secondary)
-            Text("\(resolved.tracksToSync.count.formatted()) songs")
+            Text(pluralized(resolved.tracksToSync.count, "song"))
                 .fontWeight(.medium)
             // Total playing time, e.g. "3d 4h" or "2h 35m".
             if resolved.totalDurationSeconds >= 60 {

@@ -289,9 +289,9 @@ struct SyncPreviewView: View {
                 if !plan.removals.isEmpty {
                     HStack {
                         Image(systemName: "minus.circle").foregroundStyle(.red)
-                        Text("\(plan.removals.count.formatted()) songs you no longer sync are still on the card.")
+                        Text("\(pluralized(plan.removals.count, "song")) you no longer sync \(plan.removals.count == 1 ? "is" : "are") still on the card.")
                         Spacer()
-                        Toggle("Remove Them", isOn: Binding(get: { sync.options.applyRemovals },
+                        Toggle(plan.removals.count == 1 ? "Remove It" : "Remove Them", isOn: Binding(get: { sync.options.applyRemovals },
                                                             set: { sync.options.applyRemovals = $0 }))
                             .toggleStyle(.checkbox)
                     }
@@ -588,7 +588,7 @@ struct SyncPreviewView: View {
         if !plan.removals.isEmpty {
             let expanded = isExpanded("remove")
             Section {
-                Toggle("Remove the \(plan.removals.count.formatted()) songs you no longer sync",
+                Toggle("Remove the \(pluralized(plan.removals.count, "song")) you no longer sync",
                        isOn: Binding(get: { sync.options.applyRemovals },
                                      set: { sync.options.applyRemovals = $0 }))
                 if assessment.needsLargeRemovalConfirmation {
@@ -738,7 +738,7 @@ struct SyncPreviewView: View {
                             .font(.caption.bold())
                             .foregroundStyle(.secondary)
                             .rotationEffect(.degrees(open ? 90 : 0))
-                        Text("\(album.displayName) · \(album.items.count.formatted()) songs")
+                        Text("\(album.displayName) · \(pluralized(album.items.count, "song"))")
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .foregroundStyle(individually ? .primary : .secondary)
@@ -1025,12 +1025,12 @@ struct SyncProgressView: View {
             parts.append("\(Int64(progress.bytesCopied).formatted(style)) of \(Int64(progress.totalBytes).formatted(style))")
         }
         if progress.totalOperations > 0 {
-            parts.append("\(progress.completedOperations.formatted()) of \(progress.totalOperations.formatted()) items")
+            parts.append("\(progress.completedOperations.formatted()) of \(pluralized(progress.totalOperations, "item"))")
         }
         // Covers come after the music; say so, as the estimate above is
         // for the music only until they start.
         if progress.coversTotal > 0 && progress.totalBytes > 0 {
-            parts.append("then \(progress.coversTotal.formatted()) album covers")
+            parts.append("then \(pluralized(progress.coversTotal, "album cover"))")
         }
         return parts.joined(separator: " · ")
     }
@@ -1163,7 +1163,7 @@ struct SyncResultView: View {
         } else if report.playlistsTakenOut > 0 {
             parts.append("no playlists need importing")
         }
-        if report.coversWritten > 0 { parts.append("\(report.coversWritten) album covers added") }
+        if report.coversWritten > 0 { parts.append("\(pluralized(report.coversWritten, "album cover")) added") }
         if report.audiobooksCopied > 0 { parts.append("\(pluralized(report.audiobooksCopied, "audiobook")) copied") }
         if report.audiobooksRemoved > 0 { parts.append("\(pluralized(report.audiobooksRemoved, "audiobook")) removed") }
         let copied = report.bytesCopied == 0
