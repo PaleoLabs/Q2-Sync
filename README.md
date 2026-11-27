@@ -143,13 +143,17 @@ your Mac, or delete it.
 
 <p align="center"><em>Browse your library against your Q2, with Song Info for any song</em></p>
 
+![The Books browser in the sidebar's Audiobooks section, with each book's status on the Q2 and the Book Info panel](docs/images/books-browser.png)
+
+<p align="center"><em>Browse your audiobooks, with Book Info for any book</em></p>
+
 | | |
 | --- | --- |
-| ![Choosing what to sync](docs/images/device-music.png) | ![Sync preview](docs/images/sync-preview.png) |
-| *Choose artists, albums, genres and playlists* | *Preview every change before it happens* |
-| ![Capacity bar](docs/images/capacity-bar.png) | ![Q2 Sync settings](docs/images/app-settings.png) |
-| *Finder-style capacity bar* | *Menu bar item and open at login* |
-| ![Sync Complete window with the steps to follow on the Q2](docs/images/sync-complete.png) | ![Firmware settings showing the installed Q2 Pod version and release notes](docs/images/firmware-settings.png) |
+| ![The Music tab with chosen artists, the capacity bar and Revert and Apply](docs/images/device-music.png) | ![Sync preview with Details open: counts per kind of content and the Remove Them choice](docs/images/sync-preview.png) |
+| *Choose artists, albums, genres and playlists, then Apply* | *Preview every change before it happens* |
+| ![The Audiobooks tab with selected books and protected (DRM) books marked](docs/images/device-audiobooks.png) | ![Q2 Sync settings](docs/images/app-settings.png) |
+| *Pick audiobooks from Apple Books* | *Menu bar item and open at login* |
+| ![Sync Complete window with the steps to follow on the Q2](docs/images/sync-complete.png) | ![The General tab's firmware section with the latest Q2 Pod release notes](docs/images/firmware-settings.png) |
 | *Clear next steps after every sync* | *Firmware updates and switching* |
 
 ## Safe by design
