@@ -32,8 +32,12 @@ struct DeviceView: View {
     /// Holds which tab is showing, so the menus can switch it.
     @Environment(AutoSyncController.self) private var autoSync
 
+    /// The last resolved selection and space numbers (see `MusicTabCache`).
+    @State private var cache = MusicTabCache()
+
     var body: some View {
         @Bindable var navigation = autoSync.navigation
+        let (resolved, estimate) = resolvedSelection()
         VStack(spacing: 0) {
             DeviceHeaderView(connected: connected, devices: devices, showSettings: { navigation.deviceTab = .settings })
                 .padding(.horizontal, 20)
@@ -49,17 +53,63 @@ struct DeviceView: View {
 
             Divider()
 
-            switch navigation.deviceTab {
-            case .music:
-                DeviceMusicView(connected: connected, devices: devices, library: library)
-            case .settings:
-                DeviceSettingsView(connected: connected, devices: devices)
+            Group {
+                switch navigation.deviceTab {
+                case .music:
+                    if let resolved {
+                        DeviceMusicView(connected: connected, devices: devices, library: library, resolved: resolved)
+                    } else {
+                        LibraryNotReadView(library: library)
+                    }
+                case .settings:
+                    DeviceSettingsView(connected: connected, devices: devices)
+                }
             }
+            // Fill the space so the Sync bar sits at the bottom on every tab.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            Divider()
+            // Below every tab, like Finder: one Revert/Apply covers them all.
+            DeviceSyncBar(connected: connected, devices: devices, estimate: estimate)
         }
         // Fill the whole detail area, pinned to the top, so the header
         // never floats to the middle when the content below is short.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .navigationTitle(connected.device.name)
+    }
+
+    /// The shown music selection resolved against the library, and the
+    /// capacity bar's numbers for it. Redone only when the selection,
+    /// library or card changed, not on every redraw (typing in the filter,
+    /// switching sections…).
+    ///
+    /// - Returns: `nil` for the selection before the library has been
+    ///   read; the estimate then shows only what the card holds.
+    private func resolvedSelection() -> (ResolvedSelection?, CapacityEstimate) {
+        guard let snapshot = library.snapshot else { return (nil, capacity(for: nil)) }
+        let selection = devices.shownSyncSettings?.music ?? connected.device.effectiveSelection
+        let key = MusicTabCache.Key(
+            selection: selection, libraryLoad: library.loadCount, trackCount: snapshot.tracks.count,
+            manifestSavedAt: devices.cardManifest?.updatedAt, manifestCount: devices.cardManifest?.entries.count,
+            totalBytes: connected.volume.totalCapacity ?? 0, freeBytes: connected.volume.availableCapacity ?? 0,
+            cardReadable: connected.accessURL != nil)
+        let (resolved, estimate) = cache.values(for: key) {
+            let resolved = SelectionResolver.resolve(selection, in: snapshot)
+            return (resolved, capacity(for: resolved))
+        }
+        return (resolved, estimate)
+    }
+
+    /// Capacity numbers for the connected card and a selection.
+    ///
+    /// - Parameter resolved: The resolved selection, or `nil` before the
+    ///   library has been read.
+    private func capacity(for resolved: ResolvedSelection?) -> CapacityEstimate {
+        CapacityEstimate.compute(totalBytes: connected.volume.totalCapacity ?? 0,
+                                 freeBytes: connected.volume.availableCapacity ?? 0,
+                                 manifest: devices.cardManifest,
+                                 selection: resolved,
+                                 cardReadable: connected.accessURL != nil)
     }
 }
 

@@ -5,14 +5,14 @@
 //  PURPOSE
 //  The "Music" tab of the device page: choose "Entire music library" or
 //  tick individual artists, albums, genres and playlists, like Finder's
-//  iPod sync. A summary bar shows how many songs and bytes will sync and
+//  iPod sync. A summary line shows how many songs and bytes will sync and
 //  how many will be skipped (cloud-only, protected, missing).
 //
 //  HOW IT FITS
-//  Reads the library snapshot from `LibraryModel`, reads and saves the
-//  selection through `DeviceMonitor` (stored per device), and uses
-//  `SelectionResolver` (Core) for the summary. The summary bar holds the
-//  Sync button, and `CapacityBarView` sits above it.
+//  Reads the library snapshot from `LibraryModel`. Changes are edits
+//  through `DeviceMonitor.editSyncSettings`, saved only on Apply (see
+//  `DeviceSyncBar`). `DeviceView` resolves the shown selection once and
+//  passes it in, since the capacity bar below the tabs needs it too.
 //
 
 import SwiftUI
@@ -23,6 +23,9 @@ struct DeviceMusicView: View {
     let connected: ConnectedDevice
     let devices: DeviceMonitor
     let library: LibraryModel
+
+    /// The shown selection, resolved against the library by `DeviceView`.
+    let resolved: ResolvedSelection
 
     /// Which section's checkboxes are showing.
     @State private var section: BrowseCategory = .artists
@@ -36,61 +39,26 @@ struct DeviceMusicView: View {
     /// Controls the skipped-songs popover.
     @State private var showingSkipped = false
 
-    /// The last resolved selection and space numbers (see `MusicTabCache`).
-    @State private var cache = MusicTabCache()
-
-    /// Runs syncs (from the environment, set up in `Q2SyncApp`).
-    @Environment(SyncCoordinator.self) private var sync
-
     /// Starts syncs the same way the menu bar does.
     @Environment(AutoSyncController.self) private var autoSync
 
-    /// The saved selection for this device.
-    private var selection: SyncSelection { connected.device.effectiveSelection }
+    /// The shown selection: unapplied edits, or what's saved.
+    private var selection: SyncSelection {
+        devices.shownSyncSettings?.music ?? connected.device.effectiveSelection
+    }
 
     var body: some View {
         if let snapshot = library.snapshot {
             content(snapshot: snapshot)
         } else {
-            VStack(spacing: 0) {
-                LibraryNotReadView(library: library)
-                Divider()
-                // Current card usage, before any selection is known.
-                CapacityBarView(estimate: capacity(for: nil))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-            }
+            LibraryNotReadView(library: library)
         }
-    }
-
-    /// Capacity numbers for the connected card and a selection.
-    ///
-    /// - Parameter resolved: The resolved selection, or `nil` before the
-    ///   library has been read.
-    private func capacity(for resolved: ResolvedSelection?) -> CapacityEstimate {
-        CapacityEstimate.compute(totalBytes: connected.volume.totalCapacity ?? 0,
-                                 freeBytes: connected.volume.availableCapacity ?? 0,
-                                 manifest: devices.cardManifest,
-                                 selection: resolved,
-                                 cardReadable: connected.accessURL != nil)
     }
 
     // MARK: - Main content
 
     @ViewBuilder
     private func content(snapshot: LibrarySnapshot) -> some View {
-        // Redone only when the selection, library or card changed, not on
-        // every redraw (typing in the filter, switching sections…).
-        let key = MusicTabCache.Key(
-            selection: selection, libraryLoad: library.loadCount, trackCount: snapshot.tracks.count,
-            manifestSavedAt: devices.cardManifest?.updatedAt, manifestCount: devices.cardManifest?.entries.count,
-            totalBytes: connected.volume.totalCapacity ?? 0, freeBytes: connected.volume.availableCapacity ?? 0,
-            cardReadable: connected.accessURL != nil)
-        let (resolved, estimate) = cache.values(for: key) {
-            let resolved = SelectionResolver.resolve(selection, in: snapshot)
-            return (resolved, capacity(for: resolved))
-        }
-
         VStack(alignment: .leading, spacing: 0) {
             // The first step on a new Q2: nothing is chosen yet.
             // Always laid out, and just made invisible once something is
@@ -98,7 +66,7 @@ struct DeviceMusicView: View {
             do {
                 Label(hasQ2SyncSongs
                       ? "Nothing is chosen. Syncing now would remove the songs Q2 Sync put on this card."
-                      : "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want.",
+                      : "Choose what to put on your Q2: your entire music library, or tick the artists, albums, genres and playlists you want. ⌘-click a box to tick or untick the whole list.",
                       systemImage: hasQ2SyncSongs ? "exclamationmark.triangle" : "hand.point.down")
                     .foregroundStyle(hasQ2SyncSongs ? .orange : .accentColor)
                     // Wraps to the width it's given. Not `fixedSize(vertical:)`:
@@ -134,15 +102,11 @@ struct DeviceMusicView: View {
                 ContentUnavailableView("Your Entire Library",
                                        systemImage: "music.note.list",
                                        description: Text("Every song and playlist that can be copied will be synced."))
-                    // Fill the space so the capacity and Sync bars sit at the bottom.
+                    // Fill the space so the summary and Sync bars sit at the bottom.
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             Divider()
-            // Finder-style bar: what the card holds and what this sync adds.
-            CapacityBarView(estimate: estimate)
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
             summaryBar(resolved)
         }
     }
@@ -273,23 +237,20 @@ struct DeviceMusicView: View {
     /// `true` if the card holds songs Q2 Sync put there. Then an empty
     /// selection is a real choice (remove them all); otherwise there's
     /// nothing to sync yet.
-    private var hasQ2SyncSongs: Bool {
-        !(devices.cardManifest?.entries.isEmpty ?? true)
-    }
+    private var hasQ2SyncSongs: Bool { devices.cardHasQ2SyncSongs }
 
-    /// Applies a change to the selection and saves it.
+    /// Changes the shown selection. Saved only on Apply.
     ///
     /// - Parameter change: A closure that edits a copy of the selection.
     ///   `inout` lets the closure modify the copy in place.
     private func update(_ change: (inout SyncSelection) -> Void) {
-        var copy = selection
-        change(&copy)
-        devices.setSelection(copy)
+        devices.editSyncSettings { change(&$0.music) }
     }
 
     // MARK: - Summary bar
 
-    /// "1,234 songs · 8.2 GB · 32 skipped" plus Deselect All.
+    /// "1,234 songs · 8.2 GB · 32 skipped" plus Deselect All. The Sync,
+    /// Revert and Apply buttons are in `DeviceSyncBar`, below the tabs.
     private func summaryBar(_ resolved: ResolvedSelection) -> some View {
         HStack(spacing: 12) {
             Image(systemName: "music.note")
@@ -327,18 +288,8 @@ struct DeviceMusicView: View {
                 Button("Deselect All") {
                     update { $0 = SyncSelection(mode: .selectedItems) }
                 }
+                .help("Untick everything on every tab. To tick or untick only this tab, ⌘-click a checkbox.")
             }
-
-            Button {
-                Task { await autoSync.startSync(automatic: false) }
-            } label: {
-                Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(sync.phase != .idle || connected.accessURL == nil || (selection.isEmpty && !hasQ2SyncSongs))
-            .help(selection.isEmpty && !hasQ2SyncSongs
-                  ? "Choose some music first"
-                  : "Review the changes, then copy them to the Q2")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
@@ -379,7 +330,7 @@ extension Set {
     }
 }
 
-/// The Music tab's last resolved selection and capacity estimate. Working
+/// The device page's last resolved selection and capacity estimate. Working
 /// them out goes through every song in the library and on the card, so
 /// they're kept until something they depend on changes. A class held in
 /// `@State`: updating it doesn't redraw the view.

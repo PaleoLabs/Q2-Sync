@@ -45,8 +45,14 @@ final class AppNavigation {
             // when you leave it.
             if case .device = selection { return }
             deviceTab = .music
+            // Edits not applied are thrown away when you leave, like Finder.
+            if case .device = oldValue { onLeaveDevicePage?() }
         }
     }
+
+    /// Called when the sidebar leaves the Q2's page. Set by
+    /// `AutoSyncController` to throw away unapplied edits.
+    @ObservationIgnored var onLeaveDevicePage: (() -> Void)?
 
     /// Which tab of the Q2's page is showing.
     var deviceTab: DeviceTab = .music

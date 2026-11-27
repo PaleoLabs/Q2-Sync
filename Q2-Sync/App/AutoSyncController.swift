@@ -77,6 +77,7 @@ final class AutoSyncController {
         // objects this controller owns references to.
         devices.onDeviceConnected = { [weak self] connected in self?.deviceConnected(connected) }
         devices.onNewDriveNeedsSetUp = { [weak self] volume in self?.newDriveNeedsSetUp(volume) }
+        navigation.onLeaveDevicePage = { [weak devices] in devices?.discardUnappliedChanges() }
         sync.onAutomaticEvent = { [weak self] event in self?.handle(event) }
         notifications.onAction = { [weak self] action in self?.handle(action) }
         installer.onPendingQuestionAnswered = { [weak self] in

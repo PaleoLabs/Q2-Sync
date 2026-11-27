@@ -172,7 +172,7 @@ Everything you tick is combined: a song is synced if its artist, album, genre
 or any of its playlists is ticked. When you tick an artist, their new albums
 sync automatically next time.
 
-The bar at the bottom shows:
+The line at the bottom of the Music tab shows:
 
 - how many songs your selection holds, how long they play for in total
   (for example "2h 35m" or "3d 4h"), and how much space they use;
@@ -180,6 +180,8 @@ The bar at the bottom shows:
   only in iCloud (Q2 Sync never downloads them; if they're your own music,
   download them in Music first) and protected (DRM) songs, which includes
   every song from an Apple Music subscription;
+At the bottom of your Q2's page, on every tab:
+
 - the **capacity bar**: your music, music you've unticked, what this sync will
   add, **Other** (everything else: the Q2's own data such as its library and
   Cover Flow images, playlists and album covers, and music copied there
@@ -191,7 +193,19 @@ The bar at the bottom shows:
   the card (grant access again on the Settings tab), the bar shows only used
   and free space.
 
-Your choices are saved for this Q2 automatically.
+Like Finder's iPod page, nothing you tick is saved straight away. As soon as
+you change anything, the **Sync** button becomes **Revert** and **Apply**:
+
+- **Apply** saves your choices for this Q2 and starts a sync (the preview
+  below opens).
+- **Revert** puts back the choices you had, and **Sync** returns.
+
+Your changes stay while you switch between the Music and Settings tabs. They
+are thrown away, without asking, if you go to another page in the sidebar,
+switch to another Q2, unplug the Q2 or quit Q2 Sync.
+
+While a sync is under way the button reads **Stop**. Stopping keeps the
+choices you applied.
 
 ### Browse your Music library
 
@@ -258,7 +272,7 @@ marks above, so it works without the Q2 connected.
 
 ## 4. Run a sync
 
-1. Click **Sync**.
+1. Click **Sync** (or **Apply**, if you've just changed your choices).
 2. Q2 Sync reads your library, checks the card, and shows a **preview**: one
    sentence saying what the sync will do (for example "This sync will update
    3 playlists. Everything else you chose is already on the card."), and how much space

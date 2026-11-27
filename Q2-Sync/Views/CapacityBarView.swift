@@ -80,6 +80,9 @@ struct CapacityBarView: View {
         }
         .frame(height: 18)
         .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.separator))
+        // Lets a button beside this view line up with the bar, not with
+        // the middle of the bar, legend and notes together.
+        .alignmentGuide(.capacityBarCenter) { $0[VerticalAlignment.center] }
     }
 
     /// Coloured dots with labels and sizes, e.g. "● Music 266.6 MB".
@@ -157,4 +160,18 @@ private struct OptionalHelp: ViewModifier {
     func body(content: Content) -> some View {
         if let text { content.help(text) } else { content }
     }
+}
+
+extension VerticalAlignment {
+
+    /// The middle of `CapacityBarView`'s bar (not its legend or notes).
+    private enum CapacityBarCenter: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat {
+            context[VerticalAlignment.center]
+        }
+    }
+
+    /// Lines things up with the middle of the capacity bar, as Finder's
+    /// Sync button is (use in an `HStack` beside a `CapacityBarView`).
+    static let capacityBarCenter = VerticalAlignment(CapacityBarCenter.self)
 }

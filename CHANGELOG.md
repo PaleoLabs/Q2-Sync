@@ -7,6 +7,11 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 ### Added
 - **Tick or untick a whole list at once.** On the Music tab, **⌘**-click a checkbox and every item in that tab takes its new state. With a filter, only the items shown change. ([#59](https://github.com/PaleoLabs/Q2-Sync/issues/59))
 
+### Changed
+- **Revert and Apply, like Finder.** Ticking boxes or choosing Entire music library on your Q2's page no longer saves straight away. **Sync** becomes **Revert** and **Apply**: Apply saves your choices and starts the sync, Revert puts back what you had. Changes you haven't applied are thrown away if you leave your Q2's page, switch to another Q2, unplug it or quit. While a sync runs, the button reads **Stop**.
+- **The capacity bar and Sync button are at the bottom of every tab** of your Q2's page, not only Music. The button lines up with the bar, as in Finder.
+- **Hints for ⌘-click.** The first-time note on the Music tab and the **Deselect All** button's hover text mention it.
+
 ## 0.3.1 (2026-11-25)
 
 ### Added

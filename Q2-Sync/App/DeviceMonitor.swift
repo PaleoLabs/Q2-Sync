@@ -383,6 +383,9 @@ final class DeviceMonitor {
     /// Clears the connected device and releases sandbox access.
     private func disconnect() {
         flushPendingSave()
+        // Unapplied edits go with the card (unplugged, or switched to
+        // another Q2), as in Finder.
+        discardUnappliedChanges()
         connected?.accessURL?.stopAccessingSecurityScopedResource()
         connected = nil
         cardManifest = nil
@@ -540,9 +543,74 @@ final class DeviceMonitor {
         }
     }
 
+    /// `true` if the connected card holds songs Q2 Sync put there. Then an
+    /// empty selection is a real choice (remove them all); otherwise
+    /// there's nothing to sync yet.
+    var cardHasQ2SyncSongs: Bool {
+        !(cardManifest?.entries.isEmpty ?? true)
+    }
+
+    // MARK: - Unapplied changes (Revert / Apply)
+
+    /// Edits made on the Q2's page and not applied yet, like Finder's
+    /// iPod page. Kept in memory only: quitting throws them away.
+    private(set) var unappliedChanges = UnappliedChanges()
+
+    /// What the Q2's page shows for the connected Q2: its unapplied edits,
+    /// or the saved settings.
+    var shownSyncSettings: DeviceSyncSettings? {
+        connected.map { unappliedChanges.settings(for: $0.device) }
+    }
+
+    /// `true` if the connected Q2 has edits waiting for Revert or Apply.
+    var hasUnappliedChanges: Bool {
+        connected.map { unappliedChanges.hasChanges(for: $0.device) } ?? false
+    }
+
+    /// Edits the connected Q2's settings without saving them (until Apply).
+    ///
+    /// - Parameter change: Edits a copy of the shown settings in place.
+    func editSyncSettings(_ change: (inout DeviceSyncSettings) -> Void) {
+        guard let device = connected?.device else { return }
+        unappliedChanges.edit(device, change)
+    }
+
+    /// Revert: puts the connected Q2's saved settings back on its page.
+    func revertUnappliedChanges() {
+        guard let uuid = connected?.device.volumeUUID else { return }
+        unappliedChanges.discard(volumeUUID: uuid)
+    }
+
+    /// Apply: saves the connected Q2's edits now.
+    ///
+    /// - Returns: `true` if there were edits and they were saved.
+    /// - Side effects: Writes `devices.json` in the app's container.
+    @discardableResult
+    func applyUnappliedChanges() -> Bool {
+        guard let device = connected?.device,
+              let changes = unappliedChanges.changes(for: device) else { return false }
+        saveSyncSettings(changes)
+        unappliedChanges.discard(volumeUUID: device.volumeUUID)
+        return true
+    }
+
+    /// Throws away every unapplied edit: called on leaving the Q2's page
+    /// and when the Q2 disconnects, as Finder does.
+    func discardUnappliedChanges() {
+        unappliedChanges.discardAll()
+    }
+
+    /// Saves sync settings for the connected Q2 at once.
+    ///
+    /// - Parameter settings: Every kind of content's settings. A new kind
+    ///   (audiobooks…) is saved here too.
+    private func saveSyncSettings(_ settings: DeviceSyncSettings) {
+        setSelection(settings.music)
+        flushPendingSave()
+    }
+
     /// Saves a new sync selection for the connected Q2.
     ///
-    /// Called on every checkbox click, so the choice is never lost.
     /// - Parameter selection: The updated selection.
     /// - Side effects: Writes `devices.json` in the app's container.
     func setSelection(_ selection: SyncSelection) {

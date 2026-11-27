@@ -150,3 +150,83 @@ struct SelectionPersistenceTests {
         #expect(device?.effectiveSelection.isEmpty == true)
     }
 }
+
+@Suite("Unapplied changes (Revert / Apply)")
+struct UnappliedChangesTests {
+
+    /// A Q2 with one artist ticked and saved.
+    private func device(uuid: String = "U") -> KnownDevice {
+        var device = KnownDevice(volumeUUID: uuid, name: "Q2", firmware: .q2Pod, bookmarkData: Data(),
+                                 addedDate: .now, hasCompletedFirstSync: false)
+        device.selection = SyncSelection(mode: .selectedItems, artistIDs: ["artist:ac/dc"])
+        return device
+    }
+
+    @Test("With no edits, the saved settings are shown and there's nothing to apply")
+    func noEdits() {
+        let changes = UnappliedChanges()
+        let q2 = device()
+        #expect(changes.settings(for: q2) == q2.syncSettings)
+        #expect(!changes.hasChanges(for: q2))
+        #expect(changes.changes(for: q2) == nil)
+    }
+
+    @Test("A tick is shown but not saved until applied")
+    func editIsPending() {
+        var changes = UnappliedChanges()
+        let q2 = device()
+        changes.edit(q2) { $0.music.artistIDs.insert("artist:adele") }
+        #expect(changes.hasChanges(for: q2))
+        #expect(changes.settings(for: q2).music.artistIDs == ["artist:ac/dc", "artist:adele"])
+        #expect(q2.syncSettings.music.artistIDs == ["artist:ac/dc"], "Saved settings untouched")
+        #expect(changes.changes(for: q2)?.music.artistIDs.contains("artist:adele") == true)
+    }
+
+    @Test("Ticking then unticking the same box counts as no change")
+    func backToSavedIsNoChange() {
+        var changes = UnappliedChanges()
+        let q2 = device()
+        changes.edit(q2) { $0.music.artistIDs.insert("artist:adele") }
+        changes.edit(q2) { $0.music.artistIDs.remove("artist:adele") }
+        #expect(!changes.hasChanges(for: q2))
+    }
+
+    @Test("Switching to Entire library is an edit too")
+    func modeChange() {
+        var changes = UnappliedChanges()
+        let q2 = device()
+        changes.edit(q2) { $0.music.mode = .entireLibrary }
+        #expect(changes.hasChanges(for: q2))
+        #expect(changes.settings(for: q2).music.mode == .entireLibrary)
+    }
+
+    @Test("Revert puts the saved settings back")
+    func revert() {
+        var changes = UnappliedChanges()
+        let q2 = device()
+        changes.edit(q2) { $0.music.artistIDs.insert("artist:adele") }
+        changes.discard(volumeUUID: q2.volumeUUID)
+        #expect(!changes.hasChanges(for: q2))
+        #expect(changes.settings(for: q2) == q2.syncSettings)
+    }
+
+    @Test("Once the edits are saved, they're no longer unapplied")
+    func appliedMatchesSaved() {
+        var changes = UnappliedChanges()
+        var q2 = device()
+        changes.edit(q2) { $0.music.artistIDs.insert("artist:adele") }
+        q2.selection = changes.changes(for: q2)?.music // What Apply saves.
+        #expect(!changes.hasChanges(for: q2))
+    }
+
+    @Test("Each Q2 keeps its own edits; leaving throws all away")
+    func perDevice() {
+        var changes = UnappliedChanges()
+        let first = device(uuid: "A"), second = device(uuid: "B")
+        changes.edit(first) { $0.music.artistIDs.insert("artist:adele") }
+        #expect(changes.hasChanges(for: first))
+        #expect(!changes.hasChanges(for: second))
+        changes.discardAll()
+        #expect(!changes.hasChanges(for: first))
+    }
+}
