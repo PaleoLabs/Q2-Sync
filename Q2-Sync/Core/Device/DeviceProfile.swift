@@ -173,6 +173,21 @@ struct DeviceProfile: Hashable, Sendable {
     /// Card path on the device itself (used for playlists and docs).
     let deviceMountPoint: String
 
+    /// The card folder audiobooks go in, or `nil` if this firmware doesn't
+    /// support syncing them. Q2 Pod: `Audiobooks` (its own Library row,
+    /// resume and chapters). Stock: `nil` (not known to resume books).
+    var audiobooksFolderName: String? = nil
+
+    /// `true` if `components` (a card path split at "/") is inside the
+    /// audiobooks folder and no deeper than `Audiobooks/<book>/<file>`:
+    /// the only part of a reserved folder Q2 Sync may change. See
+    /// `PathGuard.check(url:for:)` for what's allowed there.
+    func isAudiobookItem(_ components: [String]) -> Bool {
+        guard let name = audiobooksFolderName, let first = components.first,
+              first.lowercased() == name.lowercased() else { return false }
+        return components.count <= 3
+    }
+
     /// What to do after a sync, in order: eject, update the Q2's library,
     /// then whatever else applies.
     ///
@@ -239,7 +254,8 @@ extension DeviceProfile {
             "Open Cover Flow: the covers rebuild then.",
         ],
         tfCardUpdateMenuPath: "System settings → System Update → TF card update",
-        deviceMountPoint: "/mnt/mmc"
+        deviceMountPoint: "/mnt/mmc",
+        audiobooksFolderName: "Audiobooks"
     )
 
     /// Shanling's stock firmware. It shares the card layout with Q2 Pod,

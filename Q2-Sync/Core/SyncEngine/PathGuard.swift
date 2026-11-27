@@ -187,14 +187,32 @@ struct PathGuard: Sendable {
         let relative = String(resolved.dropFirst(rootPath.count + 1))
         let components = relative.split(separator: "/").map(String.init)
 
-        // (d) Not a reserved item.
-        if profile.reservedItems.isReserved(components: components) {
+        // (d) Not a reserved item. One narrow exception: on firmware that
+        // supports audiobooks (Q2 Pod), `Audiobooks/<book>/<audio file>`,
+        // and only these operations: create `Audiobooks` or a book folder;
+        // write an audio file directly inside a book folder; delete such a
+        // file or an (empty) book folder. Nothing deeper, no other file
+        // types, never `Audiobooks` itself, never a user-confirmed delete.
+        let isAudiobookItem = profile.isAudiobookItem(components)
+        if isAudiobookItem {
+            let ext = (components.last.map { ($0 as NSString).pathExtension } ?? "").lowercased()
+            let allowed: Bool
+            switch operation {
+            case .createDirectory: allowed = components.count <= 2
+            case .write: allowed = components.count == 3 && CardScanner.audioExtensions.contains(ext)
+            case .delete: allowed = components.count >= 2
+            case .deleteConfirmedByUser: allowed = false
+            }
+            if !allowed || profile.reservedItems.isReservedInside(components: components) {
+                throw Violation.reservedItem(relative)
+            }
+        } else if profile.reservedItems.isReserved(components: components) {
             throw Violation.reservedItem(relative)
         }
 
         // Managed areas for normal sync operations.
         if operation != .deleteConfirmedByUser {
-            guard let top = components.first, managedAreas.contains(top.lowercased()) else {
+            guard let top = components.first, managedAreas.contains(top.lowercased()) || isAudiobookItem else {
                 throw Violation.outsideManagedArea(relative)
             }
             // Never delete a whole managed folder (e.g. all of Music/).

@@ -131,7 +131,10 @@ struct SyncPreviewView: View {
             && plan.playlistPlan.waitingForImport > 0
     }
 
-    private var hasNothingToList: Bool { plan.isEmpty && plan.cardOnly.isEmpty && plan.skipped.isEmpty }
+    private var hasNothingToList: Bool {
+        plan.isEmpty && plan.cardOnly.isEmpty && plan.skipped.isEmpty
+            && plan.audiobooks.skipped.isEmpty && plan.audiobooks.note == nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -269,8 +272,20 @@ struct SyncPreviewView: View {
     /// something to decide.
     @ViewBuilder
     private var decisions: some View {
-        if !plan.removals.isEmpty || !cardOnlyGroups.isEmpty || asksAboutPlaylistImport {
+        if !plan.removals.isEmpty || plan.audiobooks.booksToRemove > 0 || !cardOnlyGroups.isEmpty || asksAboutPlaylistImport {
             VStack(alignment: .leading, spacing: 10) {
+                if plan.audiobooks.booksToRemove > 0 {
+                    HStack {
+                        Image(systemName: "minus.circle").foregroundStyle(.red)
+                        Text(plan.audiobooks.booksToRemove == 1
+                             ? "1 audiobook you no longer sync is still on the card."
+                             : "\(plan.audiobooks.booksToRemove.formatted()) audiobooks you no longer sync are still on the card.")
+                        Spacer()
+                        Toggle("Remove Them", isOn: Binding(get: { sync.options.applyRemovals },
+                                                            set: { sync.options.applyRemovals = $0 }))
+                            .toggleStyle(.checkbox)
+                    }
+                }
                 if !plan.removals.isEmpty {
                     HStack {
                         Image(systemName: "minus.circle").foregroundStyle(.red)
@@ -342,6 +357,14 @@ struct SyncPreviewView: View {
             countLine("Remove playlists", playlists.removals.count, "minus.circle", .red)
             countLine("Already imported", sync.options.playlistsWereImported ? playlists.leavingImport.count : 0, "tray.and.arrow.up", .secondary)
         }
+        let books = plan.audiobooks
+        let showsAudiobooks = !books.isEmpty || !books.skipped.isEmpty || books.unchangedBooks > 0
+        let audiobookBox = countBox("Audiobooks") {
+            countLine("Copy", books.booksToCopy, "plus.circle.fill", .green)
+            countLine("Remove", sync.options.applyRemovals ? books.booksToRemove : 0, "minus.circle.fill", .red)
+            countLine("Already on card", books.unchangedBooks + books.adoptions.count, "checkmark.circle.fill", .secondary)
+            countLine("Can't sync", books.skipped.count, "exclamationmark.circle.fill", .orange)
+        }
         let coverBox = countBox("Album Covers") {
             countLine("Album covers", plan.coverWrites.count, "photo", .indigo)
             countLine("Remove covers", plan.coverRemovals.count, "minus.circle", .red)
@@ -359,7 +382,11 @@ struct SyncPreviewView: View {
                         notCopied
                         if showsPlaylists { playlistBox }
                         if showsCovers { coverBox }
+                        if showsAudiobooks { audiobookBox }
                     }
+                }
+                if showsAudiobooks && showsPlaylists && showsCovers {
+                    HStack(alignment: .top, spacing: 10) { audiobookBox }
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -405,7 +432,7 @@ struct SyncPreviewView: View {
     /// e.g. "Copies 1.2 GB · 230.4 GB free afterwards".
     private var spaceSummary: String {
         let style = ByteCountFormatStyle(style: .file)
-        let copy = plan.bytesToCopy == 0 ? "Nothing to copy" : "Copies \(Int64(plan.bytesToCopy).formatted(style))"
+        let copy = plan.allBytesToCopy == 0 ? "Nothing to copy" : "Copies \(Int64(plan.allBytesToCopy).formatted(style))"
         let free = max(0, assessment.projectedFreeBytes).formatted(style)
         return "\(copy) · about \(free) free on the card afterwards"
     }
@@ -516,6 +543,7 @@ struct SyncPreviewView: View {
             collapsibleSection("covers", "Album Covers", lists.covers, footer: "From Apple Music's artwork.") { cover in
                 row(cover.albumName, detail: cover.path, symbol: "photo", color: .indigo)
             }
+            audiobookSections
             collapsibleSection("coverRemovals", "Remove Covers", lists.coverRemovals.map(CoverRemovalRow.init),
                                footer: "Album covers are turned off in Settings.") { removal in
                 row((removal.path as NSString).deletingLastPathComponent, detail: removal.path,
@@ -526,6 +554,32 @@ struct SyncPreviewView: View {
             }
         }
         .listStyle(.inset)
+    }
+
+    /// Audiobooks to copy, remove or that can't be synced, one row per book.
+    @ViewBuilder
+    private var audiobookSections: some View {
+        let books = plan.audiobooks
+        let copies = Dictionary(grouping: books.copies, by: \.bookID).values
+            .compactMap(\.first).sorted { $0.bookTitle.localizedStandardCompare($1.bookTitle) == .orderedAscending }
+        let removals = Dictionary(grouping: books.bookRemovals, by: \.bookID).values
+            .compactMap(\.first).sorted { $0.bookTitle.localizedStandardCompare($1.bookTitle) == .orderedAscending }
+        collapsibleSection("audiobookCopies", "Copy Audiobooks", copies,
+                           footer: books.note) { copy in
+            row(copy.bookTitle, detail: copy.folder, symbol: "book.closed", color: .green)
+        }
+        collapsibleSection("audiobookRemovals", "Remove Audiobooks", removals,
+                           footer: "Removed only if you tick Remove Them. Only audiobooks Q2 Sync copied are removed.") { removal in
+            row(removal.bookTitle, detail: (removal.path as NSString).deletingLastPathComponent,
+                symbol: "minus.circle", color: .red)
+        }
+        collapsibleSection("audiobookSkipped", "Audiobooks That Can't Sync", books.skipped) { book in
+            row(book.title, detail: book.availability.audiobookReason,
+                symbol: book.availability.symbolName, color: .orange)
+        }
+        if copies.isEmpty, let text = books.note {
+            Section { note(text) } header: { Text("Audiobooks") }
+        }
     }
 
     /// Removal switches (always shown) and the songs to remove.
@@ -1110,6 +1164,8 @@ struct SyncResultView: View {
             parts.append("no playlists need importing")
         }
         if report.coversWritten > 0 { parts.append("\(report.coversWritten) album covers added") }
+        if report.audiobooksCopied > 0 { parts.append("\(pluralized(report.audiobooksCopied, "audiobook")) copied") }
+        if report.audiobooksRemoved > 0 { parts.append("\(pluralized(report.audiobooksRemoved, "audiobook")) removed") }
         let copied = report.bytesCopied == 0
             ? "nothing copied"
             : "\(Int64(report.bytesCopied).formatted(ByteCountFormatStyle(style: .file))) copied"

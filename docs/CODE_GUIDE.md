@@ -455,6 +455,7 @@ Nothing else in the code mentions a firmware by name.
 | `libraryScanStep` / `playlistImportStep` | Library → Update Library → Scan music now; Library → Playlists → Import | Local Songs → Update Library → Scan music now; Playlists → Import |
 | `coverRefreshSteps` | System settings → Display → Coverflow → Refresh Coverflow, then open Cover Flow | none (**unverified**) |
 | `versionLocationHint`, `deviceMountPoint` | About › "CFW. Version"; `/mnt/mmc` | About; `/mnt/mmc` |
+| `audiobooksFolderName` | `Audiobooks` (audiobook sync, #48) | `nil` (no audiobook sync) |
 
 **Reserved items** (`ReservedItemRules`, case-insensitive):
 
@@ -468,6 +469,15 @@ Nothing else in the code mentions a firmware by name.
   `$RECYCLE.BIN`;
 - anywhere: `database.ignore`, `database.unignore`;
 - any name containing `librespot`.
+
+The one reserved folder Q2 Sync may change is `Audiobooks/`, and only on a
+profile with `audiobooksFolderName` (Q2 Pod): `PathGuard` allows creating
+`Audiobooks/` and `Audiobooks/<book>/`, writing an audio file directly in a
+book folder, and deleting such a file or an empty book folder. Hidden items,
+names reserved anywhere and deeper paths stay refused there
+(`ReservedItemRules.isReservedInside`). Which files to change comes from the
+manifest's `audiobooks` records (`Core/SyncEngine/AudiobookSync.swift`), so
+only books Q2 Sync copied are ever replaced or removed.
 
 ### Adding a profile
 
@@ -493,7 +503,7 @@ Defense in depth: several independent layers, each enough on its own.
 | --- | --- |
 | `app-sandbox` | Turns the sandbox on. |
 | `assets.music.read-only` | **Read-only** access to `~/Music` for ITLibrary and copying. There is deliberately no read-write variant. |
-| `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. |
+| `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. Apple Books' folder (audiobooks) is allowed the same way, with a **read-only** bookmark (`App/BooksAccess.swift`). |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
 | `files.downloads.read-write` | "Move to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups` (the default backup folder). |
 | `network.client` | The check for new Q2 Sync releases, the optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
@@ -513,9 +523,9 @@ first. It resolves symlinks and `..` and refuses anything:
 
 Plus: normal sync operations only inside `Music/`, `.q2sync/` and
 `_explaylist_data/` (only `.m3u` files directly inside); deleting elsewhere
-needs `.deleteConfirmedByUser`. The one narrow exception is
+needs `.deleteConfirmedByUser`. The narrow exceptions are
 `checkAppleDoubleCompanion`, which allows deleting the `._` companion of a song
-Q2 Sync manages.
+Q2 Sync manages, and `Audiobooks/<book>/<audio file>` on Q2 Pod (see §4).
 
 Copy-back has its own guard (`RecoveryCopier.checkDestination`): only inside the
 staging folder, never inside `~/Music` or the media folder, never overwriting.

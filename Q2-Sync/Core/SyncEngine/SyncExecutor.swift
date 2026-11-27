@@ -18,6 +18,7 @@
 //  3. Adoptions (record identical files already on the card).
 //  4. Moves (renames for retagged songs).
 //  5. Copies (new and changed songs).
+//  5b. Audiobooks (Q2 Pod): removals, adoptions, then copies.
 //  6. Album covers: Q2 Sync's covers are removed if covers were turned
 //     off, or if their folder has no songs left (so the folder can go);
 //     then new covers are written.
@@ -76,6 +77,11 @@ struct SyncReport: Sendable, Equatable {
     var playlistsTakenOut = 0
     var coversWritten = 0
     var coversRemoved = 0
+    /// Audiobooks copied (added or updated) and removed, counted by book.
+    var audiobooksCopied = 0
+    var audiobooksRemoved = 0
+    /// Chosen audiobooks that couldn't be copied (protected, not downloaded…).
+    var skippedAudiobooks: [Audiobook] = []
     /// Songs left out of playlists because they aren't on the card.
     var playlistSongsMissing = 0
     var skipped: [Track] = []
@@ -151,7 +157,8 @@ struct SyncExecutor: Sendable {
         let started = clock.now
         let log = SyncLog(title: "Sync", deviceName: deviceName, directory: logsDirectory)
         var manifest = manifest
-        var report = SyncReport(skipped: plan.skipped, logURL: log.fileURL)
+        var report = SyncReport(skippedAudiobooks: plan.audiobooks.skipped, skipped: plan.skipped,
+                                logURL: log.fileURL)
 
         // Defence in depth: removals above the threshold need confirmation,
         // whatever the UI did. This covers planned removals AND card-only
@@ -160,6 +167,10 @@ struct SyncExecutor: Sendable {
                                             includeRemovals: options.applyRemovals)
         let removalsAllowed = fraction <= SyncSafety.largeRemovalThreshold || options.largeRemovalConfirmed
         let removals = (options.applyRemovals && removalsAllowed) ? plan.removals : []
+        // Audiobook files: replaced parts of wanted books always go; books
+        // no longer wanted only with the same choice and limit as songs.
+        let audiobookRemovals = plan.audiobooks.replacedFiles
+            + ((options.applyRemovals && removalsAllowed) ? plan.audiobooks.bookRemovals : [])
         let cardOnlyCopies = plan.cardOnly.filter { options.cardOnlyActions[$0.path] == .moveToMac }
         let cardOnlyRemovals = removalsAllowed
             ? plan.cardOnly.filter { options.cardOnlyActions[$0.path]?.removesFromCard == true } : []
@@ -172,8 +183,9 @@ struct SyncExecutor: Sendable {
             totalOperations: cardOnlyCopies.count + cardOnlyRemovals.count + removals.count + plan.adoptions.count + plan.moves.count + plan.copies.count
                 + playlistPlan.writes.count + playlistPlan.leavingImport.count + playlistPlan.removals.count
                 + plan.coverWrites.count
-                + plan.coverRemovals.count,
-            totalBytes: plan.bytesToCopy,
+                + plan.coverRemovals.count
+                + audiobookRemovals.count + plan.audiobooks.copies.count,
+            totalBytes: plan.allBytesToCopy,
             coversTotal: plan.coverWrites.count)
         var lastReport = clock.now
         /// Sends progress, throttled so the UI isn't flooded.
@@ -332,6 +344,65 @@ struct SyncExecutor: Sendable {
                 }
                 try finishOperation()
             }
+            // 5b. Audiobooks: removals, adoptions, then copies.
+            var books = manifest.audiobooks ?? [:]
+            var removedBooks = Set<String>()
+            for removal in audiobookRemovals {
+                try Task.checkCancellation()
+                progress.currentItem = "Removing “\(removal.bookTitle)”"
+                publish()
+                do {
+                    try fileSystem.removeFile(removal.path)
+                    log.write("REMOVE AUDIOBOOK FILE  \(removal.path)")
+                    let key = CardLayout.caseKey(removal.path)
+                    books[removal.bookID]?.files.removeAll { CardLayout.caseKey($0.path) == key }
+                    if books[removal.bookID]?.files.isEmpty == true {
+                        books[removal.bookID] = nil
+                        if !removal.isReplaced { removedBooks.insert(removal.bookID) }
+                    }
+                    fileSystem.removeEmptyFolders(above: removal.path)
+                } catch let error where Self.isPerSongError(error) {
+                    record(error, path: removal.path, in: &report, log: log)
+                }
+                manifest.audiobooks = books
+                try finishOperation()
+            }
+            report.audiobooksRemoved = removedBooks.count
+            for id in plan.audiobooks.forgotten { books[id] = nil }
+            for (id, adopted) in plan.audiobooks.adoptions {
+                books[id] = adopted
+                log.write("ADOPT AUDIOBOOK  \(adopted.folder)")
+            }
+            manifest.audiobooks = books
+            var copiedBooks = Set<String>()
+            for copy in plan.audiobooks.copies {
+                try Task.checkCancellation()
+                progress.currentItem = "Copying “\(copy.bookTitle)”"
+                publish(force: true)
+                do {
+                    let size = try fileSystem.copyFromMac(source: copy.source, to: copy.destination) { bytes in
+                        progress.bytesCopied += UInt64(bytes)
+                        report.bytesCopied += UInt64(bytes)
+                        publish()
+                    }
+                    var book = books[copy.bookID]
+                        ?? AudiobookRecord(folder: copy.folder, title: copy.bookTitle, files: [])
+                    book.title = copy.bookTitle
+                    let key = CardLayout.caseKey(copy.destination)
+                    book.files.removeAll { CardLayout.caseKey($0.path) == key }
+                    book.files.append(AudiobookFileRecord(path: copy.destination, sourceSize: copy.sourceSize,
+                                                          cardSize: size, syncedAt: .now))
+                    books[copy.bookID] = book
+                    manifest.audiobooks = books
+                    copiedBooks.insert(copy.bookID)
+                    log.write("\(copy.kind == .add ? "ADD" : "UPDATE") AUDIOBOOK  \(copy.destination)  (\(SyncLog.size(size)))")
+                } catch let error where Self.isPerSongError(error) {
+                    record(error, path: copy.destination, in: &report, log: log)
+                }
+                try finishOperation()
+            }
+            report.audiobooksCopied = copiedBooks.count
+
             // 6. Album covers. First remove Q2 Sync's covers from folders
             //    with no managed song left (so the empty folder can go),
             //    then write the planned covers into folders that still

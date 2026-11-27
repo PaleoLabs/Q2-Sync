@@ -18,6 +18,7 @@ import SwiftUI
 /// The two tabs on the device page.
 enum DeviceTab: String, CaseIterable, Identifiable {
     case music = "Music"
+    case audiobooks = "Audiobooks"
     case settings = "Settings"
     var id: String { rawValue }
 }
@@ -61,6 +62,8 @@ struct DeviceView: View {
                     } else {
                         LibraryNotReadView(library: library)
                     }
+                case .audiobooks:
+                    DeviceAudiobooksView(connected: connected, devices: devices)
                 case .settings:
                     DeviceSettingsView(connected: connected, devices: devices)
                 }
@@ -76,6 +79,10 @@ struct DeviceView: View {
         // never floats to the middle when the content below is short.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .navigationTitle(connected.device.name)
+        // Audiobooks count on the capacity bar on every tab.
+        .task(id: connected.device.volumeUUID) {
+            if connected.device.profile.audiobooksFolderName != nil { await autoSync.audiobooks.load() }
+        }
     }
 
     /// The shown music selection resolved against the library, and the
@@ -92,12 +99,22 @@ struct DeviceView: View {
             selection: selection, libraryLoad: library.loadCount, trackCount: snapshot.tracks.count,
             manifestSavedAt: devices.cardManifest?.updatedAt, manifestCount: devices.cardManifest?.entries.count,
             totalBytes: connected.volume.totalCapacity ?? 0, freeBytes: connected.volume.availableCapacity ?? 0,
-            cardReadable: connected.accessURL != nil)
+            cardReadable: connected.accessURL != nil,
+            audiobooks: audiobookInputs.map { $0.books }, audiobookSettings: audiobookInputs?.selection)
         let (resolved, estimate) = cache.values(for: key) {
             let resolved = SelectionResolver.resolve(selection, in: snapshot)
             return (resolved, capacity(for: resolved))
         }
         return (resolved, estimate)
+    }
+
+    /// Apple Books' audiobooks and the shown Audiobooks settings, for the
+    /// capacity bar, or `nil` if this Q2 doesn't sync audiobooks or the
+    /// books haven't been read.
+    private var audiobookInputs: (books: [Audiobook], selection: AudiobookSelection)? {
+        guard connected.device.profile.audiobooksFolderName != nil,
+              case .loaded(let books) = autoSync.audiobooks.state else { return nil }
+        return (books, devices.shownSyncSettings?.audiobooks ?? connected.device.effectiveAudiobooks)
     }
 
     /// Capacity numbers for the connected card and a selection.
@@ -109,7 +126,8 @@ struct DeviceView: View {
                                  freeBytes: connected.volume.availableCapacity ?? 0,
                                  manifest: devices.cardManifest,
                                  selection: resolved,
-                                 cardReadable: connected.accessURL != nil)
+                                 cardReadable: connected.accessURL != nil,
+                                 audiobooks: audiobookInputs)
     }
 }
 

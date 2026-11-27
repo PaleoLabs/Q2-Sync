@@ -55,6 +55,8 @@ struct CapacityEstimate: Sendable, Equatable {
     var selectedMusicBytes: Int64
     /// Q2 Sync's songs on the card that are no longer selected.
     var deselectedMusicBytes: Int64
+    /// Audiobooks Q2 Sync has on the card that are still chosen.
+    var audiobookBytes: Int64 = 0
     /// Everything else on the card.
     var otherBytes: Int64
     /// Selected songs not on the card yet.
@@ -89,11 +91,16 @@ struct CapacityEstimate: Sendable, Equatable {
     ///   - reserve: Space always left free.
     ///   - cardReadable: `false` if Q2 Sync can't read the card (no
     ///     access): all used space is shown as such, nothing to add.
+    ///   - audiobooks: Apple Books' audiobooks and the Q2's Audiobooks
+    ///     settings, or `nil` if not read (then audiobooks on the card
+    ///     count as chosen, and nothing as to add). Audiobooks no longer
+    ///     chosen count with deselected songs; new ones with songs to add.
     /// - Returns: The estimate.
     static func compute(totalBytes: Int64, freeBytes: Int64, manifest: SyncManifest?,
                         selection: ResolvedSelection?,
                         reserve: Int64 = SyncSafety.reservedFreeBytes,
-                        cardReadable: Bool = true) -> CapacityEstimate {
+                        cardReadable: Bool = true,
+                        audiobooks: (books: [Audiobook], selection: AudiobookSelection)? = nil) -> CapacityEstimate {
         guard cardReadable else {
             return CapacityEstimate(totalBytes: totalBytes, freeBytes: freeBytes,
                                     selectedMusicBytes: 0, deselectedMusicBytes: 0,
@@ -126,8 +133,24 @@ struct CapacityEstimate: Sendable, Equatable {
             }
         }
 
+        // Audiobooks (see AudiobookSync.swift): by book, from the manifest.
+        var audiobookOnCard: Int64 = 0
+        let records = manifest?.audiobooks ?? [:]
+        let keptBooks: Set<String>? = audiobooks.map { books, settings in
+            Set(books.filter { settings.isEnabled && (settings.includesAll || settings.bookIDs.contains($0.id)) }.map(\.id))
+        }
+        for (id, record) in records {
+            let bytes = record.files.reduce(Int64(0)) { $0 + Int64($1.cardSize) }
+            if keptBooks?.contains(id) ?? true { audiobookOnCard += bytes } else { deselectedMusic += bytes }
+        }
+        if let (books, settings) = audiobooks {
+            for book in settings.books(from: books) where records[book.id] == nil {
+                toAdd += Int64(book.totalSize)
+            }
+        }
+
         let used = max(0, totalBytes - freeBytes)
-        let other = max(0, used - selectedMusic - deselectedMusic)
+        let other = max(0, used - selectedMusic - deselectedMusic - audiobookOnCard)
 
         let fit: Fit
         if freeBytes - toAdd >= reserve {
@@ -140,6 +163,7 @@ struct CapacityEstimate: Sendable, Equatable {
 
         return CapacityEstimate(totalBytes: totalBytes, freeBytes: freeBytes,
                                 selectedMusicBytes: selectedMusic, deselectedMusicBytes: deselectedMusic,
+                                audiobookBytes: audiobookOnCard,
                                 otherBytes: other, toAddBytes: toAdd, fit: fit)
     }
 }
