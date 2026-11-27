@@ -3,8 +3,9 @@
 //  Q2-Sync › Core › Device
 //
 //  PURPOSE
-//  A small Mac-side note of which songs Q2 Sync has put on each Q2's card,
-//  so the library browser can mark "On Q2" while the Q2 is unplugged.
+//  A small Mac-side note of which songs and audiobooks Q2 Sync has put on
+//  each Q2's card, so the library and Books browsers can mark "On Q2" while
+//  the Q2 is unplugged.
 //
 //  HOW IT FITS
 //  The card's own manifest (`.q2sync/manifest.json`) stays the source of
@@ -16,7 +17,8 @@
 //  WHERE IT LIVES
 //  `Application Support/Q2 Sync/Card Contents/<volume UUID>.json` inside
 //  the app's sandbox container: app data, not a user document, so not in
-//  Downloads or Documents. It holds song IDs only (no titles or paths).
+//  Downloads or Documents. It holds song and book IDs only (no titles or
+//  paths).
 //  Forgetting a Q2 deletes its record.
 //
 
@@ -38,6 +40,11 @@ struct CardContentsRecord: Codable, Sendable, Equatable {
     /// Apple Music persistent IDs of the songs Q2 Sync manages on the card.
     var trackIDs: Set<PersistentID>
 
+    /// Apple Books ids of the audiobooks Q2 Sync manages on the card.
+    /// `nil` in records saved before audiobooks were recorded: unknown
+    /// until the Q2 is next read.
+    var audiobookIDs: Set<String>?
+
     /// Builds a record from the card's manifest.
     ///
     /// - Parameters:
@@ -49,6 +56,7 @@ struct CardContentsRecord: Codable, Sendable, Equatable {
         self.lastSynced = manifest.updatedAt
         self.checkedAt = checkedAt
         self.trackIDs = Set(manifest.entries.keys)
+        self.audiobookIDs = manifest.audiobooks.map { Set($0.keys) } ?? []
     }
 }
 

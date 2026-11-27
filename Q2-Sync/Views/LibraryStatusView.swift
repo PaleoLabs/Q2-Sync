@@ -86,6 +86,53 @@ struct LibraryStatusView: View {
     }
 }
 
+/// Sidebar footer for the Books browser: book count and size, and the
+/// books that can't sync, by reason.
+struct AudiobookStatusView: View {
+
+    let model: AudiobookLibraryModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            switch model.state {
+            case .idle:
+                Label(model.source == nil ? "Apple Books not allowed yet" : "Apple Books not read yet",
+                      systemImage: "circle.dashed")
+                    .foregroundStyle(.secondary)
+            case .loading:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Reading Apple Books…")
+                }
+            case .failed(let message):
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Button("Try Again") { Task { await model.load() } }
+                    .controlSize(.small)
+            case .loaded(let books):
+                let bytes = books.reduce(UInt64(0)) { $0 + $1.totalSize }
+                Text("\(pluralized(books.count, "audiobook")) · \(Int64(bytes).formatted(.byteCount(style: .file)))")
+                    .fontWeight(.medium)
+                // Every reason a book can't sync that isn't zero.
+                ForEach(TrackAvailability.allCases.filter { $0 != .available }, id: \.self) { kind in
+                    let count = books.count { $0.availability == kind }
+                    if count > 0 {
+                        HStack {
+                            Image(systemName: kind.symbolName).foregroundStyle(kind.tint)
+                            Text("\(kind.audiobookReason): \(count.formatted())")
+                        }
+                        .help(kind.audiobookExplanation)
+                    }
+                }
+            }
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
+    }
+}
+
 // MARK: - Presentation helpers for availability
 
 extension TrackAvailability {
@@ -149,6 +196,9 @@ extension TrackAvailability {
 /// list Apple Music subscription songs and songs only in iCloud too, but
 /// only song files stored on this Mac can be synced.
 enum LibraryWording {
+
+    /// Tooltip for Refresh Audiobooks.
+    static let refreshAudiobooksHelp = "Re-read the audiobooks in Apple Books on this Mac. Only DRM-free books downloaded to this Mac can be copied to your Q2. Q2 Sync never changes your books."
 
     /// Tooltip for Refresh Music Library.
     static let refreshHelp = "Re-read the Music app's library on this Mac. Only song files stored on this Mac can be copied to your Q2, not Apple Music subscription songs. Q2 Sync never changes your library."

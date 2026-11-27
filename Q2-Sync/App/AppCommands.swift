@@ -136,7 +136,8 @@ struct FindCommands: Commands {
     }
 }
 
-/// View: the library lists (⌘1–⌘4) and the Q2's page (⌘5).
+/// View: the library lists (⌘1–⌘4), Books (⌘6, while the sidebar shows
+/// it) and the Q2's page (⌘5).
 struct NavigationCommands: Commands {
     let controller: AutoSyncController
 
@@ -150,6 +151,11 @@ struct NavigationCommands: Commands {
             ForEach(Array(BrowseCategory.allCases.enumerated()), id: \.element) { index, category in
                 Button(category.rawValue) { controller.show(.library(category)) }
                     .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                    .disabled(unavailable)
+            }
+            if controller.devices.syncsAudiobooksOnAnyQ2 {
+                Button("Books") { controller.show(.audiobooks) }
+                    .keyboardShortcut("6", modifiers: .command)
                     .disabled(unavailable)
             }
             Divider()
@@ -217,22 +223,33 @@ struct DeviceCommands: Commands {
 }
 
 /// View › Show Song Info (⌘I): shows or hides the panel with the selected
-/// song's details. Dimmed unless the main window is on a library view.
+/// song's details. On the Books browser it's Show Book Info instead.
+/// Dimmed unless the main window is on one of those.
 struct SongInfoCommands: Commands {
-    // The same stored setting the library view's panel and toolbar use.
+    // The same stored settings the browsers' panels and toolbars use.
     @AppStorage("showSongInfo") private var showSongInfo = false
+    @AppStorage("showBookInfo") private var showBookInfo = false
 
     /// Set by `LibraryCategoryView` while it's in the frontmost window.
     @FocusedValue(\.offersSongInfo) private var offersSongInfo
+    /// Set by `AudiobookBrowserView` while it's in the frontmost window.
+    @FocusedValue(\.offersBookInfo) private var offersBookInfo
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
-            let available = offersSongInfo == true
-            Button(available && showSongInfo ? "Hide Song Info" : "Show Song Info") {
-                showSongInfo.toggle()
+            if offersBookInfo == true {
+                Button(showBookInfo ? "Hide Book Info" : "Show Book Info") {
+                    showBookInfo.toggle()
+                }
+                .keyboardShortcut("i", modifiers: .command)
+            } else {
+                let available = offersSongInfo == true
+                Button(available && showSongInfo ? "Hide Song Info" : "Show Song Info") {
+                    showSongInfo.toggle()
+                }
+                .keyboardShortcut("i", modifiers: .command)
+                .disabled(!available)
             }
-            .keyboardShortcut("i", modifiers: .command)
-            .disabled(!available)
         }
     }
 }

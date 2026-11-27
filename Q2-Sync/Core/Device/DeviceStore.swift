@@ -23,6 +23,7 @@
 //
 
 import Foundation
+import Observation
 
 /// A card the user confirmed is their Q2.
 struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
@@ -143,7 +144,9 @@ struct PendingFirmwareInstall: Codable, Hashable, Sendable {
 ///
 /// A `class` (not a `struct`) because the app shares one instance. It's
 /// only used from the main thread via `DeviceMonitor`, so it doesn't need
-/// to be `Sendable`.
+/// to be `Sendable`. Observable so views reading the known devices through
+/// `DeviceMonitor` (the sidebar's sections, say) update when one is saved.
+@Observable
 final class DeviceStore {
 
     /// The saved file's structure.

@@ -18,7 +18,7 @@ import Observation
 
 /// A search or filter field that Edit › Find can put the cursor in.
 enum FilterField: Equatable {
-    /// The toolbar's search field in the library browser.
+    /// The toolbar's search field in the library or Books browser.
     case library
     /// "Filter" on the Q2's Music tab.
     case musicTab

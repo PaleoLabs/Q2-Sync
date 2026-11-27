@@ -21,6 +21,11 @@
 //  3. An optional field on `KnownDevice` (nil = default), read in
 //     `syncSettings`, saved in `DeviceMonitor.saveSyncSettings`.
 //  4. A `DeviceTab` case whose view starts with `SyncSectionHeader`.
+//  5. Its sidebar section (#70), like Audiobooks › Books: a `SidebarItem`
+//     case, a `DeviceMonitor.syncs…OnAnyQ2` check (any known Q2, from
+//     `KnownDevice`), a browser view with an info panel, its IDs in
+//     `CardContentsRecord` for "On Q2", and the toolbar's Refresh and the
+//     sidebar footer following it (`RootView`).
 //  Revert, Apply, "thrown away when you leave" and the Sync button's
 //  "nothing chosen" check then cover it as well.
 //

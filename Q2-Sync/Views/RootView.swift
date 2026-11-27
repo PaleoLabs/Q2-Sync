@@ -23,6 +23,8 @@ enum SidebarItem: Hashable {
     /// "Connect Your Q2", while no Q2 is connected.
     case connectQ2
     case library(BrowseCategory)
+    /// Audiobooks › Books, shown while any Q2 syncs audiobooks.
+    case audiobooks
 }
 
 /// The app's main window content.
@@ -101,15 +103,27 @@ struct RootView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await library.load() }
-                } label: {
-                    Label("Refresh Library", systemImage: "arrow.clockwise")
+                // Refreshes whichever kind of content is showing.
+                if autoSync.navigation.selection == .audiobooks {
+                    Button {
+                        Task { await autoSync.audiobooks.load() }
+                    } label: {
+                        Label("Refresh Audiobooks", systemImage: "arrow.clockwise")
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .disabled(autoSync.audiobooks.state == .loading || autoSync.audiobooks.source == nil)
+                    .help(LibraryWording.refreshAudiobooksHelp)
+                } else {
+                    Button {
+                        Task { await library.load() }
+                    } label: {
+                        Label("Refresh Library", systemImage: "arrow.clockwise")
+                    }
+                    // Text beside the icon: a bare circle arrow was ambiguous.
+                    .labelStyle(.titleAndIcon)
+                    .disabled(library.state == .loading)
+                    .help(LibraryWording.refreshHelp)
                 }
-                // Text beside the icon: a bare circle arrow was ambiguous.
-                .labelStyle(.titleAndIcon)
-                .disabled(library.state == .loading)
-                .help(LibraryWording.refreshHelp)
             }
         }
         // Read the Music library the first time the window is shown (once
@@ -137,6 +151,12 @@ struct RootView: View {
         }
         .onAppear {
             autoSync.navigation.reconcile(connected: devices.connected?.device.volumeUUID)
+        }
+        // Books goes when no Q2 syncs audiobooks any more: back to Artists.
+        .onChange(of: devices.syncsAudiobooksOnAnyQ2, initial: true) { _, shows in
+            if !shows, autoSync.navigation.selection == .audiobooks {
+                autoSync.navigation.selection = .library(.artists)
+            }
         }
     }
 
@@ -191,12 +211,29 @@ struct RootView: View {
                         .tag(SidebarItem.library(item))
                 }
             }
+
+            // One section per kind of content a Q2 syncs, shown while any
+            // known Q2 syncs it (#70). Music is always shown: browsing the
+            // library helps before setting up a Q2.
+            if devices.syncsAudiobooksOnAnyQ2 {
+                Section("Audiobooks") {
+                    Label("Books", systemImage: "book.closed")
+                        .tag(SidebarItem.audiobooks)
+                }
+            }
         }
         // Lets the other-drives row shrink to nothing when it's empty.
         .environment(\.defaultMinListRowHeight, 0)
         .safeAreaInset(edge: .bottom) {
-            LibraryStatusView(library: library)
-                .padding(10)
+            // Follows the selection: book counts on Books, else songs.
+            Group {
+                if autoSync.navigation.selection == .audiobooks {
+                    AudiobookStatusView(model: autoSync.audiobooks)
+                } else {
+                    LibraryStatusView(library: library)
+                }
+            }
+            .padding(10)
         }
     }
 
@@ -217,6 +254,8 @@ struct RootView: View {
                           waitingDrives: devices.postponedVolumes.map(\.name))
         case .library(let category):
             LibraryCategoryView(library: library, devices: devices, category: category)
+        case .audiobooks:
+            AudiobookBrowserView(devices: devices)
         case nil:
             ContentUnavailableView("Nothing Selected", systemImage: "sidebar.left")
         }
