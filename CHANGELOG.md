@@ -22,6 +22,8 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 
 ### Fixed
 - **"1 album cover", not "1 album covers".** Counts of one now read correctly in the sync window, the Sync Complete summary, the sync preview ("1 song you no longer sync is still on the card"), the Music tab and the library status. ([#55](https://github.com/PaleoLabs/Q2-Sync/issues/55))
+- **Time remaining while removing.** When a sync removes songs from the card, the progress bar and time estimate now follow the removals ("Removing 120 of 3,083 · then 2.96 GB to copy") instead of sitting at "Estimating time remaining…" and an empty bar until copying starts. ([#62](https://github.com/PaleoLabs/Q2-Sync/issues/62))
+- **The sync preview stays centred in the window** when you open Details, instead of growing downward.
 
 ## 0.3.1 (2026-11-25)
 

@@ -180,6 +180,8 @@ struct SyncPreviewView: View {
                 .padding(16)
         }
         .frame(width: 660, height: showsDetails && !hasNothingToList ? detailsHeight : nil)
+        // Grows downward otherwise; keep it centred like when it opened.
+        .keepsSheetCentered()
         // Edit › Find (⌘F) opens Details if needed and puts the cursor in
         // the filter.
         .onAppear { if !hasNothingToList { autoSync.navigation.filterAppeared(.syncPreview) } }
@@ -542,11 +544,11 @@ struct SyncPreviewView: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// Sheet height with Details open: 760 pt, less on a short screen
+    /// Sheet height with Details open: 725 pt, less on a short screen
     /// (never under 600) so the sheet stays inside the window it hangs from.
     private var detailsHeight: CGFloat {
         let screen = NSScreen.main?.visibleFrame.height ?? 900
-        return min(760, max(600, screen - 140))
+        return min(725, max(600, screen - 140))
     }
 
     // MARK: Details
@@ -1102,7 +1104,8 @@ struct SyncProgressView: View {
             Text(progress.isAddingCovers ? "Adding Album Covers…" : "Syncing…").font(.title2.bold())
             ProgressView(value: progress.fractionComplete)
             Text(sync.secondsRemaining.map(TimeRemainingEstimator.describe)
-                 ?? (progress.totalBytes > 0 || progress.isAddingCovers ? "Estimating time remaining…" : " "))
+                 ?? (progress.totalBytes > 0 || progress.isAddingCovers || progress.isRemoving
+                     ? "Estimating time remaining…" : " "))
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Text(progress.currentItem.isEmpty ? "Starting…" : progress.currentItem)
@@ -1125,9 +1128,18 @@ struct SyncProgressView: View {
         .frame(width: 460)
     }
 
-    /// e.g. "1.2 GB of 8.4 GB · 120 of 431 items", or "Cover 120 of 950"
-    /// during the album-cover step.
+    /// e.g. "1.2 GB of 8.4 GB · 120 of 431 items", "Removing 120 of 3,083
+    /// · then 2.96 GB to copy" during the removal step, or "Cover 120 of
+    /// 950" during the album-cover step.
     private func detail(_ progress: SyncProgress) -> String {
+        if progress.isRemoving {
+            var text = "Removing \(min(progress.removalsDone + 1, progress.removalsTotal).formatted()) of \(progress.removalsTotal.formatted())"
+            // The estimate above is for the removals only; say what follows.
+            if progress.totalBytes > 0 {
+                text += " · then \(Int64(progress.totalBytes).formatted(ByteCountFormatStyle(style: .file))) to copy"
+            }
+            return text
+        }
         if progress.isAddingCovers {
             return "Cover \(min(progress.coversDone + 1, progress.coversTotal).formatted()) of \(progress.coversTotal.formatted())"
         }

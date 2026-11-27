@@ -48,10 +48,18 @@ struct SyncProgress: Sendable, Equatable {
     /// `true` during the album-cover step, which has its own progress bar
     /// and time estimate (covers aren't counted in bytes).
     var isAddingCovers = false
+    /// Files to remove before copying (card-only deletes and songs no
+    /// longer synced), and removed (or skipped) so far.
+    var removalsTotal = 0
+    var removalsDone = 0
+    /// `true` during the removal step, which, like covers, has its own
+    /// progress bar and time estimate: removals copy no bytes (#62).
+    var isRemoving = false
 
     /// 0…1, weighted by bytes when there's copying to do. During the
-    /// album-cover step, how far through the covers.
+    /// removal or album-cover step, how far through that step.
     var fractionComplete: Double {
+        if isRemoving && removalsTotal > 0 { return min(1, Double(removalsDone) / Double(removalsTotal)) }
         if isAddingCovers && coversTotal > 0 { return min(1, Double(coversDone) / Double(coversTotal)) }
         if totalBytes > 0 { return min(1, Double(bytesCopied) / Double(totalBytes)) }
         return totalOperations == 0 ? 1 : Double(completedOperations) / Double(totalOperations)
@@ -186,7 +194,8 @@ struct SyncExecutor: Sendable {
                 + plan.coverRemovals.count
                 + audiobookRemovals.count + plan.audiobooks.copies.count,
             totalBytes: plan.allBytesToCopy,
-            coversTotal: plan.coverWrites.count)
+            coversTotal: plan.coverWrites.count,
+            removalsTotal: cardOnlyRemovals.count + removals.count)
         var lastReport = clock.now
         /// Sends progress, throttled so the UI isn't flooded.
         func publish(force: Bool = false) {
@@ -248,6 +257,8 @@ struct SyncExecutor: Sendable {
 
             // 1b. Card-only files the user chose to delete, or to move to the
             //     Mac (deleted only once their copy is safely on the Mac).
+            //     With step 2, this is the removal step (own bar and estimate).
+            progress.isRemoving = progress.removalsTotal > 0
             for item in cardOnlyRemovals {
                 try Task.checkCancellation()
                 progress.currentItem = "Removing “\(item.displayName)”"
@@ -255,6 +266,7 @@ struct SyncExecutor: Sendable {
                 let isMove = options.cardOnlyActions[item.path] == .moveToMac
                 if isMove && !movedToMac.contains(item.path) {
                     log.write("MOVE SKIPPED  \(item.path): not copied to the Mac, so left on the card")
+                    progress.removalsDone += 1
                     try finishOperation()
                     continue
                 }
@@ -272,6 +284,7 @@ struct SyncExecutor: Sendable {
                 } catch let error where Self.isPerSongError(error) {
                     record(error, path: item.path, in: &report, log: log)
                 }
+                progress.removalsDone += 1
                 try finishOperation()
             }
 
@@ -289,7 +302,12 @@ struct SyncExecutor: Sendable {
                 } catch let error where Self.isPerSongError(error) {
                     record(error, path: removal.entry.path, in: &report, log: log)
                 }
+                progress.removalsDone += 1
                 try finishOperation()
+            }
+            if progress.isRemoving {
+                progress.isRemoving = false
+                publish(force: true)
             }
             for id in plan.forgottenEntries { manifest.entries[id] = nil }
 

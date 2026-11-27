@@ -328,8 +328,13 @@ struct SyncExecutorTests {
         // (50% removal needs the large-removal confirmation.)
         let options = SyncOptions(applyRemovals: true, largeRemovalConfirmed: true)
         let (plan3, manifest3) = try planOnCard([tracks[0]], card: card)
-        let report = await executor.run(plan: plan3, manifest: manifest3, options: options) { _ in }
+        let updates = ProgressRecorder()
+        let report = await executor.run(plan: plan3, manifest: manifest3, options: options) { updates.add($0) }
         #expect(report.removed == 1)
+        // #62: the removal step reports its own count, then ends.
+        #expect(updates.all.contains { $0.isRemoving && $0.removalsTotal == 1 })
+        #expect(updates.all.last?.isRemoving == false)
+        #expect(updates.all.last?.removalsDone == 1)
         #expect(!FileManager.default.fileExists(atPath: card.root.appending(path: "Music/Artist/Album/02 Beta.mp3").path))
         #expect(!FileManager.default.fileExists(atPath: card.root.appending(path: ".q2sync/Trash").path))
         #expect(try SyncManifest.load(from: card.fileSystem).entries.keys.sorted() == ["A"])
@@ -444,4 +449,12 @@ struct SyncSummaryTests {
         #expect(plan.summary(applyRemovals: false) == "Everything you chose is already on the card.")
         #expect(plan.summary(applyRemovals: true) == "This sync will remove 1 song.")
     }
+}
+
+/// Collects the executor's progress updates (sent from a background thread).
+final class ProgressRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var updates: [SyncProgress] = []
+    func add(_ update: SyncProgress) { lock.withLock { updates.append(update) } }
+    var all: [SyncProgress] { lock.withLock { updates } }
 }

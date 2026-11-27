@@ -82,6 +82,8 @@ final class SyncCoordinator {
     @ObservationIgnored private var estimator = TimeRemainingEstimator()
     /// Measures the album-cover step, which isn't counted in bytes.
     @ObservationIgnored private var coverEstimator = TimeRemainingEstimator.forCovers()
+    /// Measures the removal step, counted in files (#62).
+    @ObservationIgnored private var removalEstimator = TimeRemainingEstimator.forRemovals()
 
     /// The result once finished.
     private(set) var report: SyncReport?
@@ -362,6 +364,7 @@ final class SyncCoordinator {
         secondsRemaining = nil
         estimator = TimeRemainingEstimator()
         coverEstimator = .forCovers()
+        removalEstimator = .forRemovals()
         var executor = SyncExecutor(fileSystem: preview.fileSystem, deviceName: preview.deviceName)
         executor.artwork = preview.artwork
         executor.recoveryCopier = RecoveryCopier(stagingFolder: RecoveryCopier.defaultStagingFolder,
@@ -377,7 +380,10 @@ final class SyncCoordinator {
             Task { @MainActor in
                 self.progress = update
                 let now = ProcessInfo.processInfo.systemUptime
-                if update.isAddingCovers {
+                if update.isRemoving {
+                    self.secondsRemaining = self.removalEstimator.update(bytesCopied: UInt64(update.removalsDone),
+                                                                         totalBytes: UInt64(update.removalsTotal), at: now)
+                } else if update.isAddingCovers {
                     self.secondsRemaining = self.coverEstimator.update(bytesCopied: UInt64(update.coversDone),
                                                                        totalBytes: UInt64(update.coversTotal), at: now)
                 } else {

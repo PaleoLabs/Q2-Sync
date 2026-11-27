@@ -5,8 +5,8 @@
 //  PURPOSE
 //  Estimates how long the rest of a sync's copying will take, for the
 //  progress window ("About 12 minutes remaining"). It counts "units":
-//  bytes for copying songs, or covers for the album-cover step (which
-//  gets its own estimator with smaller minimums).
+//  bytes for copying songs, or files for the removal step and covers for
+//  the album-cover step (each gets its own estimator with smaller minimums).
 //
 //  HOW
 //  Copying speed is measured from when the first bytes arrive (so time
@@ -45,6 +45,11 @@ struct TimeRemainingEstimator: Sendable {
     /// For the album-cover step: covers, not bytes.
     static func forCovers() -> TimeRemainingEstimator {
         TimeRemainingEstimator(minimumSeconds: 5, minimumUnits: 3)
+    }
+
+    /// For the removal step: files removed, not bytes (#62).
+    static func forRemovals() -> TimeRemainingEstimator {
+        TimeRemainingEstimator(minimumSeconds: 5, minimumUnits: 10)
     }
 
     /// Adds a progress sample and returns the seconds left, if known.

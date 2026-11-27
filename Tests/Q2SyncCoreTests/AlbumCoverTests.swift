@@ -289,6 +289,27 @@ struct TimeRemainingTests {
         #expect(progress.fractionComplete == 0.25)
     }
 
+    @Test("Removals get their own estimate, counted in files (#62)")
+    func removals() {
+        var estimator = TimeRemainingEstimator.forRemovals()
+        #expect(estimator.update(bytesCopied: 0, totalBytes: 3_000, at: 0) == nil) // nothing yet
+        #expect(estimator.update(bytesCopied: 1, totalBytes: 3_000, at: 1) == nil) // starts here
+        #expect(estimator.update(bytesCopied: 50, totalBytes: 3_000, at: 4) == nil) // too soon
+        // 50 files a second: 2,500 left → about 50 seconds.
+        let remaining = estimator.update(bytesCopied: 501, totalBytes: 3_000, at: 11)
+        #expect(remaining.map { abs($0 - 50) < 1 } == true)
+    }
+
+    @Test("The progress bar follows the removals during the removal step (#62)")
+    func removalFraction() {
+        var progress = SyncProgress(totalOperations: 10, totalBytes: 100, removalsTotal: 8)
+        progress.isRemoving = true
+        progress.removalsDone = 2
+        #expect(progress.fractionComplete == 0.25)
+        progress.isRemoving = false
+        #expect(progress.fractionComplete == 0) // copying starts from empty
+    }
+
     @Test("No copying, no estimate")
     func nothingToCopy() {
         var estimator = TimeRemainingEstimator()
