@@ -331,7 +331,7 @@ final class FirmwareInstaller {
     }
 
     /// Switches the Q2 to the pending firmware (from the question or the
-    /// Settings tab's "Mark as Installed").
+    /// General tab's "Mark as Installed").
     func markPendingInstalled(removeFile: Bool) {
         devices.completePendingFirmwareInstall()
         if removeFile { removeFirmwareFile() }

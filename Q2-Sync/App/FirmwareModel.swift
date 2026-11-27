@@ -11,7 +11,7 @@
 //  HOW IT FITS
 //  Owned by `AutoSyncController`, which checks (at most once a day) when a
 //  Q2 Pod device connects, and posts a notification for a new release.
-//  The device's Settings tab shows the details and a "Check Now" button;
+//  The device's General tab shows the details and a "Check Now" button;
 //  Device › Check for Firmware Updates checks whichever firmware the Q2
 //  runs. The requests live in Core (`FirmwareUpdateChecker`,
 //  `FirmwareSources`).

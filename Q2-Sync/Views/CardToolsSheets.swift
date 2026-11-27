@@ -10,7 +10,7 @@
 //
 //  HOW IT FITS
 //  The sheets are presented by `RootView`; the section sits in
-//  `DeviceSettingsView`. State lives in `CardVerifyModel` / `PodDataModel`.
+//  `DeviceGeneralView`. State lives in `CardVerifyModel` / `PodDataModel`.
 //
 
 import AppKit
@@ -181,7 +181,7 @@ struct VerifyCardSheet: View {
 
 // MARK: - Q2 Pod data
 
-/// The "Q2 Pod Data" part of a Q2's Settings tab.
+/// The "Q2 Pod Data" part of a Q2's General tab.
 struct PodDataSection: View {
 
     let model: PodDataModel
@@ -240,7 +240,7 @@ struct PodDataSection: View {
                 .disabled(model.backupFolder.folder == nil)
             }
         } header: {
-            Text("Q2 Pod Data").id(SettingsSection.podData)
+            Text("Q2 Pod Data").id(GeneralTabSection.podData)
         } footer: {
             Text("Q2 Pod keeps your song ratings, listens waiting to be scrobbled, scrobbling and radio settings, EQ presets, custom App Store sources and Rockbox settings on the card. Back them up to a folder on your Mac (Downloads › Q2 Sync Backups unless you change it; the same folder for every Q2) in case the card is lost or reformatted. The Q2's own settings are stored inside the Q2, where a Mac can't reach them.")
         }

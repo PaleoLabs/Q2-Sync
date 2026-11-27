@@ -53,7 +53,7 @@ the card in a card reader instead.
 The card must be formatted **exFAT** or **FAT32** (Shanling prefers exFAT)
 on a **Master Boot Record** partition table. New cards usually are. If your
 card uses another scheme (such as the GUID Partition Map Disk Utility may
-pick), Q2 Sync shows a warning on the Q2's Settings tab with the steps to
+pick), Q2 Sync shows a warning on the Q2's General tab with the steps to
 erase it in Disk Utility: choose **View → Show All Devices**, select the card
 itself, click **Erase**, and pick Format **ExFAT** and Scheme **Master Boot
 Record**. Erasing deletes everything on the card, and Q2 Sync never erases or
@@ -200,7 +200,7 @@ At the bottom of your Q2's page, on every tab:
   says some of it may be songs copied onto the card another way: those that
   match your library are kept at the next sync rather than copied again, so
   less may be added (the sync preview checks exactly). If Q2 Sync can't read
-  the card (grant access again on the Settings tab), the bar shows only used
+  the card (grant access again on the General tab), the bar shows only used
   and free space.
 
 Like Finder's iPod page, nothing you tick is saved straight away. As soon as
@@ -210,7 +210,7 @@ you change anything, the **Sync** button becomes **Revert** and **Apply**:
   below opens).
 - **Revert** puts back the choices you had, and **Sync** returns.
 
-Your changes stay while you switch between the Music, Audiobooks and Settings tabs. They
+Your changes stay while you switch between the Music, Audiobooks and General tabs. They
 are thrown away, without asking, if you go to another page in the sidebar,
 switch to another Q2, unplug the Q2 or quit Q2 Sync.
 
@@ -363,7 +363,7 @@ marks above, so it works without the Q2 connected.
    click **Done**.
 
 Every sync is recorded in a log. Click the **Show Log** link on the result, or
-go to your Q2's **Settings** tab → **Show Sync Logs**.
+go to your Q2's **General** tab → **Show Sync Logs**.
 
 **Where things go on the card:** music goes in `Music/Artist/Album/`,
 playlists in `_explaylist_data/`, and Q2 Sync's own records in a hidden
@@ -371,7 +371,7 @@ playlists in `_explaylist_data/`, and Q2 Sync's own records in a hidden
 
 **Album covers (on by default):** Apple Music often keeps artwork
 in its own library rather than inside the song files, so the Q2 would show no
-cover. With **Add album covers** on (your Q2's **Settings** tab), Q2 Sync puts a
+cover. With **Add album covers** on (your Q2's **General** tab), Q2 Sync puts a
 `cover.jpg` in each album folder, made from the album's artwork in Apple
 Music (resized to at most 1000 pixels, in a format the Q2 reads quickly).
 The preview lists them under **Album Covers**.
@@ -385,7 +385,7 @@ The preview lists them under **Album Covers**.
 **Refresh Cover Flow after covers change (Q2 Pod).** Cover Flow keeps its
 own cache of covers, so after a sync that adds or removes covers (for
 example after turning the setting on or off), the Sync Complete window adds
-steps to (the Q2's Settings tab also lists these last under **After Each
+steps to (the Q2's General tab also lists these last under **After Each
 Sync**):
 
 1. Update the library as usual (Library → Update Library → Scan music now).
@@ -464,7 +464,7 @@ If you used that, the folder is still there: in Finder, open the card, press
 After every sync, your Q2 needs to scan the card before new music shows up.
 The Sync Complete window lists the steps that apply to that sync: the
 playlist step only when playlists are ready to import, and the Cover Flow
-steps only when covers changed. Your Q2's **Settings** tab lists them all under
+steps only when covers changed. Your Q2's **General** tab lists them all under
 **After Each Sync** while the card is connected.
 
 1. Eject the card in Q2 Sync, then unplug the Q2 (with a card reader, put the
@@ -495,7 +495,7 @@ several minutes. Leave it until it finishes.
 default):** off, every playlist stays in the card's playlist folder and Q2
 Sync never takes one out, so the Q2's Import reads them all each time. That
 is the safe choice: no playlist can miss an Import. Turn it on (your Q2's
-**Settings** tab, under **Playlists**) if Import takes too long for you. Each
+**General** tab, under **Playlists**) if Import takes too long for you. Each
 sync then adds only playlists that are new or changed. Q2 Sync can't see
 whether you ran Import on the Q2, so when playlists from an earlier sync are
 still in the folder, the sync window says how many and shows a
@@ -518,7 +518,7 @@ Q2 Sync shows these steps after each sync, for your Q2's firmware.
 
 ## 7. Auto-sync
 
-Q2 Sync can notice when your Q2 connects. On your Q2's **Settings** tab, under
+Q2 Sync can notice when your Q2 connects. On your Q2's **General** tab, under
 **Auto-Sync**, choose **When this Q2 connects**:
 
 - **Ask Me (Notification)** (default): a notification asks whether to sync.
@@ -540,7 +540,7 @@ is connected).
 For auto-sync to work, Q2 Sync must be running. It stays in the **menu bar**
 when you close its window. To start it automatically, open **Q2 Sync ›
 Settings** and turn on **Open Q2 Sync at login**. While auto-sync is on and
-Q2 Sync doesn't open at login, the Q2's Settings tab also shows an **Open at
+Q2 Sync doesn't open at login, the Q2's General tab also shows an **Open at
 Login** button under **When this Q2 connects**. Q2 Sync doesn't ask anywhere
 else.
 
@@ -565,11 +565,11 @@ make room, or open Q2 Sync from the Applications folder.
 ## 8. Firmware: install, switch and update
 
 Q2 Sync can put **Q2 Pod** or **Shanling's stock firmware** on your card, so
-you can switch between them or update. Open your Q2's **Settings** tab and
+you can switch between them or update. Open your Q2's **General** tab and
 click **Install Firmware…** (or choose **Device → Install Firmware…**).
 
 1. Pick **Q2 Pod** or **Shanling (stock)**. The firmware your Q2 runs now
-   (as set on its Settings tab) is picked to start with, to update it; pick
+   (as set on its General tab) is picked to start with, to update it; pick
    the other to switch. Q2 Sync shows the latest version of each: Q2 Pod's
    from GitHub, stock's from Shanling's download page.
 2. Click **Download and Copy to Card**. Q2 Sync downloads it, checks it's
@@ -597,7 +597,7 @@ instructions.
 
 ### Update notices
 
-**Q2 Pod:** on your Q2's **Settings** tab, under **Firmware Updates**, turn on
+**Q2 Pod:** on your Q2's **General** tab, under **Firmware Updates**, turn on
 **Check GitHub for new Q2 Pod releases**. Q2 Sync checks at most once a day
 when your Q2 connects (or when you click **Check Now**) and tells you about new
 releases, with their notes and a link.
@@ -620,7 +620,7 @@ System Update → Network update**.
 even with automatic checking off. While the other firmware is on the card and
 you haven't said whether the Q2 installed it, it's dimmed: answer **Did the
 Firmware Update Finish?**, or click **Mark as Installed** or **Remove from
-Card** on the Settings tab.
+Card** on the General tab.
 
 ---
 
@@ -628,7 +628,7 @@ Card** on the Settings tab.
 
 ### Verify the card
 
-microSD cards can damage files without warning. On your Q2's **Settings**
+microSD cards can damage files without warning. On your Q2's **General**
 tab, under **Card**, click **Verify Card…** (or **Device → Verify Card…**, or
 **Verify Card…** on the Sync Complete window).
 Q2 Sync reads every song it put on the card and compares it, byte for byte,
@@ -652,7 +652,7 @@ with the song on your Mac. Nothing changes while it checks.
 
 Q2 Pod keeps some of your data on the card: song ratings, listens waiting to
 be scrobbled, scrobbling and radio settings, EQ presets, custom App Store
-sources and Rockbox settings. On your Q2's **Settings** tab, under **Q2 Pod
+sources and Rockbox settings. On your Q2's **General** tab, under **Q2 Pod
 Data**, click **Back Up Now** to copy them to the backup folder:
 **Downloads › Q2 Sync Backups** unless you click **Change…** next to
 **Backup folder** and choose another (one folder for all your Q2s; not your
@@ -781,7 +781,7 @@ Yes. The record of what's on the card lives on the card itself.
 
 **Where are the logs?**
 Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
-**Settings** tab.
+**General** tab.
 
 **I clicked "Not My Q2" by mistake.**
 **Q2 Sync › Settings → Ask Again About "Not My Q2" Drives**.

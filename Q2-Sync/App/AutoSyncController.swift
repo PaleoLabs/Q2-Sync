@@ -383,20 +383,20 @@ final class AutoSyncController {
 
     /// Device › Check for Firmware Updates: checks Q2 Pod or Shanling's
     /// stock firmware, whichever the Q2 runs. The result appears on the Q2's
-    /// Settings tab.
+    /// General tab.
     func checkForFirmwareUpdates() {
         guard let kind = devices.connected?.device.knownFirmware else { return }
         showMainWindow()
-        guard showQ2(tab: .settings) else { return }
+        guard showQ2(tab: .general) else { return }
         navigation.sectionToReveal = .firmwareUpdates
         Task { await firmware.checkOnRequest(for: kind) }
     }
 
     /// Device › Back Up Q2 Pod Data. The result appears on the Q2's
-    /// Settings tab.
+    /// General tab.
     func backUpPodData() {
         showMainWindow()
-        guard showQ2(tab: .settings) else { return }
+        guard showQ2(tab: .general) else { return }
         navigation.sectionToReveal = .podData
         // The tab may not have been shown yet, so look at the card now.
         podData.refresh()
@@ -405,10 +405,10 @@ final class AutoSyncController {
     }
 
     /// Device › Restore Q2 Pod Data…: asks which backup, from the Q2's
-    /// Settings tab.
+    /// General tab.
     func restorePodData() {
         showMainWindow()
-        guard showQ2(tab: .settings) else { return }
+        guard showQ2(tab: .general) else { return }
         navigation.sectionToReveal = .podData
         Task {
             // Let the window come forward before the Open panel covers it.

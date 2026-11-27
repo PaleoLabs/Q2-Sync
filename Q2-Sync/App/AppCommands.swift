@@ -159,7 +159,7 @@ struct NavigationCommands: Commands {
                 .disabled(unavailable)
             Button("Show Q2 Music") { controller.showQ2(tab: .music) }
                 .disabled(unavailable || connected == nil)
-            Button("Show Q2 Settings") { controller.showQ2(tab: .settings) }
+            Button("Show Q2 General") { controller.showQ2(tab: .general) }
                 .disabled(unavailable || connected == nil)
             Divider()
         }
@@ -175,7 +175,7 @@ struct DeviceCommands: Commands {
         CommandMenu("Device") {
             let connected = controller.devices.connected
             let podData = controller.podData
-            // The same rules as the Settings tab's Q2 Pod Data buttons, and
+            // The same rules as the General tab's Q2 Pod Data buttons, and
             // not while a sheet is open over them.
             let podDataUnavailable = !noticeAcknowledged || connected?.accessURL == nil || podData.isBusy
                 || controller.isCardInUse(except: .podData) || controller.isShowingSheet

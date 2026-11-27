@@ -393,7 +393,7 @@ preview's album rows (by folder and album tag).
 | --- | --- |
 | `Q2SyncApp` | Entry point: main `Window`, `MenuBarExtra` (always shown; it's the way back while the Dock icon is hidden), `Settings`. `AppDelegate` keeps the app running when the window closes, asks before quitting while the card is in use, and adds Sync Now and Eject to the Dock menu (`applicationDockMenu`, with the menu bar item's enabled rules). |
 | `AppCommands` (file) | The menu bar menus and their shortcuts. A changed shortcut also goes in the user guide's "Keyboard shortcuts". |
-| `AppNavigation` | The sidebar selection, the Q2 page's tab, the selected songs, whether the main window is in front, the search or filter field Edit › Find focuses, and the Settings section a menu item scrolls to. Owned by `AutoSyncController`. |
+| `AppNavigation` | The sidebar selection, the Q2 page's tab, the selected songs, whether the main window is in front, the search or filter field Edit › Find focuses, and the General tab section a menu item scrolls to. Owned by `AutoSyncController`. |
 | `SupportActions` | Show Sync Logs, Show Card in Finder, the latest release's page and the Help menu's and About panel's GitHub links (fixed addresses, no user data). |
 | `AppUpdateModel` | New versions of Q2 Sync: checks at launch and every 24 hours (after a failure, in an hour) unless turned off, and Check for Updates…, which always answers. Both show `UpdateNoticeView`; an automatic find is shown on every check until the app is updated or the release is skipped (`skippedAppRelease`), after a 5 s settle delay and only once `AutoSyncController.isOccupied` is false (library or card in use, a modal panel, or a sheet in the visible main window), so it doesn't pile onto launch prompts and auto-sync. The menu bar item offers it while `available` is set. |
 | `UpdateWindow` | The floating, non-modal AppKit window for that notice, centered over the main window (on screen without one), so it can appear with no other window open and never holds up a sync or quitting. Takes the keyboard only when you asked for the check. |
@@ -411,8 +411,8 @@ preview's album rows (by folder and album tag).
 
 ### Views (`Q2-Sync/Views`)
 
-`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, Music/Settings tabs,
-`DeviceSettingsView`), `UpdateNoticeView` (a new version, up to date, or a failed check), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
+`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, General/Music/Audiobooks tabs,
+`DeviceGeneralView`), `UpdateNoticeView` (a new version, up to date, or a failed check), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
 table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
 `CapacityBarView` (its notes follow the same rule: outside a scroll view, `fixedSize(vertical:)` on wrapping text blanks the sidebar), `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NumberedSteps` (the next-steps list in the sync result
@@ -632,7 +632,7 @@ Paths on the Mac are inside the app's sandbox container,
 | --- | --- |
 | Known devices, selections, auto-sync mode, bookmarks | `Library/Application Support/Q2 Sync/devices.json` |
 | Each Q2's last known contents (song IDs, dates) for the library browser | `Library/Application Support/Q2 Sync/Card Contents/<volume UUID>.json` |
-| Sync logs | `Library/Application Support/Q2 Sync/Logs/` (Settings tab → **Show Sync Logs**) |
+| Sync logs | `Library/Application Support/Q2 Sync/Logs/` (General tab → **Show Sync Logs**) |
 | Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarCloseNotice`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease`, `checkForAppUpdates`, `skippedAppRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |
 | Q2 Pod data backups | `<backup folder>/<card> <date>/` (default `~/Downloads/Q2 Sync Backups`; a chosen folder's bookmark is `podBackupsFolderBookmark` in UserDefaults) with `backup.json` and `About this backup.txt` |
@@ -659,7 +659,7 @@ On the card:
 | "Couldn't open your Apple Music library" | Allow Q2 Sync in System Settings › Privacy & Security › Media & Apple Music. With local signing this may reset after rebuilding. |
 | "Library appears to have no songs" / "media folder isn't available" | The "Mac looks empty" guard: connect the external music drive, or check the right library is open in Music. |
 | Card never shows up | It must be exFAT/FAT, removable, with a UUID. Check Disk Utility. If you clicked **Not My Q2**, use Settings (⌘,) → **Ask Again About “Not My Q2” Drives**. |
-| "no longer has permission to use this card" | Settings tab → **Grant Access…**, select the card root. |
+| "no longer has permission to use this card" | General tab → **Grant Access…**, select the card root. |
 | "The selected music doesn't fit" | Deselect music, or allow removals in the preview. The app keeps 200 MB free. |
 | "record of this card is damaged" | `.q2sync/manifest.json` is corrupt. Delete it; the next sync re-adopts identical files and copies the rest. |
 | `._` files on the card | Made by macOS (Finder copies or quarantine). Q2 Sync removes them next to its own songs; for others run `dot_clean -m /Volumes/<card>/Music`. |

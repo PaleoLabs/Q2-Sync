@@ -11,7 +11,7 @@
 //  is running. Onboarding and Sync Complete never ask.
 //
 //  HOW IT FITS
-//  `DeviceSettingsView` (DeviceView.swift) shows the prompt; the toggle in
+//  `DeviceGeneralView` (DeviceView.swift) shows the prompt; the toggle in
 //  `AppSettingsView` stays the real control and uses `LoginItem` too.
 //
 

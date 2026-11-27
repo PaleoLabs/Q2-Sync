@@ -12,7 +12,7 @@
 //
 //  HOW IT FITS
 //  Presented by `RootView` when `FirmwareInstaller.isPresentingSheet`.
-//  Opened from the Settings tab and the Device menu.
+//  Opened from the General tab and the Device menu.
 //
 
 import AppKit

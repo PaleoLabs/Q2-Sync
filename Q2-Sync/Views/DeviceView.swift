@@ -5,7 +5,8 @@
 //  PURPOSE
 //  The page shown when the Q2 is selected in the sidebar, laid out like
 //  Finder's iPod page: a header (icon, name, firmware, capacity, Eject)
-//  and two tabs, "Music" (what to sync) and "Settings" (firmware and card).
+//  and tabs in Finder's order: "General" (firmware and card), then what
+//  to sync: "Music" and "Audiobooks".
 //
 //  HOW IT FITS
 //  Shown by `RootView`. Actions go through `DeviceMonitor`; library data
@@ -15,11 +16,11 @@
 import AppKit
 import SwiftUI
 
-/// The two tabs on the device page.
+/// The tabs on the device page, in the order shown (General first, like Finder).
 enum DeviceTab: String, CaseIterable, Identifiable {
+    case general = "General"
     case music = "Music"
     case audiobooks = "Audiobooks"
-    case settings = "Settings"
     var id: String { rawValue }
 }
 
@@ -40,7 +41,7 @@ struct DeviceView: View {
         @Bindable var navigation = autoSync.navigation
         let (resolved, estimate) = resolvedSelection()
         VStack(spacing: 0) {
-            DeviceHeaderView(connected: connected, devices: devices, showSettings: { navigation.deviceTab = .settings })
+            DeviceHeaderView(connected: connected, devices: devices, showGeneral: { navigation.deviceTab = .general })
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
 
@@ -60,8 +61,8 @@ struct DeviceView: View {
                     DeviceMusicView(connected: connected, devices: devices, library: library, resolved: resolved)
                 case .audiobooks:
                     DeviceAudiobooksView(connected: connected, devices: devices)
-                case .settings:
-                    DeviceSettingsView(connected: connected, devices: devices)
+                case .general:
+                    DeviceGeneralView(connected: connected, devices: devices)
                 }
             }
             // Fill the space so the Sync bar sits at the bottom on every tab.
@@ -135,8 +136,8 @@ struct DeviceHeaderView: View {
 
     let connected: ConnectedDevice
     let devices: DeviceMonitor
-    /// Switches to the Settings tab (for the firmware update link).
-    var showSettings: () -> Void = {}
+    /// Switches to the General tab (for the firmware update link).
+    var showGeneral: () -> Void = {}
 
     @Environment(AutoSyncController.self) private var autoSync
 
@@ -153,7 +154,7 @@ struct DeviceHeaderView: View {
                 Text(capacityText).font(.callout).foregroundStyle(.secondary)
                 if let advice = devices.formatAdvice(for: connected.volume) {
                     Button(advice.summary, systemImage: "exclamationmark.triangle") {
-                        showSettings()
+                        showGeneral()
                     }
                     .buttonStyle(.link)
                     .font(.callout)
@@ -161,7 +162,7 @@ struct DeviceHeaderView: View {
                 }
                 if let latest = autoSync.firmware.latest,
                    autoSync.firmware.status(for: connected.device)?.shouldNotify == true {
-                    Button("Q2 Pod \(latest.tag) is available", systemImage: "arrow.down.circle") { showSettings() }
+                    Button("Q2 Pod \(latest.tag) is available", systemImage: "arrow.down.circle") { showGeneral() }
                         .buttonStyle(.link)
                         .font(.callout)
                 }
@@ -186,8 +187,8 @@ struct DeviceHeaderView: View {
     }
 }
 
-/// The Settings tab: firmware, after-sync steps and card details.
-struct DeviceSettingsView: View {
+/// The General tab: firmware, after-sync steps and card details.
+struct DeviceGeneralView: View {
 
     let connected: ConnectedDevice
     let devices: DeviceMonitor

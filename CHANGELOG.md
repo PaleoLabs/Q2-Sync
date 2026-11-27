@@ -14,6 +14,7 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 - **Revert and Apply, like Finder.** Ticking boxes or choosing Entire music library on your Q2's page no longer saves straight away. **Sync** becomes **Revert** and **Apply**: Apply saves your choices and starts the sync, Revert puts back what you had. Changes you haven't applied are thrown away if you leave your Q2's page, switch to another Q2, unplug it or quit. While a sync runs, the button reads **Stop**.
 - **The capacity bar and Sync button are at the bottom of every tab** of your Q2's page, not only Music. The button lines up with the bar, as in Finder.
 - **The Music and Audiobooks tabs are laid out like Finder's**: the **Sync … onto** checkbox on its own line, then **Sync:** with the choices one under the other. **Sync** is available when only audiobooks are chosen.
+- **The Settings tab is now General, and comes first**, as in Finder: General | Music | Audiobooks. Your Q2's page opens on it. **View › Show Q2 Settings** is now **Show Q2 General**. Q2 Sync's own Settings (**⌘,**) keeps its name. ([#66](https://github.com/PaleoLabs/Q2-Sync/issues/66))
 - **Hints for ⌘-click.** The first-time note on the Music tab and the **Deselect All** button's hover text mention it.
 
 ## 0.3.1 (2026-11-25)

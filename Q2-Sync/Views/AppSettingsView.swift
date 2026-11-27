@@ -12,7 +12,7 @@
 //
 //  HOW IT FITS
 //  Declared as the `Settings` scene in `Q2SyncApp`. Per-card settings
-//  (firmware, "When This Q2 Connects") live on that card's Settings tab.
+//  (firmware, "When This Q2 Connects") live on that card's General tab.
 //
 //  LOGIN ITEMS (explained)
 //  `SMAppService.mainApp` is Apple's API for "open this app at login". It

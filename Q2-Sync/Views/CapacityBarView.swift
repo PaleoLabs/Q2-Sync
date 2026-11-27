@@ -107,7 +107,7 @@ struct CapacityBarView: View {
     @ViewBuilder
     private var status: some View {
         if !estimate.isCardReadable {
-            Label("Q2 Sync can't read this card, so it can't show what's on it or what a sync would add. Grant access in the Settings tab.",
+            Label("Q2 Sync can't read this card, so it can't show what's on it or what a sync would add. Grant access in the General tab.",
                   systemImage: "lock")
                 .font(.caption)
                 .foregroundStyle(.secondary)

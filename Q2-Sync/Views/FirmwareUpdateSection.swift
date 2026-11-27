@@ -3,7 +3,7 @@
 //  Q2-Sync › Views
 //
 //  PURPOSE
-//  The "Firmware Updates" part of a Q2's Settings tab.
+//  The "Firmware Updates" part of a Q2's General tab.
 //    • Install Firmware… (Q2 Pod or stock), and the status of firmware put
 //      on the card that the Q2 hasn't installed yet.
 //    • Q2 Pod: an optional check of GitHub for new releases, your installed
@@ -14,7 +14,7 @@
 //  Firmware is only downloaded when you click Install or Update.
 //
 //  HOW IT FITS
-//  Shown inside `DeviceSettingsView`'s Form. Data from `FirmwareModel`;
+//  Shown inside `DeviceGeneralView`'s Form. Data from `FirmwareModel`;
 //  per-device values saved through `DeviceMonitor`.
 //
 
@@ -43,7 +43,7 @@ struct FirmwareUpdateSection: View {
                 stockContent
             }
         } header: {
-            Text("Firmware Updates").id(SettingsSection.firmwareUpdates)
+            Text("Firmware Updates").id(GeneralTabSection.firmwareUpdates)
         } footer: {
             Text("Firmware is downloaded only when you click Install or Update. Q2 Sync checks it and copies it to the card as update.tar; your Q2 installs it when you choose TF card update.")
         }

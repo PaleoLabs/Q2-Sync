@@ -11,7 +11,7 @@
 //  On the Mac, in the app's sandbox container:
 //    ~/Library/Containers/io.github.q2sync.Q2Sync/Data/Library/
 //        Application Support/Q2 Sync/Logs/Sync 2026-11-15 at 15.30.00.log
-//  (The Settings tab will get a "Show Logs" button.)
+//  (The General tab will get a "Show Logs" button.)
 //
 //  Each line is written and flushed immediately, so the log is complete
 //  up to the moment of any crash or cancel.

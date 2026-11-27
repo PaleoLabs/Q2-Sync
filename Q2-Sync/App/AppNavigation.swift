@@ -28,8 +28,8 @@ enum FilterField: Equatable {
     case syncPreview
 }
 
-/// A part of the Q2's Settings tab that a menu item can scroll to.
-enum SettingsSection: Hashable {
+/// A part of the Q2's General tab that a menu item can scroll to.
+enum GeneralTabSection: Hashable {
     case firmwareUpdates
     case podData
 }
@@ -43,10 +43,10 @@ final class AppNavigation {
     /// has been set up on this Mac, then on Artists.
     var selection: SidebarItem? {
         didSet {
-            // The Q2's page opens on Music, like Finder: forget the tab
+            // The Q2's page opens on General, like Finder: forget the tab
             // when you leave it.
             if case .device = selection { return }
-            deviceTab = .music
+            deviceTab = .general
             // Edits not applied are thrown away when you leave, like Finder.
             if case .device = oldValue { onLeaveDevicePage?() }
         }
@@ -57,11 +57,11 @@ final class AppNavigation {
     @ObservationIgnored var onLeaveDevicePage: (() -> Void)?
 
     /// Which tab of the Q2's page is showing.
-    var deviceTab: DeviceTab = .music
+    var deviceTab: DeviceTab = .general
 
-    /// The part of the Settings tab to scroll into view, set by a menu
+    /// The part of the General tab to scroll into view, set by a menu
     /// item whose result appears there. The tab clears it once there.
-    var sectionToReveal: SettingsSection?
+    var sectionToReveal: GeneralTabSection?
 
     /// Files of the songs selected in the library browser, for File › Show
     /// in Finder.

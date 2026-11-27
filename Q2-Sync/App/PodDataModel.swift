@@ -7,7 +7,7 @@
 //  (`PodDataBackup`): Back Up Now, the list of backups, and Restore.
 //
 //  HOW IT FITS
-//  Owned by `AutoSyncController`; used by the Settings tab's "Q2 Pod Data"
+//  Owned by `AutoSyncController`; used by the General tab's "Q2 Pod Data"
 //  section and `RestorePodDataSheet`. Syncing waits while it works.
 //
 
