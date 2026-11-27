@@ -70,6 +70,10 @@ struct SyncManifest: Codable, Sendable, Equatable {
         var writtenAt: Date
     }
 
+    /// Audiobooks Q2 Sync put in `Audiobooks/`, by Apple Books id.
+    /// Optional so manifests from before audiobooks still load.
+    var audiobooks: [String: AudiobookRecord]?
+
     /// When the manifest was last saved.
     var updatedAt: Date?
 

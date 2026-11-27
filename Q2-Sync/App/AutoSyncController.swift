@@ -58,6 +58,12 @@ final class AutoSyncController {
     /// Backs up and restores Q2 Pod's own data on the card.
     let podData: PodDataModel
 
+    /// Permission to read Apple Books' audiobooks (one for all Q2s).
+    let booksAccess: BooksAccess
+
+    /// The audiobooks in Apple Books, for the Audiobooks tab and syncing.
+    let audiobooks: AudiobookLibraryModel
+
     /// Opens (or brings forward) the main window. Set by a view that has
     /// SwiftUI's `openWindow` action, since only views can get it.
     @ObservationIgnored var openMainWindow: (() -> Void)?
@@ -71,6 +77,9 @@ final class AutoSyncController {
         self.installer = FirmwareInstaller(devices: devices)
         self.verifier = CardVerifyModel(library: library, devices: devices)
         self.podData = PodDataModel(devices: devices)
+        let booksAccess = BooksAccess()
+        self.booksAccess = booksAccess
+        self.audiobooks = AudiobookLibraryModel(access: booksAccess)
 
         notifications.configure()
         // `[weak self]` avoids a retain cycle: these closures are stored by
@@ -253,7 +262,8 @@ final class AutoSyncController {
     func startSync(automatic: Bool) async {
         guard let connected = devices.connected, !isCardInUse() else { return }
         if !automatic { showMainWindow() }
-        await sync.prepare(connected: connected, library: library, devices: devices, automatic: automatic)
+        await sync.prepare(connected: connected, library: library, devices: devices,
+                           audiobooks: audiobooks.source, automatic: automatic)
     }
 
     /// Checks for Q2 Pod updates (if turned on, at most daily) and announces

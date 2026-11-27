@@ -101,6 +101,21 @@ struct ReservedItemRules: Hashable, Sendable {
         return false
     }
 
+    /// Checks a path inside a reserved root folder that the profile lets
+    /// Q2 Sync manage (only `Audiobooks/` on Q2 Pod). The root-name rule
+    /// is skipped for the folder itself; hidden items, names reserved
+    /// anywhere and name fragments below it are still reserved.
+    ///
+    /// - Parameter components: The whole path, e.g. `["Audiobooks", "Book", "1.m4b"]`.
+    func isReservedInside(components: [String]) -> Bool {
+        for name in components.dropFirst() {
+            let lower = name.lowercased()
+            if lower.hasPrefix(".") || lowerAnywhere.contains(lower)
+                || lowerFragments.contains(where: { lower.contains($0) }) { return true }
+        }
+        return false
+    }
+
     /// Convenience for a slash-separated relative path like `"Music/A/B.mp3"`.
     ///
     /// - Parameter relativePath: Path relative to the card root.

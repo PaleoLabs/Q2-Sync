@@ -66,6 +66,12 @@ Sync your **entire library** of local music files, or tick exactly the **artists
 playlists** you want. Add a new album by an artist you've ticked, and it
 syncs on its own.
 
+### 📚 Audiobooks from Apple Books
+On Q2 Pod, sync **all your audiobooks or just the ones you tick** from Apple
+Books, like Finder does for an iPod. Each book gets its own folder in
+`Audiobooks`, where Q2 Pod remembers your place and shows chapters. Protected
+(DRM) books are listed but can't be ticked.
+
 ### 🔎 Browse your library against your Q2
 The **Music Library** browser marks what's on your Q2, what the next sync adds
 and what can't be copied, even with the Q2 unplugged. Search it by artist,

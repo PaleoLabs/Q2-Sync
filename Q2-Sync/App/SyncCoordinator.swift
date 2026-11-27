@@ -140,7 +140,7 @@ final class SyncCoordinator {
     ///     otherwise the preview is shown and the user is notified.
     /// - Side effects: Reads the library and card. Never writes to the card.
     func prepare(connected: ConnectedDevice, library: LibraryModel, devices: DeviceMonitor,
-                 automatic: Bool = false) async {
+                 audiobooks: (any AudiobookSource)? = nil, automatic: Bool = false) async {
         guard phase == .idle else { return }
         devices.flushPendingSave() // The selection on disk matches what's synced.
         planningGeneration += 1
@@ -174,6 +174,28 @@ final class SyncCoordinator {
             return
         }
 
+        // Audiobooks (Q2 Pod only): read Apple Books now, so the sync never
+        // uses an old list. Without access, or if Books can't be read,
+        // audiobooks are left as they are on the card.
+        var books: [Audiobook]?
+        var audiobookNote: String?
+        let audiobookSelection = connected.device.effectiveAudiobooks
+        if connected.device.profile.audiobooksFolderName != nil {
+            if let audiobooks {
+                phase = .planning("Reading Apple Books…")
+                do {
+                    books = try await audiobooks.loadAudiobooks()
+                } catch AudiobookError.noBooksList {
+                    books = []
+                } catch {
+                    audiobookNote = error.localizedDescription + " Audiobooks on the card weren't changed."
+                }
+                guard isCurrentPlanning(generation) else { return }
+            } else if audiobookSelection.isEnabled {
+                audiobookNote = "Q2 Sync can't read Apple Books, so audiobooks weren't synced. Allow access on the Audiobooks tab."
+            }
+        }
+
         phase = .planning("Checking the card…")
         do {
             let pathGuard = try PathGuard(
@@ -191,7 +213,9 @@ final class SyncCoordinator {
                                                             profile: connected.device.profile,
                                                             albumCovers: connected.device.effectiveAlbumCovers,
                                                             onlyChangedPlaylists: connected.device.effectiveImportOnlyChangedPlaylists,
-                                                            reimportAllPlaylists: connected.device.reimportAllPlaylists == true)
+                                                            reimportAllPlaylists: connected.device.reimportAllPlaylists == true,
+                                                            books: books, audiobookSelection: audiobookSelection,
+                                                            audiobookNote: audiobookNote)
             // Cancelled while the card was being scanned: drop the plan.
             guard isCurrentPlanning(generation) else { return }
 
@@ -256,7 +280,9 @@ final class SyncCoordinator {
                                   snapshot: LibrarySnapshot,
                                   fileSystem: CardFileSystem, profile: DeviceProfile,
                                   albumCovers: Bool, onlyChangedPlaylists: Bool,
-                                  reimportAllPlaylists: Bool) async throws
+                                  reimportAllPlaylists: Bool,
+                                  books: [Audiobook]?, audiobookSelection: AudiobookSelection,
+                                  audiobookNote: String?) async throws
         -> (SyncManifest, SyncPlan) {
         let manifest = try SyncManifest.load(from: fileSystem)
         // The card is listed once (slow over the Q2's USB); the music and
@@ -281,6 +307,17 @@ final class SyncCoordinator {
         // of copying the same songs again.
         CardOnlyFinder.adoptIdenticalCopies(in: &adjusted, musicFolderName: profile.musicFolderName)
 
+        // Audiobooks, in their own reserved folder (see AudiobookSync.swift).
+        if let folderName = profile.audiobooksFolderName {
+            if let books {
+                adjusted.audiobooks = AudiobookPlanner.plan(books: books, selection: audiobookSelection,
+                                                            manifest: manifest,
+                                                            card: AudiobookCardListing.scan(on: fileSystem),
+                                                            folderName: folderName)
+            }
+            if let audiobookNote { adjusted.audiobooks.note = audiobookNote }
+        }
+
         adjusted.playlistPlan.onlyChangedForImport = onlyChangedPlaylists
         adjusted.playlistPlan.reimportAll = reimportAllPlaylists
         PlaylistWriter.dropUnchangedWrites(in: &adjusted, manifest: manifest, profile: profile) { path in
@@ -298,7 +335,7 @@ final class SyncCoordinator {
     func apply(devices: DeviceMonitor) {
         guard phase == .preview, let preview, preview.assessment(for: options).canApply else { return }
         phase = .running
-        progress = SyncProgress(totalOperations: 0, totalBytes: preview.plan.bytesToCopy)
+        progress = SyncProgress(totalOperations: 0, totalBytes: preview.plan.allBytesToCopy)
         secondsRemaining = nil
         estimator = TimeRemainingEstimator()
         coverEstimator = .forCovers()

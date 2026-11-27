@@ -106,10 +106,14 @@ struct SyncPlan: Sendable {
     var coverWrites: [CoverWrite] = []
     /// Q2 Sync's own covers to remove, because album covers were turned off.
     var coverRemovals: [CardPath] = []
+    /// Audiobooks to copy, keep or remove (Q2 Pod only; see AudiobookSync.swift).
+    var audiobooks = AudiobookPlan()
 
     /// Bytes that will be copied.
     var bytesToCopy: UInt64 { copies.reduce(0) { $0 + $1.track.fileSize } }
 
+    /// Bytes copied for songs and audiobooks together.
+    var allBytesToCopy: UInt64 { bytesToCopy + audiobooks.bytesToCopy }
     /// Bytes freed if removals are applied.
     var bytesFreedByRemovals: UInt64 { removals.reduce(0) { $0 + $1.entry.cardSize } }
 
@@ -137,6 +141,7 @@ struct SyncPlan: Sendable {
             && playlistPlan.writes.isEmpty && playlistPlan.removals.isEmpty && playlistPlan.leavingImport.isEmpty
             && coverWrites.isEmpty
             && coverRemovals.isEmpty
+            && audiobooks.isEmpty
     }
 }
 
@@ -331,6 +336,15 @@ extension SyncPlan {
         if !playlistPlan.removals.isEmpty { changes.append("remove \(Self.count(playlistPlan.removals.count, "playlist"))") }
         if !coverWrites.isEmpty { changes.append("add \(Self.count(coverWrites.count, "album cover"))") }
         if !coverRemovals.isEmpty { changes.append("remove \(Self.count(coverRemovals.count, "album cover"))") }
+        if audiobooks.booksToCopy > 0 {
+            changes.append("copy \(Self.count(audiobooks.booksToCopy, "audiobook")) (\(Int64(audiobooks.bytesToCopy).formatted(ByteCountFormatStyle(style: .file))))")
+        }
+        if applyRemovals && audiobooks.booksToRemove > 0 {
+            changes.append("remove \(Self.count(audiobooks.booksToRemove, "audiobook"))")
+        }
+        if !audiobooks.adoptions.isEmpty {
+            changes.append("record \(Self.count(audiobooks.adoptions.count, "audiobook")) already on the card")
+        }
         // Housekeeping that copies nothing, named so the sentence never
         // says "nothing to do" while Sync has work.
         if !adoptions.isEmpty {
@@ -347,7 +361,9 @@ extension SyncPlan {
         let list = changes.count == 1 ? changes[0]
             : changes.dropLast().joined(separator: ", ") + " and " + changes[changes.count - 1]
         var text = "This sync will \(list)."
-        if unchangedCount + adoptions.count > 0 { text += " Everything else you chose is already on the card." }
+        if unchangedCount + adoptions.count + audiobooks.unchangedBooks > 0 {
+            text += " Everything else you chose is already on the card."
+        }
         return text
     }
 

@@ -200,12 +200,42 @@ you change anything, the **Sync** button becomes **Revert** and **Apply**:
   below opens).
 - **Revert** puts back the choices you had, and **Sync** returns.
 
-Your changes stay while you switch between the Music and Settings tabs. They
+Your changes stay while you switch between the Music, Audiobooks and Settings tabs. They
 are thrown away, without asking, if you go to another page in the sidebar,
 switch to another Q2, unplug the Q2 or quit Q2 Sync.
 
 While a sync is under way the button reads **Stop**. Stopping keeps the
 choices you applied.
+
+### Audiobooks (Q2 Pod)
+
+Q2 Sync copies audiobooks from **Apple Books**, the way Finder syncs them to
+an iPod. They go in the card's `Audiobooks` folder, one folder per book, where
+Q2 Pod lists them under **Library › Audiobooks**: they remember your place,
+have chapters, and stay out of your music and shuffle.
+
+1. Click your Q2 in the sidebar, then the **Audiobooks** tab.
+2. The first time, click **Allow Access to Books…**. A window opens at Apple
+   Books' folder, already selected: click **Allow Access**. Q2 Sync only reads
+   it, and remembers the permission.
+3. Tick **Sync audiobooks onto** your Q2, then choose **All audiobooks** or
+   **Selected audiobooks** and tick the books you want.
+4. Click **Apply**, as for music.
+
+- **Protected books can't be synced.** Most audiobooks bought in the Apple
+  Books store are protected (DRM) and play only in Apple's apps. They're
+  listed with a lock, and their boxes can't be ticked. Books you added
+  yourself, such as DRM-free `.m4b` files, sync.
+- **Only downloaded books are listed.** A book that's only in iCloud doesn't
+  appear: download it in Apple Books first.
+- **Very long books:** Q2 Pod can refuse a single file of around 40 hours.
+  Books with a file over 35 hours are marked **May be too long**.
+- A book you untick, or delete from Apple Books, is removed from the card at
+  the next sync if you tick **Remove Them** in the preview. Q2 Sync only
+  removes books it copied; anything else in `Audiobooks` is left alone.
+- On **stock firmware**, the tab explains that audiobook sync needs Q2 Pod.
+- To add audiobooks to Apple Books, open Books and choose **File › Add to
+  Library**.
 
 ### Browse your Music library
 
@@ -658,6 +688,17 @@ It shows the version and build, for example `Version 0.1 (142 · 0e7d893)`.
 Mention it when you report a problem. The same panel links to Q2 Sync on
 GitHub and to its license. For a newer version, see
 [New versions of Q2 Sync](#new-versions-of-q2-sync).
+
+**Why can't this audiobook be synced?**
+It's protected (DRM), or its files can't be read. (A book that isn't
+downloaded doesn't appear at all: download it in Apple Books.) Hover over
+the reason on the **Audiobooks** tab. Most audiobooks from the Apple Books
+store are protected and only play in Apple's apps; a DRM-free copy you add to
+Apple Books (**File › Add to Library**) syncs.
+
+**Can Q2 Sync change my Apple Books library?**
+No. It only reads Apple Books' folder, with a read-only permission you give
+once.
 
 **Can Q2 Sync damage my Apple Music library?**
 No. It only reads your library, and macOS itself prevents it from writing to

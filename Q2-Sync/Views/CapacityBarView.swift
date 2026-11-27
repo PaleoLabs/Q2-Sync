@@ -43,6 +43,7 @@ struct CapacityBarView: View {
         }
         return [
             Segment(id: "music", label: "Music", bytes: estimate.selectedMusicBytes, color: .blue),
+            Segment(id: "audiobooks", label: "Audiobooks", bytes: estimate.audiobookBytes, color: .purple),
             Segment(id: "deselected", label: "Not selected", bytes: estimate.deselectedMusicBytes, color: .blue.opacity(0.4)),
             Segment(id: "add", label: "To add", bytes: estimate.toAddBytes, color: .green),
             // "Other", as in Finder: everything that isn't a song in Q2

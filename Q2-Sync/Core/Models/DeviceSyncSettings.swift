@@ -28,13 +28,16 @@ struct DeviceSyncSettings: Hashable, Sendable {
     /// The Music tab: entire library, or the ticked artists, albums,
     /// genres and playlists.
     var music: SyncSelection
+
+    /// The Audiobooks tab: on or off, all or the ticked books.
+    var audiobooks: AudiobookSelection = AudiobookSelection()
 }
 
 extension KnownDevice {
 
     /// The saved sync settings for this Q2.
     var syncSettings: DeviceSyncSettings {
-        DeviceSyncSettings(music: effectiveSelection)
+        DeviceSyncSettings(music: effectiveSelection, audiobooks: effectiveAudiobooks)
     }
 }
 

@@ -22,7 +22,9 @@
         Q2's card, which you choose once when you first connect it. Every
         write is still checked by the app's PathGuard, which refuses any
         path outside the confirmed card. (If your music lives on an
-        external drive, that folder is remembered with a READ-ONLY bookmark.)
+        external drive, that folder is remembered with a READ-ONLY bookmark.
+        Apple Books' folder, which you allow once to sync audiobooks, is
+        remembered READ-ONLY the same way.)
     • files.bookmarks.app-scope
         Lets the app remember that permission across launches using a
         "security-scoped bookmark".

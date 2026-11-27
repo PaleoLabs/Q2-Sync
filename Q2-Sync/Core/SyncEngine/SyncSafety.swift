@@ -77,9 +77,11 @@ enum SyncSafety {
         let cardOnlyFreed = plan.cardOnly
             .filter { cardOnlyActions[$0.path]?.removesFromCard == true }
             .reduce(Int64(0)) { $0 + Int64($1.size) }
-        let removalsFreed = includeRemovals ? Int64(plan.bytesFreedByRemovals) : 0
-        let freed = Int64(plan.bytesFreedByUpdates) + cardOnlyFreed + removalsFreed
-        result.projectedFreeBytes = availableBytes + freed - Int64(plan.bytesToCopy)
+        let removalsFreed = includeRemovals
+            ? Int64(plan.bytesFreedByRemovals + plan.audiobooks.bytesFreedByRemovals) : 0
+        let replacedAudiobookFiles = Int64(plan.audiobooks.replacedFiles.reduce(0) { $0 + $1.cardSize })
+        let freed = Int64(plan.bytesFreedByUpdates) + cardOnlyFreed + removalsFreed + replacedAudiobookFiles
+        result.projectedFreeBytes = availableBytes + freed - Int64(plan.allBytesToCopy)
         if result.projectedFreeBytes < reservedFreeBytes {
             let short = reservedFreeBytes - result.projectedFreeBytes
             let message = "The selected music doesn't fit on the card. Deselect about "

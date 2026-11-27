@@ -607,6 +607,9 @@ final class DeviceMonitor {
     private func saveSyncSettings(_ settings: DeviceSyncSettings) {
         setSelection(settings.music)
         flushPendingSave()
+        if connected?.device.effectiveAudiobooks != settings.audiobooks {
+            updateConnectedDevice { $0.audiobooks = settings.audiobooks }
+        }
     }
 
     /// Saves a new sync selection for the connected Q2.
