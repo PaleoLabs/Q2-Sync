@@ -2,7 +2,7 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
-## Unreleased
+## 0.4.0 (2026-11-27)
 
 ### Added
 - **Audiobooks from Apple Books (Q2 Pod), as a preview.** A new **Audiobooks** tab on your Q2's page syncs all your audiobooks or only the ones you tick, like Finder does for an iPod. Each book gets its own folder in the card's `Audiobooks` folder, where Q2 Pod remembers your place and shows chapters. The first time, allow Q2 Sync to read Apple Books' folder (read-only). Protected (DRM) and not-downloaded books are listed with the reason and can't be ticked. Books you untick are removed only if you choose **Remove Them** in the preview, and only books Q2 Sync copied. The capacity bar shows audiobooks. Not on stock firmware. This is a preview: it relies on how Apple Books stores books, which Apple doesn't document, so please report anything that looks wrong. ([#48](https://github.com/PaleoLabs/Q2-Sync/issues/48))
