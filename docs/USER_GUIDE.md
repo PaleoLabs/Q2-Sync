@@ -249,6 +249,29 @@ have chapters, and stay out of your music and shuffle.
 - To add audiobooks to Apple Books, open Books and choose **File › Add to
   Library**.
 
+### Browse your audiobooks
+
+While any of your Q2s has **Sync audiobooks** on, the sidebar has an
+**Audiobooks** section with **Books**, below Music Library (**View › Books**,
+**⌘6**). It lists the audiobooks in Apple Books as they relate to your Q2,
+even when the Q2 is unplugged:
+
+- The **Q2** column shows a green check (**On Q2**), a grey arrow (**Next
+  sync**: copied at the next sync), a dash (**Not chosen**), or an orange icon
+  when the book can't be synced (protected, not downloaded, files missing or
+  unreadable; hover for why).
+- Click a column header (Title, Author, Length, Size) to sort. **Search** with
+  the field in the toolbar (**⌘F** puts the cursor there).
+- Double-click a book (or click **Book Info** in the toolbar, or press
+  **⌘I**, or right-click it and choose **Show Info**) for a panel with its
+  status, author, length, size and files in order, with **Show in Finder**.
+  Right-click books for **Show in Finder** too.
+- The bottom of the sidebar shows how many books you have and their size, and
+  how many can't be synced.
+
+If a Q2's record of the card is from before this version, the list asks you
+to connect it once so Q2 Sync can see which books are on it.
+
 ### Browse your Music library
 
 The **Music Library** section of the sidebar (Artists, Albums, Genres,
@@ -795,11 +818,12 @@ Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
 | **⌘0** | Open the Q2 Sync window |
 | **⌘1** to **⌘4** | Show Artists, Albums, Genres or Playlists |
 | **⌘5** | Show your Q2 |
+| **⌘6** | Show Books (when the sidebar has an Audiobooks section) |
 | **⌘R** | Refresh the Music library |
 | **⇧⌘R** | Show the selected songs in Finder |
 | **⌘F** | Search your library, or filter the Music tab or the sync preview |
 | **⌘**-click a checkbox | On the Music tab, tick or untick every item shown |
-| **⌘I** | Show or hide Song Info |
+| **⌘I** | Show or hide Song Info, or Book Info on Books |
 | **⇧⌘S** | Sync Now |
 | **⌘E** | Eject |
 | **⌘,** | Settings |
