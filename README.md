@@ -64,14 +64,18 @@ and light and dark mode.
 ### 🎵 Pick your music, the familiar way
 Sync your **entire library** of local music files, or tick exactly the **artists, albums, genres and
 playlists** you want. Add a new album by an artist you've ticked, and it
-syncs on its own.
+syncs on its own. **⌘**-click a checkbox to tick or untick a whole list. As in
+Finder, your changes wait for **Apply** (or **Revert**), and you can untick
+**Sync music** to sync only audiobooks.
 
 ### 📚 Audiobooks from Apple Books
 On Q2 Pod, sync **all your audiobooks or just the ones you tick** from Apple
 Books, like Finder does for an iPod. Each book gets its own folder in
 `Audiobooks`, where Q2 Pod remembers your place and shows chapters. Protected
-(DRM) books are listed but can't be ticked. *Preview: new in 0.4.0; please
-report anything that looks wrong.*
+(DRM) books are listed but can't be ticked. Browse them in the sidebar's
+**Audiobooks › Books** section, which shows each book's length, size and
+whether it's on your Q2, with search and **Book Info** (**⌘I**). Needs Q2 Pod
+firmware. *Preview: new in 0.4.0; please report anything that looks wrong.*
 
 ### 🔎 Browse your library against your Q2
 The **Music Library** browser marks what's on your Q2, what the next sync adds
@@ -81,9 +85,10 @@ open or close **Song Info**: its artwork, tags, file details and plays, with
 **Show in Finder**.
 
 ### 👀 See every change before it happens
-The **Ready to Sync** preview lists every song that will be added, updated,
-renamed or removed, and how much space is left afterwards. Nothing changes
-until you click **Sync** on it.
+The **Ready to Sync** preview lists every song and audiobook that will be
+added, updated, renamed or removed, and how much space is left afterwards.
+Nothing changes until you click **Sync** on it, and nothing is removed unless
+you tick **Remove Them** (the button then reads **Sync and Remove**).
 
 ### ⚡️ Fast, incremental syncs
 Only new or changed songs are copied. Retag a song in Apple Music and it's
@@ -155,7 +160,8 @@ the card, which you fix by syncing again.
 - **Read-only toward Apple Music.** The library is read with Apple's
   `iTunesLibrary` framework, which can't change it. The App Sandbox gives the
   app **read-only** access to `~/Music`, so macOS itself blocks any write
-  there. Song files are opened read-only.
+  there. Song files are opened read-only. Apple Books' folder, which you
+  allow once to sync audiobooks, is also read-only.
 - **One path guard.** Every change on the card passes a single checker that
   refuses anything outside the confirmed card, on the wrong or an internal
   disk, inside your Music folder, or on the list of firmware files. It has
@@ -193,6 +199,9 @@ the card, which you fix by syncing again.
   even when downloaded), older protected iTunes Store purchases, and songs
   only in iCloud are listed but can't be copied. Files are copied as they
   are, without converting.
+- For audiobooks: **Q2 Pod** firmware, and books **downloaded** in Apple
+  Books that aren't protected (DRM), such as `.m4b` files you added
+  yourself. Most audiobooks bought in the Apple Books store are protected.
 
 ## Install
 
@@ -245,6 +254,7 @@ New to the app? Read the [User Guide](docs/USER_GUIDE.md), also in the app under
 | | Q2 Pod (custom) | Shanling stock |
 | --- | --- | --- |
 | Syncing music | ✅ | ✅ |
+| Audiobooks (`Audiobooks/`, preview) | ✅ Library › Audiobooks, with chapters and your place | ❌ needs Q2 Pod |
 | Playlists (`_explaylist_data/*.m3u`) | ✅ confirmed on Q2 Pod 1.8.9 | ✅ same folder, to verify on device |
 | Album covers (`cover.jpg`, optional) | ✅ Cover Flow and Library (refresh Cover Flow after changes) | ✅ Now Playing and Album Wall (to verify on device) |
 | "Update the library on your Q2" steps | Library → Update Library → Scan music now | Local Songs → Update Library → Scan music now |

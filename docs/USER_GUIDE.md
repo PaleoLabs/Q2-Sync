@@ -350,19 +350,27 @@ marks above, so it works without the Q2 connected.
    will be free. If something needs your choice (songs you no longer sync,
    or music that's only on the card), a box below it asks.
    Click **Details** for the counts and every change, song by song. The
-   counts are in one box per topic: **Songs** (Add, Update, Rename, Remove),
-   **Not Copied** (Already on card, On card only, Can't sync), **Playlists**
-   and **Album Covers**. Counts of 0 are greyed out. The lists below follow
-   the same order, after the sections that need a choice. Q2 Sync remembers
-   whether you left Details open.
-3. **Nothing changes until you click Sync** on the preview. Click **Cancel**
-   to leave the card as it is.
-4. **Removing songs you unticked:** the box says how many are still on the
-   card, but nothing is removed unless you tick **Remove Them** (or, under
-   Details, **Remove the … songs you no longer sync**). Removed songs are
-   deleted from the card. They're still in your library, so ticking them
-   again puts them back at the next sync. If that's more than 20% of the
-   songs on the card, you'll be asked to confirm.
+   counts are one row per kind of content with something to do (**Songs**,
+   **Audiobooks**, **Playlists**, **Album Covers**), each with the same
+   columns: **Add**, **Update**, **Rename**, **Remove** and **Can't Sync**.
+   A count of 0 is greyed out, and a dash means the action doesn't apply
+   (audiobooks are never renamed, for example). A line below the counts
+   says what's already on the card and what's only on the card. The lists
+   below follow the same order, after the sections that need a choice. Q2
+   Sync remembers whether you left Details open.
+3. **Nothing changes until you click Sync** (or **Sync and Remove …**, see
+   below) on the preview. Click **Cancel** to leave the card as it is.
+4. **Removing what you unticked:** songs and audiobooks you no longer sync
+   that are still on the card share one line, in its own box, with one
+   **Remove It** / **Remove Them** checkbox. Nothing is removed unless you
+   tick it. Unticked, the box is orange and says what you no longer sync
+   will stay on the card; ticked, it turns red and says it will be deleted
+   from the card, and the button reads **Sync and Remove** with the number
+   of items. Under Details the Remove count then reads **Kept** while the
+   box is unticked. Removed songs and books are deleted from the card only.
+   They're still in your library, so ticking them again puts them back at
+   the next sync. If that's more than 20% of the songs on the card, you'll
+   be asked to confirm.
    With **Only put new or changed playlists in the import folder** on, the
    same box may also ask about playlists still waiting in the import folder.
    Tick **I imported them on the Q2** only if you did (see
