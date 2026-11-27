@@ -274,8 +274,13 @@ struct SyncPreviewView: View {
 
     /// e.g. "This sync will update 3 playlists. Everything else you chose is
     /// already on the card. About 158.38 GB will be free on the card."
+    ///
+    /// Removals of what's no longer synced are left out whatever Remove
+    /// It/Them says: the removal box and the Sync button already say so,
+    /// and changing this sentence when the box is ticked could add a line
+    /// and move the box under the pointer (#73).
     private var summaryText: String {
-        var text = plan.summary(applyRemovals: sync.options.applyRemovals)
+        var text = plan.summary(applyRemovals: false)
         if !isUpToDate {
             text += " About \(max(0, assessment.projectedFreeBytes).formatted(ByteCountFormatStyle(style: .file))) will be free on the card."
         }
