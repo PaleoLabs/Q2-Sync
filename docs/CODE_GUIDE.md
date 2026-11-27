@@ -565,7 +565,7 @@ never reads the library at app launch; it reads it when the window first shows
 
 ## 6. Build, run and test
 
-**Requirements:** macOS 27.2 or later, Xcode 27.2 or later.
+**Requirements:** a Mac with Apple silicon and macOS 15 (Sequoia) or later to run; Xcode 27.2 or later to build.
 
 **Run the app:** open `Q2-Sync.xcodeproj` in Xcode, select the **Q2-Sync**
 scheme and **My Mac**, press ⌘R.

@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="macOS 27.2+" src="https://img.shields.io/badge/macOS-27.2%2B-0A54DB?logo=apple&logoColor=white">
+  <img alt="macOS 15+" src="https://img.shields.io/badge/macOS-15%2B-0A54DB?logo=apple&logoColor=white">
   <img alt="Swift 6.2" src="https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white">
   <img alt="SwiftUI" src="https://img.shields.io/badge/UI-SwiftUI-0A84FF">
   <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPLv3-34C759"></a>
@@ -70,7 +70,8 @@ syncs on its own.
 On Q2 Pod, sync **all your audiobooks or just the ones you tick** from Apple
 Books, like Finder does for an iPod. Each book gets its own folder in
 `Audiobooks`, where Q2 Pod remembers your place and shows chapters. Protected
-(DRM) books are listed but can't be ticked.
+(DRM) books are listed but can't be ticked. *Preview: new in 0.4.0; please
+report anything that looks wrong.*
 
 ### 🔎 Browse your library against your Q2
 The **Music Library** browser marks what's on your Q2, what the next sync adds
@@ -182,7 +183,7 @@ the card, which you fix by syncing again.
 
 ## Requirements
 
-- macOS 27.2 or later
+- A Mac with Apple silicon, running macOS 15 (Sequoia) or later
 - Xcode 27.2 or later (to build)
 - A Shanling Q2 with a microSD card formatted **exFAT** or **FAT32** as one
   volume on a Master Boot Record partition table, set to

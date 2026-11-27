@@ -36,7 +36,7 @@ let sharedSwiftSettings: [SwiftSetting] = [
 
 let package = Package(
     name: "Q2SyncCore",
-    platforms: [.macOS("27.0")],
+    platforms: [.macOS("15.0")],
     products: [
         .library(name: "Q2SyncCore", targets: ["Q2SyncCore"]),
     ],
