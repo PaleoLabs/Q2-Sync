@@ -247,7 +247,9 @@ have chapters, and stay out of your music and shuffle.
   removes books it copied; anything else in `Audiobooks` is left alone.
 - On **stock firmware**, the tab explains that audiobook sync needs Q2 Pod.
 - To add audiobooks to Apple Books, open Books and choose **File › Add to
-  Library**.
+  Library**. The tab reads Apple Books when you open it, so a book you add
+  while it's showing appears when you come back to the tab. A sync always
+  reads Apple Books first, so it never misses a book.
 
 ### Browse your audiobooks
 
@@ -268,6 +270,8 @@ even when the Q2 is unplugged:
   Right-click books for **Show in Finder** too.
 - The bottom of the sidebar shows how many books you have and their size, and
   how many can't be synced.
+- The list is read when you open it. If you add a book to Apple Books while
+  it's showing, click **Refresh Audiobooks** at the top right to see it.
 
 If a Q2's record of the card is from before this version, the list asks you
 to connect it once so Q2 Sync can see which books are on it.
