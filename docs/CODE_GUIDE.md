@@ -250,6 +250,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `LibraryMarks` | The library browser's marks: per song `TrackPlacement` (on Q2 / next sync / not chosen / can't sync), per group `GroupMarks` counts | Built once per library read, card record and selection (it resolves the selection); compares against `CardContentsRecord`. |
 | `LibrarySearch` | The library browser's search (`results(in:of:includingSubtitles:)`): which groups stay listed, and the songs shown for each | Every word must be in the group's name, or in one song's title, artist, album artist or album (`localizedStandardContains`: case and accents ignored). Goes through every song, so the view runs it off the main thread. |
 | `SongListCSV` | CSV text of the songs on the Q2 or chosen for it (`make(snapshot:marks:)`) | Pure text. File › Export Song List… (`SongListCommands` in `AppCommands`) builds the marks for `devices.referenceContents` and saves it with an `NSSavePanel`. |
+| `PhotoSelection`, `PhotoAsset`, `PhotoAlbum` (#68, in progress) | The Photos tab's settings for one Q2 (source, All or Selected albums, Only favorites, the recent period, full resolution), and our read-only view of the Photos library | `PhotoSyncSource.folder` is stored but not built yet. `PhotoAlbumKind.isIncludedByAll`: only user albums come with "All"; Favorites, Recently Added, media types and Hidden must be ticked. A `PhotoSource` reads the library (`FixturePhotoSource` in tests). Not wired to the app yet. |
 | `SyncSelection` | What you ticked for a device | Stores *intent* (artist/album/genre/playlist IDs) so new albums by a ticked artist sync automatically. |
 
 ### Help (`Core/Help`)
@@ -496,9 +497,9 @@ Nothing else in the code mentions a firmware by name.
 - anywhere: `database.ignore`, `database.unignore`;
 - any name containing `librespot`.
 
-The reserved folders Q2 Sync may change are `Audiobooks/` and `Podcasts/`,
-and only on a profile with `audiobooksFolderName` / `podcastsFolderName` (Q2
-Pod). For audiobooks, `PathGuard` allows creating
+The reserved folders Q2 Sync may change are `Audiobooks/`, `Podcasts/` and
+`Photos/`, and only on a profile with `audiobooksFolderName` /
+`podcastsFolderName` / `photosFolderName` (Q2 Pod). For audiobooks, `PathGuard` allows creating
 `Audiobooks/` and `Audiobooks/<book>/`, writing an audio file directly in a
 book folder, and deleting such a file or an empty book folder. Hidden items,
 names reserved anywhere and deeper paths stay refused there
@@ -510,6 +511,28 @@ same way, one level of show folders (`Podcasts/<show>/<episode file>`,
 (`Core/SyncEngine/PodcastSync.swift`). A show folder may also hold files
 from the q2-podcasts card app or the user: a file already at an episode's
 name counts as that episode on the card and is never overwritten or removed.
+
+`Photos/` (#68, `photosFolderName`, `DeviceProfile.isPhotoItem`) is the
+third: Q2 Pod's All Photos shows photos loose in `Photos/` and in each album
+folder directly inside it, so `PathGuard` allows creating `Photos/` and
+`Photos/<album>/`, writing a `.jpg`/`.jpeg`/`.png` file at either level, and
+deleting such a file or an (empty) album folder. Nothing deeper, no other
+file types, nothing hidden (Q2 Pod's own `.photos` cache is at the card
+root and stays reserved). `PhotoPlanner` (`Core/SyncEngine/PhotoSync.swift`)
+decides which photos go where: under "All photos and albums" each user album
+is a folder and photos in no album are loose, so All Photos shows the whole
+library; under "Selected albums" only ticked albums (Hidden included if
+ticked), with "Automatically include photos from" photos loose unless a ticked
+album brings them. Every photo is a JPEG named `<YYYY-MM-DD> <original
+name>.jpg`. A photo in two albums is two files. The manifest's `photos`
+records are keyed by `"assetID|albumID"` (one per photo per folder); only
+recorded files are ever replaced or removed, and a new photo takes a free
+name rather than overwrite anything. A recorded photo is redone when it was
+edited, its file is missing or a different size, or "Include full-resolution
+photos" changed. Q2 Pod's limits (500 photos per grid, 200 albums) give
+`PhotoPlan.overLimit` / `tooManyAlbums` warnings; everything is still copied.
+Copy sizes are estimates (`estimatedCardSize`). Not yet wired into the
+coordinator or executor.
 
 **Podcasts** (#20) are read, never written, from the Podcasts app's group
 container (`~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts`),
@@ -571,8 +594,9 @@ Plus: normal sync operations only inside `Music/`, `.q2sync/` and
 `_explaylist_data/` (only `.m3u` files directly inside); deleting elsewhere
 needs `.deleteConfirmedByUser`. The narrow exceptions are
 `checkAppleDoubleCompanion`, which allows deleting the `._` companion of a song
-Q2 Sync manages, and `Audiobooks/<book>/<audio file>` and
-`Podcasts/<show>/<audio file>` on Q2 Pod (see §4).
+Q2 Sync manages, and `Audiobooks/<book>/<audio file>`,
+`Podcasts/<show>/<audio file>` and `Photos/[<album>/]<image>` on Q2 Pod
+(see §4).
 
 Copy-back has its own guard (`RecoveryCopier.checkDestination`): only inside the
 staging folder, never inside `~/Music` or the media folder, never overwriting.

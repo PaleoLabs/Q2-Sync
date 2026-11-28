@@ -110,12 +110,17 @@ struct SyncPlan: Sendable {
     var audiobooks = AudiobookPlan()
     /// Podcast episodes to copy, keep or remove (Q2 Pod only; see PodcastSync.swift).
     var podcasts = PodcastPlan()
+    /// Photos to write, keep or remove (Q2 Pod only; see PhotoSync.swift).
+    var photos = PhotoPlan()
 
     /// Bytes that will be copied.
     var bytesToCopy: UInt64 { copies.reduce(0) { $0 + $1.track.fileSize } }
 
-    /// Bytes copied for songs, audiobooks and podcasts together.
-    var allBytesToCopy: UInt64 { bytesToCopy + audiobooks.bytesToCopy + podcasts.bytesToCopy }
+    /// Bytes copied for songs, audiobooks, podcasts and photos together
+    /// (photos estimated: they're made as they're written).
+    var allBytesToCopy: UInt64 {
+        bytesToCopy + audiobooks.bytesToCopy + podcasts.bytesToCopy + photos.bytesToCopy
+    }
     /// Bytes freed if removals are applied.
     var bytesFreedByRemovals: UInt64 { removals.reduce(0) { $0 + $1.entry.cardSize } }
 
@@ -145,6 +150,7 @@ struct SyncPlan: Sendable {
             && coverRemovals.isEmpty
             && audiobooks.isEmpty
             && podcasts.isEmpty
+            && photos.isEmpty
     }
 }
 
@@ -354,6 +360,12 @@ extension SyncPlan {
         if applyRemovals && !podcasts.removals.isEmpty {
             changes.append("remove \(Self.count(podcasts.removals.count, "podcast episode"))")
         }
+        if !photos.copies.isEmpty {
+            changes.append("copy \(Self.count(photos.copies.count, "photo")) (about \(Int64(photos.bytesToCopy).formatted(ByteCountFormatStyle(style: .file))))")
+        }
+        if applyRemovals && !photos.removals.isEmpty {
+            changes.append("remove \(Self.count(photos.removals.count, "photo"))")
+        }
         // Housekeeping that copies nothing, named so the sentence never
         // says "nothing to do" while Sync has work.
         if !adoptions.isEmpty {
@@ -371,7 +383,7 @@ extension SyncPlan {
             : changes.dropLast().joined(separator: ", ") + " and " + changes[changes.count - 1]
         var text = "This sync will \(list)."
         if unchangedCount + adoptions.count + audiobooks.unchangedBooks
-            + podcasts.unchangedEpisodes + podcasts.alreadyOnCard > 0 {
+            + podcasts.unchangedEpisodes + podcasts.alreadyOnCard + photos.unchangedPhotos > 0 {
             text += " Everything else you chose is already on the card."
         }
         return text

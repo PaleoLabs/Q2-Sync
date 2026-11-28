@@ -628,6 +628,9 @@ final class DeviceMonitor {
         if connected?.device.effectivePodcasts != settings.podcasts {
             updateConnectedDevice { $0.podcasts = settings.podcasts }
         }
+        if connected?.device.effectivePhotos != settings.photos {
+            updateConnectedDevice { $0.photos = settings.photos }
+        }
     }
 
     /// Saves a new sync selection for the connected Q2.

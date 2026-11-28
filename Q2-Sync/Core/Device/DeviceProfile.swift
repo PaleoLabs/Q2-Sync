@@ -203,6 +203,25 @@ struct DeviceProfile: Hashable, Sendable {
         return components.count <= 3
     }
 
+    /// The card folder photos go in, or `nil` if this firmware doesn't
+    /// show them. Q2 Pod: `Photos` (Photos › All Photos, and one album per
+    /// folder directly inside). Stock: `nil`.
+    var photosFolderName: String? = nil
+
+    /// `true` if `components` is inside the photos folder and no deeper
+    /// than `Photos/<album>/<photo>`. Unlike books and shows, photos may
+    /// also sit loose in the folder itself (`Photos/<photo>`), which is
+    /// how Q2 Pod's All Photos shows photos in no album. See
+    /// `PathGuard.check(url:for:)` for what's allowed there.
+    func isPhotoItem(_ components: [String]) -> Bool {
+        guard let name = photosFolderName, let first = components.first,
+              first.lowercased() == name.lowercased() else { return false }
+        return components.count <= 3
+    }
+
+    /// Image types Q2 Pod shows in Photos (its `photos.c`), lowercased.
+    static let photoExtensions: Set<String> = ["jpg", "jpeg", "png"]
+
     /// What to do after a sync, in order: eject, update the Q2's library,
     /// then whatever else applies.
     ///
@@ -271,7 +290,8 @@ extension DeviceProfile {
         tfCardUpdateMenuPath: "System settings → System Update → TF card update",
         deviceMountPoint: "/mnt/mmc",
         audiobooksFolderName: "Audiobooks",
-        podcastsFolderName: "Podcasts"
+        podcastsFolderName: "Podcasts",
+        photosFolderName: "Photos"
     )
 
     /// Shanling's stock firmware. It shares the card layout with Q2 Pod,

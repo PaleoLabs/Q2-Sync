@@ -59,8 +59,12 @@ struct DeviceSyncSettings: Hashable, Sendable {
     /// The Podcasts tab: on or off, all or the ticked shows, unplayed only.
     var podcasts: PodcastSelection = PodcastSelection()
 
+    /// The Photos tab: on or off, all or the ticked albums, favourites,
+    /// recent photos and full resolution.
+    var photos: PhotoSelection = PhotoSelection()
+
     /// Every kind of content's settings. A new kind is added here.
-    var contentChoices: [any ContentSyncChoice] { [music, audiobooks, podcasts] }
+    var contentChoices: [any ContentSyncChoice] { [music, audiobooks, podcasts, photos] }
 
     /// `true` if no kind of content puts anything on the card.
     var choosesNothing: Bool { contentChoices.allSatisfy(\.choosesNothing) }
@@ -71,7 +75,7 @@ extension KnownDevice {
     /// The saved sync settings for this Q2.
     var syncSettings: DeviceSyncSettings {
         DeviceSyncSettings(music: effectiveSelection, audiobooks: effectiveAudiobooks,
-                           podcasts: effectivePodcasts)
+                           podcasts: effectivePodcasts, photos: effectivePhotos)
     }
 }
 

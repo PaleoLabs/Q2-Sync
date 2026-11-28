@@ -68,7 +68,8 @@ typealias AudiobookCardListing = CardFolderListing
 /// What's in a two-level content folder on the card: `Audiobooks/` or
 /// `Podcasts/`.
 struct CardFolderListing: Sendable, Equatable {
-    /// Files at `<Folder>/<folder>/<file>`, keyed by `CardLayout.caseKey`.
+    /// Files at `<Folder>/<folder>/<file>` (and `<Folder>/<file>` if asked
+    /// for), keyed by `CardLayout.caseKey`.
     var files: [String: CardFile] = [:]
     /// Folders directly inside the top folder, as `caseKey`s of their paths.
     var folders: Set<String> = []
@@ -83,8 +84,11 @@ struct CardFolderListing: Sendable, Equatable {
     /// Lists a top folder (e.g. `Podcasts`) two levels deep. Hidden items
     /// are skipped; `nil` gives an empty listing.
     ///
+    /// - Parameter includeLooseFiles: Also list files directly in the top
+    ///   folder (`Photos/<photo>`, which All Photos shows).
     /// - Side effects: None (reads directory listings and sizes only).
-    static func scan(folderName: String?, on fileSystem: CardFileSystem) -> CardFolderListing {
+    static func scan(folderName: String?, on fileSystem: CardFileSystem,
+                     includeLooseFiles: Bool = false) -> CardFolderListing {
         var listing = CardFolderListing()
         guard let name = folderName else { return listing }
         let root = fileSystem.pathGuard.cardRoot.appending(path: name, directoryHint: .isDirectory)
@@ -94,6 +98,11 @@ struct CardFolderListing: Sendable, Equatable {
                                                       options: [.skipsHiddenFiles]) else { return listing }
         for book in books {
             let values = try? book.resourceValues(forKeys: Set(keys))
+            if includeLooseFiles, values?.isSymbolicLink != true, values?.isRegularFile == true {
+                let path = "\(name)/\(book.lastPathComponent)".precomposedStringWithCanonicalMapping
+                listing.files[CardLayout.caseKey(path)] = CardFile(path: path, size: UInt64(values?.fileSize ?? 0))
+                continue
+            }
             guard values?.isSymbolicLink != true, values?.isDirectory == true else { continue }
             let folder = "\(name)/\(book.lastPathComponent)".precomposedStringWithCanonicalMapping
             listing.folders.insert(CardLayout.caseKey(folder))

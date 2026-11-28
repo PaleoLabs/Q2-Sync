@@ -520,6 +520,6 @@ struct PodcastExecutorTests {
         var settings = DeviceSyncSettings(music: SyncSelection())
         settings.podcasts = PodcastSelection(isEnabled: true)
         #expect(!settings.podcasts.choosesNothing && !settings.choosesNothing)
-        #expect(settings.contentChoices.count == 3)
+        #expect(settings.contentChoices.count == 4)
     }
 }

@@ -120,6 +120,13 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     /// The podcast settings, or the default (off) if none were saved.
     var effectivePodcasts: PodcastSelection { podcasts ?? PodcastSelection() }
 
+    /// What the Photos tab is set to. Optional so older `devices.json`
+    /// files still load. Use `effectivePhotos`.
+    var photos: PhotoSelection?
+
+    /// The photo settings, or the default (off) if none were saved.
+    var effectivePhotos: PhotoSelection { photos ?? PhotoSelection() }
+
     var id: String { volumeUUID }
 
     /// This device's firmware profile.

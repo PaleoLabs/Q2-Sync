@@ -78,6 +78,11 @@ struct SyncManifest: Codable, Sendable, Equatable {
     /// episode UUID. Optional so older manifests still load.
     var podcasts: [String: PodcastEpisodeRecord]?
 
+    /// Photos Q2 Sync put in `Photos/`, one per photo per folder, keyed by
+    /// `PhotoPlanner.key` ("assetID|albumID"). Optional so older manifests
+    /// still load.
+    var photos: [String: PhotoRecord]?
+
     /// When the manifest was last saved.
     var updatedAt: Date?
 

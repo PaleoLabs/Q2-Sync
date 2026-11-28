@@ -29,7 +29,8 @@
 //  directly inside are allowed). Deleting elsewhere
 //  needs the explicit `.deleteConfirmedByUser` operation, used only for
 //  card-only files the user chose to delete.
-//  Four narrow exceptions to (d):
+//  Narrow exceptions to (d): Q2 Pod's `Audiobooks/`, `Podcasts/` and
+//  `Photos/` folders (see `check(url:for:)`), and:
 //  • `checkAppleDoubleCompanion` lets the app delete the macOS `._`
 //    companion of a song it manages (see that method).
 //  • `checkStrayAppleDouble` lets the end-of-sync sweep delete any other
@@ -187,26 +188,40 @@ struct PathGuard: Sendable {
         let relative = String(resolved.dropFirst(rootPath.count + 1))
         let components = relative.split(separator: "/").map(String.init)
 
-        // (d) Not a reserved item. Two narrow exceptions, on firmware that
-        // supports them (Q2 Pod): `Audiobooks/<book>/<audio file>` and
-        // `Podcasts/<show>/<audio file>`, and only these operations: create
-        // the folder or a book/show folder; write an audio file directly
-        // inside a book/show folder; delete such a file or an (empty)
-        // book/show folder. Nothing deeper, no other file types, never the
-        // top folder itself, never a user-confirmed delete.
+        // (d) Not a reserved item. Three narrow exceptions, on firmware that
+        // supports them (Q2 Pod): `Audiobooks/<book>/<audio file>`,
+        // `Podcasts/<show>/<audio file>` and `Photos/[<album>/]<image>`.
+        // Never the top folder itself, nothing deeper, nothing hidden, never
+        // a user-confirmed delete. Books and shows: create the folder or a
+        // book/show folder; write an audio file directly inside a book/show
+        // folder; delete such a file or an (empty) book/show folder.
+        // Photos: the same with `.jpg`/`.jpeg`/`.png` files, which may also
+        // sit loose in `Photos/` (All Photos shows them).
+        let isPhotoItem = profile.isPhotoItem(components)
         let isAudiobookItem = profile.isAudiobookItem(components) || profile.isPodcastItem(components)
+            || isPhotoItem
         if isAudiobookItem {
             let ext = (components.last.map { ($0 as NSString).pathExtension } ?? "").lowercased()
+            let fileTypes = isPhotoItem ? DeviceProfile.photoExtensions : CardScanner.audioExtensions
+            let isRightType = fileTypes.contains(ext)
+            var isFolder: ObjCBool = false
+            let exists = FileManager.default.fileExists(atPath: resolved, isDirectory: &isFolder)
             let allowed: Bool
             switch operation {
             case .createDirectory: allowed = components.count <= 2
-            case .write: allowed = components.count == 3 && CardScanner.audioExtensions.contains(ext)
+            case .write:
+                allowed = isRightType && (components.count == 3 || (isPhotoItem && components.count == 2))
             case .delete:
-                // A file directly in the top folder was never Q2 Sync's:
-                // at that depth only a (book/show) folder may go.
-                var isFolder: ObjCBool = false
-                let exists = FileManager.default.fileExists(atPath: resolved, isDirectory: &isFolder)
-                allowed = components.count == 3 || (components.count == 2 && (!exists || isFolder.boolValue))
+                // A file directly in the top folder was never Q2 Sync's,
+                // except a loose photo: at that depth only a (book/show/
+                // album) folder may go, or that photo.
+                let isFolderOrGone = !exists || isFolder.boolValue
+                if isPhotoItem {
+                    allowed = (components.count == 3 && isRightType && !isFolder.boolValue)
+                        || (components.count == 2 && (isFolderOrGone || isRightType))
+                } else {
+                    allowed = components.count == 3 || (components.count == 2 && isFolderOrGone)
+                }
             case .deleteConfirmedByUser: allowed = false
             }
             if !allowed || profile.reservedItems.isReservedInside(components: components) {
