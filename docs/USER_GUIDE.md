@@ -270,8 +270,9 @@ even when the Q2 is unplugged:
   **⌘I**, or right-click it and choose **Show Info**) for a panel with its
   status, author, length, size and files in order, with **Show in Finder**.
   Right-click books for **Show in Finder** too.
-- The bottom of the sidebar shows how many books you have and their size, and
-  how many can't be synced.
+- The bottom of the sidebar shows how many books you have and their size,
+  how many can't be synced, and whether Apple Books looks healthy (see
+  [The bottom of the sidebar](#the-bottom-of-the-sidebar)).
 - The list is read when you open it. If you add a book to Apple Books while
   it's showing, click **Refresh Audiobooks** at the top right to see it.
 
@@ -340,7 +341,7 @@ unplugged:
   **⌘I**, or right-click it and choose **Show Info**) for a panel with its
   status and file, with **Show in Finder**.
 - The bottom of the sidebar shows how many episodes there are, their size,
-  and how many can't be synced.
+  how many can't be synced, and whether the Podcasts app looks healthy.
 - The list is read when you open it. If the Podcasts app downloads an
   episode while it's showing, click **Refresh Podcasts** at the top right.
 
@@ -405,12 +406,41 @@ with title, artist, album, genre, year, length, size and format, and whether
 each is **On Q2** or **Next sync**. It uses the same record of the card as the
 marks above, so it works without the Q2 connected.
 
+### The bottom of the sidebar
+
+On your Q2's page, the bottom of the sidebar has one line for each place
+this Q2 syncs from, for example:
+
+- **Music:** 9,890 songs · looks healthy · read in 4s
+- **Books:** 19 audiobooks · looks healthy
+- **Podcasts:** 7 episodes · looks healthy
+
+A line shows a spinner while that place is being read. Click a line to
+browse it (Artists, Books or Episodes). On those pages, the bottom of the
+sidebar has more detail about that place instead.
+
+**"Looks healthy"** means Q2 Sync trusts what it read. If something is
+wrong, the line says **needs attention** in red, with the reason under it,
+and the next sync leaves that kind of content on the card as it is:
+
+- **Music:** the library has no songs, its media folder isn't there (for
+  example, an external drive isn't connected), or more than 10% of the song
+  files are missing. The sync stops.
+- **Books:** Apple Books' folder can't be reached, or more than 10% of the
+  books this Q2 syncs have missing files. Audiobooks on the card aren't
+  changed.
+- **Podcasts:** the Podcasts app's database or downloads folder is missing.
+  Podcasts on the card aren't changed. No downloaded episodes at all is fine:
+  the Podcasts app deletes played downloads by default.
+
 ---
 
 ## 4. Run a sync
 
 1. Click **Sync** (or **Apply**, if you've just changed your choices).
-2. Q2 Sync reads your library, checks the card, and shows a **preview**: one
+2. Q2 Sync reads your Music library, Apple Books and the Podcasts app
+   (whichever this Q2 syncs; the sheet names each as it reads it), checks
+   the card, and shows a **preview**: one
    sentence saying what the sync will do (for example "This sync will update
    3 playlists. Everything else you chose is already on the card."), and how much space
    will be free. If something needs your choice (songs you no longer sync,

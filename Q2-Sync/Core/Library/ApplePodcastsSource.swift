@@ -45,6 +45,15 @@ protocol PodcastSource: Sendable {
     /// - Throws: `PodcastError` if the folder or database can't be read.
     /// - Side effects: None. Reading only.
     func loadPodcasts() async throws -> [PodcastShow]
+
+    /// The "looks healthy" check (see `PodcastHealthCheck`).
+    func health() -> LibraryHealth
+}
+
+extension PodcastSource {
+
+    /// Fixtures have no folder to check.
+    func health() -> LibraryHealth { .healthy }
 }
 
 /// Problems reading the Podcasts app.
@@ -101,6 +110,10 @@ struct ApplePodcastsSource: PodcastSource {
         let rows = try PodcastDatabase.rows(at: folder.appending(path: Self.databasePath),
                                             episodeIDs: Set(files.map(\.id)))
         return PodcastLibrary.shows(files: files, rows: rows)
+    }
+
+    func health() -> LibraryHealth {
+        PodcastHealthCheck.evaluate(folder: folder)
     }
 }
 

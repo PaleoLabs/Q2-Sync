@@ -67,21 +67,32 @@ struct LibraryStatusView: View {
                 }
             }
 
-            if let health = library.health {
-                switch health {
-                case .healthy:
-                    Label("Library looks healthy", systemImage: "checkmark.shield")
-                        .foregroundStyle(.green)
-                case .unsafe(let reason):
-                    Label(reason, systemImage: "xmark.shield")
-                        .foregroundStyle(.red)
-                }
-            }
+            HealthLabel(health: library.health, healthyText: "Library looks healthy")
 
             if let duration = library.lastLoadDuration {
-                Text("Read in \(duration.formatted(.units(allowed: [.seconds, .milliseconds], width: .narrow)))")
+                Text(ReadTimeWording.text(duration))
                     .foregroundStyle(.tertiary)
             }
+        }
+    }
+}
+
+/// "Library looks healthy" in green, or the reason it can't be trusted in red.
+private struct HealthLabel: View {
+
+    let health: LibraryHealth?
+    let healthyText: String
+
+    var body: some View {
+        switch health {
+        case .healthy?:
+            Label(healthyText, systemImage: "checkmark.shield")
+                .foregroundStyle(.green)
+        case .unsafe(let reason)?:
+            Label(reason, systemImage: "xmark.shield")
+                .foregroundStyle(.red)
+        case nil:
+            EmptyView()
         }
     }
 }
@@ -124,6 +135,7 @@ struct AudiobookStatusView: View {
                         .help(kind.audiobookExplanation)
                     }
                 }
+                HealthLabel(health: model.health, healthyText: "Apple Books looks healthy")
             }
         }
         .font(.caption)
@@ -172,12 +184,169 @@ struct PodcastStatusView: View {
                     Label("Protected: \(protected.formatted())", systemImage: "lock.fill")
                         .help("Protected episodes can't be copied.")
                 }
+                HealthLabel(health: model.health, healthyText: "Podcasts app looks healthy")
             }
         }
         .font(.caption)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
+    }
+}
+
+/// The sidebar's footer on a Q2's page: one line for each source this Q2
+/// syncs (Music, Books, Podcasts), each with its own state and health.
+/// Clicking a line shows that source's browser. It shows the sources'
+/// state, not sync progress (the sync sheet shows that).
+struct DeviceSourcesStatusView: View {
+
+    /// The Q2 whose sources are shown.
+    let device: KnownDevice
+    let library: LibraryModel
+    let audiobooks: AudiobookLibraryModel
+    let podcasts: PodcastLibraryModel
+    let navigation: AppNavigation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            let settings = device.syncSettings
+            let syncsBooks = device.profile.audiobooksFolderName != nil && settings.audiobooks.isEnabled
+            let syncsPodcasts = device.profile.podcastsFolderName != nil && settings.podcasts.isEnabled
+            if !settings.music.isEnabled && !syncsBooks && !syncsPodcasts {
+                Label("Nothing set to sync yet", systemImage: "circle.dashed")
+                    .foregroundStyle(.secondary)
+            }
+            if settings.music.isEnabled {
+                sourceLine(musicLine, to: .library(.artists))
+            }
+            if syncsBooks {
+                sourceLine(booksLine(settings.audiobooks), to: .audiobooks)
+            }
+            if syncsPodcasts {
+                sourceLine(podcastsLine, to: .podcasts)
+            }
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
+    }
+
+    /// What one line says.
+    private struct Line {
+        var source: String
+        var isReading = false
+        /// The summary after the source name, e.g. "9,890 songs".
+        var text: String
+        var health: LibraryHealth?
+        /// A problem reading it (shown in red, with Try Again on the page).
+        var failure: String?
+        var readTime: Duration?
+    }
+
+    /// One clickable line, plus the reason underneath when it needs attention.
+    private func sourceLine(_ line: Line, to item: SidebarItem) -> some View {
+        Button {
+            navigation.selection = item
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    if line.isReading {
+                        ProgressView().controlSize(.mini)
+                    }
+                    Text(summary(line))
+                        .lineLimit(2)
+                }
+                if let failure = line.failure {
+                    Text(failure).foregroundStyle(.red)
+                } else if case .unsafe(let reason) = line.health {
+                    Text(reason).foregroundStyle(.red)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help("Show \(line.source)")
+    }
+
+    /// "Music: 9,890 songs · looks healthy · read in 4s", with the health
+    /// word colored.
+    private func summary(_ line: Line) -> AttributedString {
+        var text = AttributedString("\(line.source): ")
+        text.font = .caption.weight(.medium)
+        text += AttributedString(line.text)
+        switch line.health {
+        case .healthy?:
+            var word = AttributedString(" · looks healthy")
+            word.foregroundColor = .green
+            text += word
+        case .unsafe?:
+            var word = AttributedString(" · needs attention")
+            word.foregroundColor = .red
+            text += word
+        case nil:
+            break
+        }
+        if let readTime = line.readTime, !line.isReading {
+            var time = AttributedString(" · " + ReadTimeWording.text(readTime).lowercased())
+            time.foregroundColor = .secondary
+            text += time
+        }
+        return text
+    }
+
+    private var musicLine: Line {
+        var line = Line(source: "Music", text: "")
+        switch library.state {
+        case .idle:
+            line.text = "not read yet"
+        case .loading:
+            line.isReading = true
+            line.text = library.snapshot.map { pluralized($0.tracks.count, "song") } ?? "reading…"
+        case .failed(let message):
+            line.text = "couldn't be read"
+            line.failure = message
+        case .loaded:
+            line.text = library.snapshot.map { pluralized($0.tracks.count, "song") } ?? ""
+            line.health = library.health
+            line.readTime = library.lastLoadDuration
+        }
+        return line
+    }
+
+    private func booksLine(_ selection: AudiobookSelection) -> Line {
+        var line = Line(source: "Books", isReading: audiobooks.isReading, text: "")
+        switch audiobooks.state {
+        case .idle:
+            line.text = audiobooks.source == nil ? "not allowed yet" : "not read yet"
+        case .loading:
+            line.text = "reading…"
+        case .failed(let message):
+            line.text = "couldn't be read"
+            line.failure = message
+        case .loaded(let books):
+            line.text = pluralized(books.count, "audiobook")
+            line.health = audiobooks.health(for: selection)
+        }
+        return line
+    }
+
+    private var podcastsLine: Line {
+        var line = Line(source: "Podcasts", isReading: podcasts.isReading, text: "")
+        switch podcasts.state {
+        case .idle:
+            line.text = podcasts.source == nil ? "not allowed yet" : "not read yet"
+        case .loading:
+            line.text = "reading…"
+        case .failed(let message):
+            line.text = "couldn't be read"
+            line.failure = message
+        case .loaded(let shows):
+            line.text = pluralized(shows.reduce(0) { $0 + $1.episodes.count }, "episode")
+            line.health = podcasts.health
+        }
+        return line
     }
 }
 

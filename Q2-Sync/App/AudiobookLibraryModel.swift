@@ -28,6 +28,16 @@ final class AudiobookLibraryModel {
 
     private(set) var state: State = .idle
 
+    /// `true` while Apple Books is being read, including re-reads (which
+    /// keep the old list showing in `state`).
+    private(set) var isReading = false
+
+    /// The "looks healthy" check for every book last read; `nil` until read.
+    private(set) var health: LibraryHealth?
+
+    /// The source of the last read, for `health(for:)`.
+    @ObservationIgnored private var lastSource: (any AudiobookSource)?
+
     /// Access to Apple Books' folder.
     let access: BooksAccess
 
@@ -54,13 +64,29 @@ final class AudiobookLibraryModel {
             return
         }
         if case .loaded = state {} else { state = .loading }
+        isReading = true
+        defer { isReading = false }
         do {
-            state = .loaded(try await source.loadAudiobooks())
+            let books = try await source.loadAudiobooks()
+            lastSource = source
+            health = source.health(of: books, selection: nil)
+            state = .loaded(books)
         } catch AudiobookError.noBooksList {
+            lastSource = source
+            health = source.health(of: [], selection: nil)
             state = .loaded([])
         } catch {
+            health = nil
             state = .failed(error.localizedDescription)
         }
+    }
+
+    /// The "looks healthy" check for the books a Q2 chooses, or `nil` until read.
+    ///
+    /// - Parameter selection: That Q2's audiobook choice.
+    func health(for selection: AudiobookSelection) -> LibraryHealth? {
+        guard case .loaded(let books) = state, let lastSource else { return nil }
+        return lastSource.health(of: books, selection: selection)
     }
 
     /// Asks for access to Apple Books, then reads the books.

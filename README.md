@@ -185,7 +185,9 @@ the card, which you fix by syncing again.
 - **Your card is recognized by its unique ID**, which you confirm once, so
   another drive is never mistaken for it.
 - **"Mac looks empty" guard.** If the library can't be read or your music drive
-  is disconnected, the sync stops before touching the card.
+  is disconnected, the sync stops before touching the card. Apple Books and
+  the Podcasts app have the same kind of check: if one can't be trusted, its
+  audiobooks or episodes on the card are left as they are.
 - **Firmware only when you ask.** Firmware is downloaded only when you click
   Install or Update, and checked before and after it's copied to the card.
   Q2 Sync never flashes the Q2 itself: the Q2's own updater does that when

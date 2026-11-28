@@ -30,6 +30,12 @@ final class PodcastLibraryModel {
 
     private(set) var state: State = .idle
 
+    /// `true` while the Podcasts app is being read, including re-reads.
+    private(set) var isReading = false
+
+    /// The "looks healthy" check from the last read; `nil` until read.
+    private(set) var health: LibraryHealth?
+
     /// Access to the Podcasts app's folder.
     let access: PodcastsAccess
 
@@ -56,9 +62,14 @@ final class PodcastLibraryModel {
             return
         }
         if case .loaded = state {} else { state = .loading }
+        isReading = true
+        defer { isReading = false }
         do {
-            state = .loaded(try await source.loadPodcasts())
+            let shows = try await source.loadPodcasts()
+            health = source.health()
+            state = .loaded(shows)
         } catch {
+            health = nil
             state = .failed(error.localizedDescription)
         }
     }

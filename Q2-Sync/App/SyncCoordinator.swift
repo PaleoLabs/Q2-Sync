@@ -158,7 +158,7 @@ final class SyncCoordinator {
         let snapshot: LibrarySnapshot
         let health: LibraryHealth
         if musicSelection.isEnabled {
-            phase = .planning("Reading your library…")
+            phase = .planning("Reading your Music library…")
             await library.load()
             guard isCurrentPlanning(generation) else { return }
             // A failed (or timed-out) read leaves the previous snapshot in place;
@@ -211,6 +211,13 @@ final class SyncCoordinator {
                 } catch {
                     audiobookNote = error.localizedDescription + " Audiobooks on the card weren't changed."
                 }
+                // The "looks healthy" check, like the Music library's: an
+                // unreachable folder or chosen books missing in bulk leave
+                // the card's audiobooks as they are.
+                if let read = books, case .unsafe(let reason) = audiobooks.health(of: read, selection: audiobookSelection) {
+                    books = nil
+                    audiobookNote = reason + " Audiobooks on the card weren't changed."
+                }
                 guard isCurrentPlanning(generation) else { return }
             } else if audiobookSelection.isEnabled {
                 audiobookNote = "Q2 Sync can't read Apple Books, so audiobooks weren't synced. Allow access on the Audiobooks tab."
@@ -230,6 +237,11 @@ final class SyncCoordinator {
                     shows = try await podcasts.loadPodcasts()
                 } catch {
                     podcastNote = error.localizedDescription + " Podcasts on the card weren't changed."
+                }
+                // Likewise a missing database or downloads folder.
+                if shows != nil, case .unsafe(let reason) = podcasts.health() {
+                    shows = nil
+                    podcastNote = reason + " Podcasts on the card weren't changed."
                 }
                 guard isCurrentPlanning(generation) else { return }
             } else if podcastSelection.isEnabled {

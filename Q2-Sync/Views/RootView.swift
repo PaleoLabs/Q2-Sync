@@ -248,10 +248,14 @@ struct RootView: View {
         // Lets the other-drives row shrink to nothing when it's empty.
         .environment(\.defaultMinListRowHeight, 0)
         .safeAreaInset(edge: .bottom) {
-            // Follows the selection: book counts on Books, episode counts
-            // on Episodes, else songs.
+            // Follows the selection: one line per source on a Q2's page,
+            // book counts on Books, episode counts on Episodes, else songs.
             Group {
-                if autoSync.navigation.selection == .audiobooks {
+                if case .device = autoSync.navigation.selection, let connected = devices.connected {
+                    DeviceSourcesStatusView(device: connected.device, library: library,
+                                            audiobooks: autoSync.audiobooks, podcasts: autoSync.podcasts,
+                                            navigation: autoSync.navigation)
+                } else if autoSync.navigation.selection == .audiobooks {
                     AudiobookStatusView(model: autoSync.audiobooks)
                 } else if autoSync.navigation.selection == .podcasts {
                     PodcastStatusView(model: autoSync.podcasts)

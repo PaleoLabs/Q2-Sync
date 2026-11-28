@@ -38,6 +38,22 @@ protocol AudiobookSource: Sendable {
     /// - Throws: `AudiobookError` if the list can't be read.
     /// - Side effects: None. Reading only.
     func loadAudiobooks() async throws -> [Audiobook]
+
+    /// The "looks healthy" check for books this source just read (see
+    /// `AudiobookHealthCheck`).
+    ///
+    /// - Parameters:
+    ///   - books: The books just read.
+    ///   - selection: A Q2's choice, or `nil` for every book.
+    func health(of books: [Audiobook], selection: AudiobookSelection?) -> LibraryHealth
+}
+
+extension AudiobookSource {
+
+    /// Without a folder to check (fixtures), only the missing-files rule applies.
+    func health(of books: [Audiobook], selection: AudiobookSelection?) -> LibraryHealth {
+        AudiobookHealthCheck.evaluate(books, selection: selection, folder: nil)
+    }
 }
 
 /// Problems reading Apple Books.
@@ -110,6 +126,10 @@ struct AppleBooksSource: AudiobookSource {
             return books
         }
         return BooksList.sorted(books)
+    }
+
+    func health(of books: [Audiobook], selection: AudiobookSelection?) -> LibraryHealth {
+        AudiobookHealthCheck.evaluate(books, selection: selection, folder: folder)
     }
 }
 

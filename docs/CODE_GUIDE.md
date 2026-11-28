@@ -75,7 +75,7 @@ flowchart TB
 | Folder | What's in it |
 | --- | --- |
 | `Q2-Sync/Core/Models` | Plain values: `Track`, `Playlist`, `LibrarySnapshot`, `SyncSelection` |
-| `Q2-Sync/Core/Library` | Reading Apple Music: `LibrarySource`, `ITunesLibrarySource` (also `LibraryArtworkReader`, which reads album artwork for covers, read-only), `FixtureLibrarySource`, `LibraryHealthCheck` |
+| `Q2-Sync/Core/Library` | Reading Apple Music: `LibrarySource`, `ITunesLibrarySource` (also `LibraryArtworkReader`, which reads album artwork for covers, read-only), `FixtureLibrarySource`, `LibraryHealthCheck`; `ContentHealthCheck.swift` (`AudiobookHealthCheck`, `PodcastHealthCheck`, `ReadTimeWording`) |
 | `Q2-Sync/Core/Device` | Device facts: `DeviceProfile`, `ReservedItemRules`, `VolumeInfo`, `CardConnection`, `DeviceStore`, `FirmwareUpdates`, `FirmwareSources`, `FirmwareImage`, `ZipExtractor` |
 | `Q2-Sync/Core/SyncEngine` | Planning, diffing, copying, playlists, path guard, safety |
 | `Q2-Sync/Core/Help` | `UserGuide`: reading the user guide for the help window |
@@ -165,7 +165,11 @@ sequenceDiagram
 3. **"Mac looks empty" check.** `LibraryHealthCheck.evaluate` stops the sync if
    the library has no songs, the media folder is missing (e.g. an external drive
    is disconnected), or more than 10% of local files can't be found. Nothing on
-   the card is looked at.
+   the card is looked at. Apple Books and the Podcasts app are read next
+   ("Reading Apple Books…", "Reading the Podcasts app…" in the sheet) and get
+   their own checks through `AudiobookSource.health(of:selection:)` and
+   `PodcastSource.health()`: an unsafe result sets `books`/`shows` to `nil`
+   with a note, so that kind is left as it is on the card (the sync goes on).
 4. **Guard.** A `PathGuard` is created for the card. It verifies the card is the
    confirmed, removable, FAT/exFAT volume with the right UUID, and not inside
    `~/Music` or the media folder.
@@ -266,6 +270,14 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   JSON).
 - **`LibraryHealthCheck.evaluate(_:) -> LibraryHealth`** · the "Mac looks
   empty" guard. Threshold: `maximumMissingFraction = 0.10`.
+- **`AudiobookHealthCheck.evaluate(_:selection:folder:)`** · Apple Books'
+  folder is reachable, and no more than 10% of the chosen books (all books
+  with `selection: nil`) have missing files; cloud-only and protected books
+  don't count. **`PodcastHealthCheck.evaluate(folder:)`** · the database is
+  readable and the downloads folder exists; no episodes is still healthy.
+  Fixture sources skip the folder rules (protocol extension defaults).
+- **`ReadTimeWording.text(_:locale:)`** · "Read in 4s", or "Read in 0.4s"
+  under a second.
 - **`FinderReveal.items(for:)`** · what "Show in Finder" selects for a group of
   songs: the files if they share a folder, their folders if those share one,
   otherwise nothing.
@@ -443,7 +455,12 @@ automatically; artwork via
 opened on first use), `HelpView` (the Help › Q2 Sync Help window,
 `HelpCommand`; draws `UserGuide` from the copy of the guide in the app's
 resources, added to the target in the project file; the Dock icon stays while
-it's open), `LibraryStatusView`, `MenuBarContent`, `AppSettingsView`.
+it's open), `LibraryStatusView` (also `AudiobookStatusView`,
+`PodcastStatusView`, and `DeviceSourcesStatusView`, the footer on a Q2's page:
+one clickable line per source the Q2 syncs, from `LibraryModel`,
+`AudiobookLibraryModel`/`PodcastLibraryModel` `isReading` and `health`;
+`RootView` picks the footer from the sidebar selection), `MenuBarContent`,
+`AppSettingsView`.
 
 ---
 
