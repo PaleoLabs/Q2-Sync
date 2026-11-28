@@ -401,6 +401,8 @@ album; its **All Photos** shows every photo on the card.
   folder instead comes later.
 - On **stock firmware**, the tab explains that photo sync needs Q2 Pod.
 - A sync always reads your Photos library first, so it never misses a photo.
+  The first read of a big library takes a little while; after that, only
+  photos added since are looked at closely, so it's quicker.
 
 ### Browse your photos
 

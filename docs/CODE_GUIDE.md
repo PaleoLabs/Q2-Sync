@@ -554,10 +554,15 @@ library has been read (`MusicTabCache.Key` compares
 In the app, `App/PhotosAccess.swift` asks macOS once with its privacy prompt
 (`PHPhotoLibrary.requestAuthorization(for: .readWrite)`, the only level macOS
 offers; nothing ever calls `performChanges`). `App/PhotoKitSource.swift` is
-both the `PhotoSource` (every photo, hidden included; Favorites, Recently
+the `PhotoSource` (every photo, hidden included; Favorites, Recently
 Added, the photo media types, Hidden and user albums inside folders; shared
-albums left out) and the `PhotoRendering` (synchronous `PHImageManager`
-requests with network access, so iCloud-only photos download: a drawn image
+albums left out). Each photo's original file name
+and type come from `PHAssetResource.assetResources(for:)`, a few ms per
+photo (10 of the 11 s a 4,418-photo library took), so they're kept in
+`Core/Models/PhotoNameCache.swift` by asset ID (an original never changes)
+and only new photos are looked up (a refresh of that library: 0.8 s, mostly
+the album walk; the lookups don't go faster spread over the cores). Each read logs its timings (category `photos`). It is
+also the `PhotoRendering` (synchronous `PHImageManager` requests with network access, so iCloud-only photos download: a drawn image
 fitting 750 × 580, or `requestImageDataAndOrientation` at full resolution).
 `App/PhotoLibraryModel.swift` holds the last read for the views.
 `SyncCoordinator.prepare` reads the library when photos are on (with photos
@@ -733,6 +738,7 @@ Paths on the Mac are inside the app's sandbox container,
 | --- | --- |
 | Known devices, selections, auto-sync mode, bookmarks | `Library/Application Support/Q2 Sync/devices.json` |
 | Each Q2's last known contents (song IDs, dates) for the library browser | `Library/Application Support/Q2 Sync/Card Contents/<volume UUID>.json` |
+| Photos' original file names and types, so the library reads fast | `Library/Application Support/Q2 Sync/Photo Names.json` |
 | Sync logs | `Library/Application Support/Q2 Sync/Logs/` (General tab → **Show Sync Logs**) |
 | Preferences | `Library/Preferences/io.github.q2sync.Q2Sync.plist`: `acknowledgedLibraryNotice`, `showMenuBarCloseNotice`, `checkFirmwareUpdates`, `latestFirmwareRelease`, `lastFirmwareCheck`, `notifiedFirmwareRelease`, `checkForAppUpdates`, `skippedAppRelease` |
 | Copied-back music | `~/Downloads/Q2 Recovered/` with `RECOVERED.txt` |

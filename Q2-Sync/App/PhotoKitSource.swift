@@ -30,6 +30,7 @@
 
 import AppKit
 import Foundation
+import OSLog
 import Photos
 
 /// The Photos library, read through PhotoKit.
@@ -41,6 +42,8 @@ struct PhotoKitSource: PhotoSource, PhotoRendering {
         .smartAlbumPanoramas, .smartAlbumLongExposures, .smartAlbumBursts,
         .smartAlbumScreenshots, .smartAlbumAnimated, .smartAlbumRAW,
     ]
+
+    private static let logger = Logger(subsystem: "io.github.q2sync.Q2Sync", category: "photos")
 
     // MARK: - PhotoSource
 
@@ -64,7 +67,10 @@ struct PhotoKitSource: PhotoSource, PhotoRendering {
     /// Reads everything, off the main thread (a big library takes a while).
     @concurrent
     private static func read() async -> PhotoLibraryContents {
+        let clock = ContinuousClock()
+        let started = clock.now
         let assets = readAssets()
+        let assetsRead = clock.now
         var albums: [PhotoAlbum] = []
         func smartAlbum(_ subtype: PHAssetCollectionSubtype, kind: PhotoAlbumKind) {
             let found = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: subtype, options: nil)
@@ -76,7 +82,13 @@ struct PhotoKitSource: PhotoSource, PhotoRendering {
         smartAlbum(.smartAlbumRecentlyAdded, kind: .recentlyAdded)
         for subtype in mediaTypeSubtypes { smartAlbum(subtype, kind: .mediaType) }
         smartAlbum(.smartAlbumAllHidden, kind: .hidden)
+        let smartRead = clock.now
         albums += userAlbums(in: PHCollectionList.fetchTopLevelUserCollections(with: nil), folderPath: [])
+        let done = clock.now
+        let timing = "\(assets.count) photos in \(assetsRead - started), "
+            + "smart albums \(smartRead - assetsRead), user albums \(done - smartRead), "
+            + "\(albums.count) albums in all, total \(done - started)"
+        logger.info("Photos read: \(timing, privacy: .public)")
         return PhotoLibraryContents(assets: assets, albums: albums)
     }
 
@@ -90,28 +102,61 @@ struct PhotoKitSource: PhotoSource, PhotoRendering {
     }
 
     /// Every photo, oldest first.
+    ///
+    /// Each photo's original file name and type come from
+    /// `PhotoNameCache`; only photos it doesn't know yet are looked up with
+    /// `PHAssetResource`, which is slow (a few ms a photo). The cache is saved, minus deleted photos, after.
     private static func readAssets() -> [PhotoAsset] {
         let found = PHAsset.fetchAssets(with: photoOptions(sorted: true))
-        var assets: [PhotoAsset] = []
-        assets.reserveCapacity(found.count)
-        found.enumerateObjects { asset, _, _ in
+        var listed: [PHAsset] = []
+        listed.reserveCapacity(found.count)
+        found.enumerateObjects { asset, _, _ in listed.append(asset) }
+        let ids = listed.map(\.localIdentifier)
+
+        var cache = PhotoNameCache.load()
+        let missing = ids.indices.filter { cache[ids[$0]] == nil }
+        let clock = ContinuousClock()
+        let started = clock.now
+        for (index, entry) in zip(missing, lookUpOriginals(of: missing.map { listed[$0] })) {
+            cache[ids[index]] = entry
+        }
+        logger.info("""
+            Photos read: looked up \(missing.count) of \(ids.count) file names in \
+            \(String(describing: clock.now - started), privacy: .public)
+            """)
+        if !missing.isEmpty || cache.entries.count != ids.count {
+            cache.keepOnly(Set(ids))
+            cache.save()
+        }
+
+        return listed.indices.map { index in
+            let asset = listed[index]
+            let original = cache[ids[index]]
+            return PhotoAsset(
+                id: ids[index],
+                created: asset.creationDate ?? asset.modificationDate ?? .distantPast,
+                modified: asset.modificationDate,
+                isFavorite: asset.isFavorite,
+                isHidden: asset.isHidden,
+                pixelWidth: asset.pixelWidth,
+                pixelHeight: asset.pixelHeight,
+                originalFileName: original?.name,
+                uniformTypeIdentifier: original?.type)
+        }
+    }
+
+    /// The original file's name and type (not an edited render's) for each
+    /// photo, in order. Run one after another: PhotoKit answers these
+    /// lookups one at a time anyway (spreading them over the cores was
+    /// measured no faster: 11.3 s for 4,418 photos either way).
+    private static func lookUpOriginals(of assets: [PHAsset]) -> [PhotoNameCache.Entry] {
+        assets.map { asset in
             autoreleasepool {
-                // The original file's name and type (not an edited render's).
                 let resources = PHAssetResource.assetResources(for: asset)
                 let original = resources.first { $0.type == .photo } ?? resources.first
-                assets.append(PhotoAsset(
-                    id: asset.localIdentifier,
-                    created: asset.creationDate ?? asset.modificationDate ?? .distantPast,
-                    modified: asset.modificationDate,
-                    isFavorite: asset.isFavorite,
-                    isHidden: asset.isHidden,
-                    pixelWidth: asset.pixelWidth,
-                    pixelHeight: asset.pixelHeight,
-                    originalFileName: original?.originalFilename,
-                    uniformTypeIdentifier: original?.uniformTypeIdentifier))
+                return PhotoNameCache.Entry(name: original?.originalFilename, type: original?.uniformTypeIdentifier)
             }
         }
-        return assets
     }
 
     /// One album and its photos, in the album's own order.
