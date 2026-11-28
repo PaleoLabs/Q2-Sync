@@ -188,6 +188,21 @@ struct DeviceProfile: Hashable, Sendable {
         return components.count <= 3
     }
 
+    /// The card folder podcast episodes go in, or `nil` if this firmware
+    /// doesn't support syncing them. Q2 Pod: `Podcasts` (Library ›
+    /// Podcasts, which resumes and keeps episodes out of music lists).
+    /// Stock: `nil`.
+    var podcastsFolderName: String? = nil
+
+    /// `true` if `components` is inside the podcasts folder and no deeper
+    /// than `Podcasts/<show>/<episode file>`. Like `isAudiobookItem`, the
+    /// only other part of a reserved folder Q2 Sync may change.
+    func isPodcastItem(_ components: [String]) -> Bool {
+        guard let name = podcastsFolderName, let first = components.first,
+              first.lowercased() == name.lowercased() else { return false }
+        return components.count <= 3
+    }
+
     /// What to do after a sync, in order: eject, update the Q2's library,
     /// then whatever else applies.
     ///
@@ -255,7 +270,8 @@ extension DeviceProfile {
         ],
         tfCardUpdateMenuPath: "System settings → System Update → TF card update",
         deviceMountPoint: "/mnt/mmc",
-        audiobooksFolderName: "Audiobooks"
+        audiobooksFolderName: "Audiobooks",
+        podcastsFolderName: "Podcasts"
     )
 
     /// Shanling's stock firmware. It shares the card layout with Q2 Pod,

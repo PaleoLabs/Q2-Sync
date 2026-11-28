@@ -74,6 +74,10 @@ struct SyncManifest: Codable, Sendable, Equatable {
     /// Optional so manifests from before audiobooks still load.
     var audiobooks: [String: AudiobookRecord]?
 
+    /// Podcast episodes Q2 Sync put in `Podcasts/`, by the Podcasts app's
+    /// episode UUID. Optional so older manifests still load.
+    var podcasts: [String: PodcastEpisodeRecord]?
+
     /// When the manifest was last saved.
     var updatedAt: Date?
 

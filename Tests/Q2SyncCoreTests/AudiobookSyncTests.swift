@@ -90,7 +90,6 @@ struct AudiobookGuardTests {
         ("Audiobooks/Book/database.ignore", .write),
         ("Audiobooks", .delete),
         ("Audiobooks/Book/Part.m4b", .deleteConfirmedByUser),
-        ("Podcasts/Show/ep1.mp3", .write),
         ("EQ/Bass.txt", .write),
     ])
     func refused(path: String, operation: PathGuard.Operation) throws {

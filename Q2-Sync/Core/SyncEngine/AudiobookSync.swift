@@ -62,19 +62,31 @@ struct AudiobookFileRecord: Codable, Sendable, Hashable {
 
 // MARK: - Card listing
 
-/// What's in the card's `Audiobooks/` folder.
-struct AudiobookCardListing: Sendable, Equatable {
-    /// Files at `Audiobooks/<folder>/<file>`, keyed by `CardLayout.caseKey`.
+/// The card's `Audiobooks/` listing (the same shape serves `Podcasts/`).
+typealias AudiobookCardListing = CardFolderListing
+
+/// What's in a two-level content folder on the card: `Audiobooks/` or
+/// `Podcasts/`.
+struct CardFolderListing: Sendable, Equatable {
+    /// Files at `<Folder>/<folder>/<file>`, keyed by `CardLayout.caseKey`.
     var files: [String: CardFile] = [:]
-    /// Folders directly inside `Audiobooks/`, as `caseKey`s of their paths.
+    /// Folders directly inside the top folder, as `caseKey`s of their paths.
     var folders: Set<String> = []
 
     /// Lists `Audiobooks/` two levels deep. Hidden items are skipped.
     ///
     /// - Side effects: None (reads directory listings and sizes only).
-    static func scan(on fileSystem: CardFileSystem) -> AudiobookCardListing {
-        var listing = AudiobookCardListing()
-        guard let name = fileSystem.pathGuard.profile.audiobooksFolderName else { return listing }
+    static func scan(on fileSystem: CardFileSystem) -> CardFolderListing {
+        scan(folderName: fileSystem.pathGuard.profile.audiobooksFolderName, on: fileSystem)
+    }
+
+    /// Lists a top folder (e.g. `Podcasts`) two levels deep. Hidden items
+    /// are skipped; `nil` gives an empty listing.
+    ///
+    /// - Side effects: None (reads directory listings and sizes only).
+    static func scan(folderName: String?, on fileSystem: CardFileSystem) -> CardFolderListing {
+        var listing = CardFolderListing()
+        guard let name = folderName else { return listing }
         let root = fileSystem.pathGuard.cardRoot.appending(path: name, directoryHint: .isDirectory)
         let fm = FileManager.default
         let keys: [URLResourceKey] = [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]
