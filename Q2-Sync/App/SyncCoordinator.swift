@@ -142,7 +142,8 @@ final class SyncCoordinator {
     ///     otherwise the preview is shown and the user is notified.
     /// - Side effects: Reads the library and card. Never writes to the card.
     func prepare(connected: ConnectedDevice, library: LibraryModel, devices: DeviceMonitor,
-                 audiobooks: (any AudiobookSource)? = nil, automatic: Bool = false) async {
+                 audiobooks: (any AudiobookSource)? = nil, podcasts: (any PodcastSource)? = nil,
+                 automatic: Bool = false) async {
         guard phase == .idle else { return }
         devices.flushPendingSave() // The selection on disk matches what's synced.
         planningGeneration += 1
@@ -216,6 +217,26 @@ final class SyncCoordinator {
             }
         }
 
+        // Podcasts (Q2 Pod only): read the Podcasts app's downloads now,
+        // like audiobooks. Without access, or if they can't be read,
+        // podcasts are left as they are on the card.
+        var shows: [PodcastShow]?
+        var podcastNote: String?
+        let podcastSelection = connected.device.effectivePodcasts
+        if connected.device.profile.podcastsFolderName != nil {
+            if let podcasts {
+                phase = .planning("Reading the Podcasts app…")
+                do {
+                    shows = try await podcasts.loadPodcasts()
+                } catch {
+                    podcastNote = error.localizedDescription + " Podcasts on the card weren't changed."
+                }
+                guard isCurrentPlanning(generation) else { return }
+            } else if podcastSelection.isEnabled {
+                podcastNote = "Q2 Sync can't read the Podcasts app, so podcasts weren't synced. Allow access on the Podcasts tab."
+            }
+        }
+
         phase = .planning("Checking the card…")
         do {
             let pathGuard = try PathGuard(
@@ -236,7 +257,9 @@ final class SyncCoordinator {
                                                             onlyChangedPlaylists: connected.device.effectiveImportOnlyChangedPlaylists,
                                                             reimportAllPlaylists: connected.device.reimportAllPlaylists == true,
                                                             books: books, audiobookSelection: audiobookSelection,
-                                                            audiobookNote: audiobookNote)
+                                                            audiobookNote: audiobookNote,
+                                                            shows: shows, podcastSelection: podcastSelection,
+                                                            podcastNote: podcastNote)
             // Cancelled while the card was being scanned: drop the plan.
             guard isCurrentPlanning(generation) else { return }
 
@@ -305,7 +328,9 @@ final class SyncCoordinator {
                                   albumCovers: Bool, onlyChangedPlaylists: Bool,
                                   reimportAllPlaylists: Bool,
                                   books: [Audiobook]?, audiobookSelection: AudiobookSelection,
-                                  audiobookNote: String?) async throws
+                                  audiobookNote: String?,
+                                  shows: [PodcastShow]?, podcastSelection: PodcastSelection,
+                                  podcastNote: String?) async throws
         -> (SyncManifest, SyncPlan) {
         let manifest = try SyncManifest.load(from: fileSystem)
         // The card is listed once (slow over the Q2's USB); the music and
@@ -341,6 +366,20 @@ final class SyncCoordinator {
                                                             folderName: folderName)
             }
             if let audiobookNote { adjusted.audiobooks.note = audiobookNote }
+        }
+
+        // Podcasts, in their own reserved folder (see PodcastSync.swift).
+        // Without a fresh list (no access, or a read error) nothing is
+        // planned, so no episode is copied or removed.
+        if let folderName = profile.podcastsFolderName {
+            if let shows {
+                adjusted.podcasts = PodcastPlanner.plan(shows: shows, selection: podcastSelection,
+                                                        manifest: manifest,
+                                                        card: CardFolderListing.scan(folderName: folderName,
+                                                                                     on: fileSystem),
+                                                        folderName: folderName)
+            }
+            if let podcastNote { adjusted.podcasts.note = podcastNote }
         }
 
         adjusted.playlistPlan.onlyChangedForImport = onlyChangedPlaylists

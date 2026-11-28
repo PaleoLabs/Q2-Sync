@@ -25,6 +25,8 @@ enum SidebarItem: Hashable {
     case library(BrowseCategory)
     /// Audiobooks › Books, shown while any Q2 syncs audiobooks.
     case audiobooks
+    /// Podcasts › Episodes, shown while any Q2 syncs podcasts.
+    case podcasts
 }
 
 /// The app's main window content.
@@ -113,6 +115,15 @@ struct RootView: View {
                     .labelStyle(.titleAndIcon)
                     .disabled(autoSync.audiobooks.state == .loading || autoSync.audiobooks.source == nil)
                     .help(LibraryWording.refreshAudiobooksHelp)
+                } else if autoSync.navigation.selection == .podcasts {
+                    Button {
+                        Task { await autoSync.podcasts.load() }
+                    } label: {
+                        Label("Refresh Podcasts", systemImage: "arrow.clockwise")
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .disabled(autoSync.podcasts.state == .loading || autoSync.podcasts.source == nil)
+                    .help(LibraryWording.refreshPodcastsHelp)
                 } else {
                     Button {
                         Task { await library.load() }
@@ -155,6 +166,12 @@ struct RootView: View {
         // Books goes when no Q2 syncs audiobooks any more: back to Artists.
         .onChange(of: devices.syncsAudiobooksOnAnyQ2, initial: true) { _, shows in
             if !shows, autoSync.navigation.selection == .audiobooks {
+                autoSync.navigation.selection = .library(.artists)
+            }
+        }
+        // Likewise Episodes when no Q2 syncs podcasts any more.
+        .onChange(of: devices.syncsPodcastsOnAnyQ2, initial: true) { _, shows in
+            if !shows, autoSync.navigation.selection == .podcasts {
                 autoSync.navigation.selection = .library(.artists)
             }
         }
@@ -221,14 +238,23 @@ struct RootView: View {
                         .tag(SidebarItem.audiobooks)
                 }
             }
+            if devices.syncsPodcastsOnAnyQ2 {
+                Section("Podcasts") {
+                    Label("Episodes", systemImage: "mic")
+                        .tag(SidebarItem.podcasts)
+                }
+            }
         }
         // Lets the other-drives row shrink to nothing when it's empty.
         .environment(\.defaultMinListRowHeight, 0)
         .safeAreaInset(edge: .bottom) {
-            // Follows the selection: book counts on Books, else songs.
+            // Follows the selection: book counts on Books, episode counts
+            // on Episodes, else songs.
             Group {
                 if autoSync.navigation.selection == .audiobooks {
                     AudiobookStatusView(model: autoSync.audiobooks)
+                } else if autoSync.navigation.selection == .podcasts {
+                    PodcastStatusView(model: autoSync.podcasts)
                 } else {
                     LibraryStatusView(library: library)
                 }
@@ -256,6 +282,8 @@ struct RootView: View {
             LibraryCategoryView(library: library, devices: devices, category: category)
         case .audiobooks:
             AudiobookBrowserView(devices: devices)
+        case .podcasts:
+            PodcastBrowserView(devices: devices)
         case nil:
             ContentUnavailableView("Nothing Selected", systemImage: "sidebar.left")
         }

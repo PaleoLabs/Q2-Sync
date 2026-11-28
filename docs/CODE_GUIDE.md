@@ -411,9 +411,10 @@ preview's album rows (by folder and album tag).
 
 ### Views (`Q2-Sync/Views`)
 
-`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, General/Music/Audiobooks tabs,
+`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, General/Music/Audiobooks/Podcasts tabs,
 `DeviceGeneralView`), `UpdateNoticeView` (a new version, up to date, or a failed check), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
 table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
+`DevicePodcastsView` (the Podcasts tab: shows with their downloaded episodes; video, protected and, with Unplayed only on, played episodes dimmed), `PodcastBrowserView` + `EpisodeInspectorView` (the sidebar's Podcasts › Episodes table and Episode Info, marked from the Q2's *applied* settings by `PodcastMarks`; `PodcastStatusView` is its sidebar footer),
 `CapacityBarView` (its notes follow the same rule: outside a scroll view, `fixedSize(vertical:)` on wrapping text blanks the sidebar), `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NumberedSteps` (the next-steps list in the sync result
 and Install Firmware sheets), `NewDeviceSheet`, `FirstLaunchNoticeView`,
@@ -463,6 +464,7 @@ Nothing else in the code mentions a firmware by name.
 | `coverRefreshSteps` | System settings → Display → Coverflow → Refresh Coverflow, then open Cover Flow | none (**unverified**) |
 | `versionLocationHint`, `deviceMountPoint` | About › "CFW. Version"; `/mnt/mmc` | About; `/mnt/mmc` |
 | `audiobooksFolderName` | `Audiobooks` (audiobook sync, #48) | `nil` (no audiobook sync) |
+| `podcastsFolderName` | `Podcasts` (podcast sync, #20) | `nil` (no podcast sync) |
 
 **Reserved items** (`ReservedItemRules`, case-insensitive):
 
@@ -477,14 +479,34 @@ Nothing else in the code mentions a firmware by name.
 - anywhere: `database.ignore`, `database.unignore`;
 - any name containing `librespot`.
 
-The one reserved folder Q2 Sync may change is `Audiobooks/`, and only on a
-profile with `audiobooksFolderName` (Q2 Pod): `PathGuard` allows creating
+The reserved folders Q2 Sync may change are `Audiobooks/` and `Podcasts/`,
+and only on a profile with `audiobooksFolderName` / `podcastsFolderName` (Q2
+Pod). For audiobooks, `PathGuard` allows creating
 `Audiobooks/` and `Audiobooks/<book>/`, writing an audio file directly in a
 book folder, and deleting such a file or an empty book folder. Hidden items,
 names reserved anywhere and deeper paths stay refused there
 (`ReservedItemRules.isReservedInside`). Which files to change comes from the
 manifest's `audiobooks` records (`Core/SyncEngine/AudiobookSync.swift`), so
-only books Q2 Sync copied are ever replaced or removed.
+only books Q2 Sync copied are ever replaced or removed. `Podcasts/` works the
+same way, one level of show folders (`Podcasts/<show>/<episode file>`,
+`DeviceProfile.isPodcastItem`), with the manifest's `podcasts` records
+(`Core/SyncEngine/PodcastSync.swift`). A show folder may also hold files
+from the q2-podcasts card app or the user: a file already at an episode's
+name counts as that episode on the card and is never overwritten or removed.
+
+**Podcasts** (#20) are read, never written, from the Podcasts app's group
+container (`~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts`),
+allowed once with a read-only bookmark (`App/PodcastsAccess.swift`).
+`ApplePodcastsSource` lists the downloaded files in `Library/Cache`
+(`<ZUUID>.<ext>`) and describes each from `Documents/MTLibrary.sqlite`,
+opened `mode=ro` (it's safe while Podcasts runs): `ZMTEPISODE` joined to
+`ZMTPODCAST`. Only `ZPLAYSTATE` tracks played state reliably (0 played, 1 in
+progress, 2 unplayed). A file with no row is left out; video and protected
+(`ZDRMKEYURI`) episodes are listed but can't sync. `SyncCoordinator.prepare`
+reads it fresh at each sync and calls `PodcastPlanner.plan`; on a read error
+it sets `PodcastPlan.note` and plans no podcast changes. Removals (episode no
+longer downloaded, show unticked, played with Unplayed only, podcasts off)
+need Remove Them, like songs; auto-sync stops for review.
 
 ### Adding a profile
 
@@ -510,7 +532,7 @@ Defense in depth: several independent layers, each enough on its own.
 | --- | --- |
 | `app-sandbox` | Turns the sandbox on. |
 | `assets.music.read-only` | **Read-only** access to `~/Music` for ITLibrary and copying. There is deliberately no read-write variant. |
-| `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. Apple Books' folder (audiobooks) is allowed the same way, with a **read-only** bookmark (`App/BooksAccess.swift`). |
+| `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. Apple Books' folder (audiobooks) and the Podcasts app's group container are allowed the same way, each with a **read-only** bookmark (`App/BooksAccess.swift`, `App/PodcastsAccess.swift`). |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
 | `files.downloads.read-write` | "Move to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups` (the default backup folder). |
 | `network.client` | The check for new Q2 Sync releases, the optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |
@@ -532,7 +554,8 @@ Plus: normal sync operations only inside `Music/`, `.q2sync/` and
 `_explaylist_data/` (only `.m3u` files directly inside); deleting elsewhere
 needs `.deleteConfirmedByUser`. The narrow exceptions are
 `checkAppleDoubleCompanion`, which allows deleting the `._` companion of a song
-Q2 Sync manages, and `Audiobooks/<book>/<audio file>` on Q2 Pod (see §4).
+Q2 Sync manages, and `Audiobooks/<book>/<audio file>` and
+`Podcasts/<show>/<audio file>` on Q2 Pod (see §4).
 
 Copy-back has its own guard (`RecoveryCopier.checkDestination`): only inside the
 staging folder, never inside `~/Music` or the media folder, never overwriting.

@@ -77,6 +77,15 @@ Books, like Finder does for an iPod. Each book gets its own folder in
 whether it's on your Q2, with search and **Book Info** (**⌘I**). Needs Q2 Pod
 firmware.
 
+### 🎙️ Podcasts from the Podcasts app
+On Q2 Pod, sync the episodes the **Podcasts** app has downloaded, for **all
+shows or just the ones you tick**, with an **Unplayed only** option. Episodes
+go in `Podcasts/<show>`, where Q2 Pod lists them under Library › Podcasts and
+remembers your place. Q2 Sync only reads the Podcasts app, and leaves episodes
+the q2-podcasts card app downloaded alone. Browse them in the sidebar's
+**Podcasts › Episodes** section, with **Episode Info** (**⌘I**). Needs Q2 Pod
+firmware.
+
 ### 🔎 Browse your library against your Q2
 The **Music Library** browser marks what's on your Q2, what the next sync adds
 and what can't be copied, even with the Q2 unplugged. Search it by artist,
@@ -85,7 +94,7 @@ open or close **Song Info**: its artwork, tags, file details and plays, with
 **Show in Finder**.
 
 ### 👀 See every change before it happens
-The **Ready to Sync** preview lists every song and audiobook that will be
+The **Ready to Sync** preview lists every song, audiobook and podcast episode that will be
 added, updated, renamed or removed, and how much space is left afterwards.
 Nothing changes until you click **Sync** on it, and nothing is removed unless
 you tick **Remove Them** (the button then reads **Sync and Remove**).

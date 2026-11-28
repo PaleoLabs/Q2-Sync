@@ -345,6 +345,8 @@ final class MusicTabCache {
         var cardReadable: Bool
         var audiobooks: [Audiobook]?
         var audiobookSettings: AudiobookSelection?
+        var podcasts: [PodcastShow]?
+        var podcastSettings: PodcastSelection?
     }
 
     private var key: Key?

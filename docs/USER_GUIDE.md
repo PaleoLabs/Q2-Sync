@@ -192,8 +192,8 @@ The line at the bottom of the Music tab shows:
   every song from an Apple Music subscription;
 At the bottom of your Q2's page, on every tab:
 
-- the **capacity bar**: your music, music you've unticked, what this sync will
-  add, **Other** (everything else: the Q2's own data such as its library and
+- the **capacity bar**: your music, audiobooks and podcast episodes (Q2
+  Pod), what you've unticked, what this sync will add, **Other** (everything else: the Q2's own data such as its library and
   Cover Flow images, playlists and album covers, and music copied there
   another way; hover over it for this), and free space. A warning appears if
   your selection won't fit. If Other is large, a note
@@ -210,7 +210,7 @@ you change anything, the **Sync** button becomes **Revert** and **Apply**:
   below opens).
 - **Revert** puts back the choices you had, and **Sync** returns.
 
-Your changes stay while you switch between the Music, Audiobooks and General tabs. They
+Your changes stay while you switch between the Music, Audiobooks, Podcasts and General tabs. They
 are thrown away, without asking, if you go to another page in the sidebar,
 switch to another Q2, unplug the Q2 or quit Q2 Sync.
 
@@ -275,6 +275,72 @@ even when the Q2 is unplugged:
 
 If a Q2's record of the card is from before this version, the list asks you
 to connect it once so Q2 Sync can see which books are on it.
+
+### Podcasts (Q2 Pod)
+
+Q2 Sync copies the episodes the **Podcasts** app has downloaded to your Mac.
+They go in the card's `Podcasts` folder, one folder per show, where Q2 Pod
+lists them under **Library › Podcasts**: they remember your place and stay
+out of your music and shuffle. Each file is named with the episode's date and
+title, for example `Podcasts/The Daily/2026-11-27 - The Election.mp3`, the
+same way the q2-podcasts app on the Q2 names them.
+
+1. Click your Q2 in the sidebar, then the **Podcasts** tab.
+2. The first time, click **Allow Access to Podcasts…**. A window opens at the
+   Podcasts app's folder, already selected: click **Allow Access**. Q2 Sync
+   only reads it, and remembers the permission.
+3. Tick **Sync podcasts onto** your Q2, then under **Sync:** choose **All
+   shows** or **Selected shows** and tick the shows you want. Each show lists
+   its downloaded episodes under it. The **Search Podcasts** box finds shows
+   and episodes (**⌘F** puts the cursor there). **⌘**-click a box to tick or
+   untick every show listed.
+4. Tick **Unplayed only** to leave out episodes the Podcasts app has marked
+   played. Episodes you're partway through still sync.
+5. Click **Apply**, as for music.
+
+- **Only downloaded episodes are listed.** Q2 Sync doesn't download
+  episodes: download them in the Podcasts app (by default it downloads the
+  latest episodes of each show you follow).
+- **Video and protected episodes can't be synced.** They're listed dimmed;
+  click **can't be synced** at the bottom of the tab for the list. Video
+  podcasts aren't synced yet. Protected episodes, such as some from paid
+  subscriptions, only play in Apple's apps.
+- **Played on the Q2 isn't played on the Mac.** Q2 Sync only reads the
+  Podcasts app, never changes it, so an episode you finish on the Q2 stays
+  unplayed on your Mac (see the [FAQ](#11-frequently-asked-questions)).
+- An episode the Podcasts app no longer has downloaded, a show you untick, or
+  a played episode while **Unplayed only** is on is removed from the card at
+  the next sync if you tick **Remove Them** in the preview. The preview says
+  why for each one. Q2 Sync only removes episodes it copied: anything else in
+  `Podcasts`, such as episodes the q2-podcasts app downloaded, is left alone.
+  If an episode is already on the card under the same name (from
+  q2-podcasts, say), Q2 Sync counts it as on the card and doesn't copy it
+  again.
+- On **stock firmware**, the tab explains that podcast sync needs Q2 Pod.
+- A sync always reads the Podcasts app first, so it never misses an episode.
+
+### Browse your podcasts
+
+While any of your Q2s has **Sync podcasts** on, the sidebar has a
+**Podcasts** section with **Episodes** (**View › Episodes**, **⌘7**). It
+lists the downloaded episodes as they relate to your Q2, even when the Q2 is
+unplugged:
+
+- Columns: **Show**, **Title**, **Date**, **Played** (Played or In
+  progress), **Size** and **Q2**. Click a column header to sort. **Search**
+  with the field in the toolbar (**⌘F** puts the cursor there).
+- The **Q2** column shows a green check (**On Q2**), a grey arrow (**Next
+  sync**), a dash (**Not chosen**: its show isn't ticked, or it's played
+  while **Unplayed only** is on), or **Video** / **Protected** when it can't
+  be synced. It follows the settings you've applied, not changes you haven't
+  applied yet.
+- Double-click an episode (or click **Episode Info** in the toolbar, or press
+  **⌘I**, or right-click it and choose **Show Info**) for a panel with its
+  status and file, with **Show in Finder**.
+- The bottom of the sidebar shows how many episodes there are, their size,
+  and how many can't be synced.
+- The list is read when you open it. If the Podcasts app downloads an
+  episode while it's showing, click **Refresh Podcasts** at the top right.
 
 ### Browse your Music library
 
@@ -350,7 +416,7 @@ marks above, so it works without the Q2 connected.
    Click **Details** for the counts and every change, song by song. The
    counts have a header row with the actions (**Add**, **Update**,
    **Rename**, **Remove**, **Can't Sync**), then one row per kind of
-   content with something to do (**Songs**, **Audiobooks**, **Playlists**,
+   content with something to do (**Songs**, **Audiobooks**, **Podcasts**, **Playlists**,
    **Album Covers**), with an icon and a number under each action. The
    counts say only what this sync will do. A count of 0 is greyed out, and
    a dash means the action doesn't apply (audiobooks are never renamed,
@@ -358,18 +424,23 @@ marks above, so it works without the Q2 connected.
    below the counts says what's already on the card, what you no longer
    sync that will stay on it, and what's only on the card. The lists
    below follow the same order, after the sections that need a choice. Q2
-   Sync remembers whether you left Details open.
+   Sync remembers whether you left Details open. While Details is open, the
+   **Filter list** box at the right of the Details line (**⌘F**) narrows the
+   lists by song, artist, album or path; the counts stay the same.
 3. **Nothing changes until you click Sync** (or **Sync and Remove …**, see
    below) on the preview. Click **Cancel** to leave the card as it is.
-4. **Removing what you unticked:** songs and audiobooks you no longer sync
-   that are still on the card share one line, in its own box, with one
+4. **Removing what you unticked:** songs, audiobooks and podcast episodes
+   you no longer sync that are still on the card share one line, in its own box, with one
    **Remove It** / **Remove Them** checkbox. Nothing is removed unless you
    tick it. Unticked, the box is orange and says what you no longer sync
    will stay on the card; ticked, it turns red and says it will be deleted
    from the card, and the button reads **Sync and Remove** with the number
    of items. While the box is unticked, the Remove count under Details
    reads 0 and the line below the counts says what will stay; tick it and
-   the count shows what will be removed. Removed songs and books are deleted from the card only.
+   the count shows what will be removed. Removed songs, books and episodes are deleted from the card only.
+   Each podcast episode to remove says why: no longer downloaded in
+   Podcasts, its show isn't chosen any more, played (with **Unplayed
+   only** on), or podcasts turned off for this Q2.
    They're still in your library, so ticking them again puts them back at
    the next sync. If that's more than 20% of the songs on the card, you'll
    be asked to confirm.
@@ -747,6 +818,21 @@ the reason on the **Audiobooks** tab. Most audiobooks from the Apple Books
 store are protected and only play in Apple's apps; a DRM-free copy you add to
 Apple Books (**File › Add to Library**) syncs.
 
+**I played an episode on the Q2. Why is it still unplayed on my Mac?**
+Q2 Sync only reads the Podcasts app: Apple doesn't offer a way for other
+apps to change it, and its library syncs with your iPhone through iCloud, so
+writing to it could cause trouble. Mark the episode played on your Mac or
+iPhone instead. With Apple's default setting (**Remove Played Downloads**),
+the Podcasts app removes the download within about a day, and the next sync
+removes the episode from the card if you tick **Remove Them**. With
+**Unplayed only** on, a played episode is removed at the next sync straight
+away.
+
+**Why can't this podcast episode be synced?**
+It's a video episode (video podcasts aren't synced yet) or it's protected,
+like some episodes from paid subscriptions. An episode that isn't downloaded
+doesn't appear at all: download it in the Podcasts app.
+
 **Can Q2 Sync change my Apple Books library?**
 No. It only reads Apple Books' folder, with a read-only permission you give
 once.
@@ -835,11 +921,12 @@ Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
 | **⌘1** to **⌘4** | Show Artists, Albums, Genres or Playlists |
 | **⌘5** | Show your Q2 |
 | **⌘6** | Show Books (when the sidebar has an Audiobooks section) |
+| **⌘7** | Show Episodes (when the sidebar has a Podcasts section) |
 | **⌘R** | Refresh the Music library |
 | **⇧⌘R** | Show the selected songs in Finder |
 | **⌘F** | Search your library, or filter the Music tab or the sync preview |
 | **⌘**-click a checkbox | On the Music tab, tick or untick every item shown |
-| **⌘I** | Show or hide Song Info, or Book Info on Books |
+| **⌘I** | Show or hide Song Info, Book Info on Books, or Episode Info on Episodes |
 | **⇧⌘S** | Sync Now |
 | **⌘E** | Eject |
 | **⌘,** | Settings |

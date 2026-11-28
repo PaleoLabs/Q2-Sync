@@ -144,6 +144,9 @@ final class DeviceMonitor {
     /// unapplied edits): the sidebar shows its Audiobooks section then.
     var syncsAudiobooksOnAnyQ2: Bool { store.knownDevices.anySyncsAudiobooks }
 
+    /// `true` when any known Q2 syncs podcasts (the sidebar's Podcasts section).
+    var syncsPodcastsOnAnyQ2: Bool { store.knownDevices.anySyncsPodcasts }
+
     /// The Q2 the library browser compares against: the connected one, or
     /// else the one read most recently. `nil` before any Q2 has been read.
     var referenceContents: (device: KnownDevice, record: CardContentsRecord)? {

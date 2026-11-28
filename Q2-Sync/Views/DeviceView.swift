@@ -6,7 +6,7 @@
 //  The page shown when the Q2 is selected in the sidebar, laid out like
 //  Finder's iPod page: a header (icon, name, firmware, capacity, Eject)
 //  and tabs in Finder's order: "General" (firmware and card), then what
-//  to sync: "Music" and "Audiobooks".
+//  to sync: "Music", "Audiobooks" and "Podcasts".
 //
 //  HOW IT FITS
 //  Shown by `RootView`. Actions go through `DeviceMonitor`; library data
@@ -21,6 +21,7 @@ enum DeviceTab: String, CaseIterable, Identifiable {
     case general = "General"
     case music = "Music"
     case audiobooks = "Audiobooks"
+    case podcasts = "Podcasts"
     var id: String { rawValue }
 }
 
@@ -61,6 +62,8 @@ struct DeviceView: View {
                     DeviceMusicView(connected: connected, devices: devices, library: library, resolved: resolved)
                 case .audiobooks:
                     DeviceAudiobooksView(connected: connected, devices: devices)
+                case .podcasts:
+                    DevicePodcastsView(connected: connected, devices: devices)
                 case .general:
                     DeviceGeneralView(connected: connected, devices: devices)
                 }
@@ -76,9 +79,10 @@ struct DeviceView: View {
         // never floats to the middle when the content below is short.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .navigationTitle(connected.device.name)
-        // Audiobooks count on the capacity bar on every tab.
+        // Audiobooks and podcasts count on the capacity bar on every tab.
         .task(id: connected.device.volumeUUID) {
             if connected.device.profile.audiobooksFolderName != nil { await autoSync.audiobooks.load() }
+            if connected.device.profile.podcastsFolderName != nil { await autoSync.podcasts.load() }
         }
     }
 
@@ -100,7 +104,8 @@ struct DeviceView: View {
             manifestSavedAt: devices.cardManifest?.updatedAt, manifestCount: devices.cardManifest?.entries.count,
             totalBytes: connected.volume.totalCapacity ?? 0, freeBytes: connected.volume.availableCapacity ?? 0,
             cardReadable: connected.accessURL != nil,
-            audiobooks: audiobookInputs.map { $0.books }, audiobookSettings: audiobookInputs?.selection)
+            audiobooks: audiobookInputs.map { $0.books }, audiobookSettings: audiobookInputs?.selection,
+            podcasts: podcastInputs.map { $0.shows }, podcastSettings: podcastInputs?.selection)
         let (resolved, estimate) = cache.values(for: key) {
             let resolved = SelectionResolver.resolve(selection, in: snapshot)
             return (resolved, capacity(for: resolved))
@@ -117,6 +122,15 @@ struct DeviceView: View {
         return (books, devices.shownSyncSettings?.audiobooks ?? connected.device.effectiveAudiobooks)
     }
 
+    /// The Podcasts app's downloaded episodes and the shown Podcasts
+    /// settings, for the capacity bar, or `nil` if this Q2 doesn't sync
+    /// podcasts or the episodes haven't been read.
+    private var podcastInputs: (shows: [PodcastShow], selection: PodcastSelection)? {
+        guard connected.device.profile.podcastsFolderName != nil,
+              case .loaded(let shows) = autoSync.podcasts.state else { return nil }
+        return (shows, devices.shownSyncSettings?.podcasts ?? connected.device.effectivePodcasts)
+    }
+
     /// Capacity numbers for the connected card and a selection.
     ///
     /// - Parameter resolved: The resolved selection, or `nil` before the
@@ -127,7 +141,8 @@ struct DeviceView: View {
                                  manifest: devices.cardManifest,
                                  selection: resolved,
                                  cardReadable: connected.accessURL != nil,
-                                 audiobooks: audiobookInputs)
+                                 audiobooks: audiobookInputs,
+                                 podcasts: podcastInputs)
     }
 }
 

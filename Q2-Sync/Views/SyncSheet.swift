@@ -114,9 +114,10 @@ struct SyncPreviewView: View {
     }
 
     /// Everything you no longer sync that's still on the card, all kinds
-    /// together (songs, audiobooks). One Remove choice covers them all.
+    /// together (songs, audiobooks, podcast episodes). One Remove choice
+    /// covers them all.
     private var noLongerSyncedCount: Int {
-        plan.removals.count + plan.audiobooks.booksToRemove
+        plan.removals.count + plan.audiobooks.booksToRemove + plan.podcasts.removals.count
     }
 
     /// e.g. "47 songs, 2 audiobooks". Add new kinds of content here.
@@ -124,6 +125,7 @@ struct SyncPreviewView: View {
         var parts: [String] = []
         if !plan.removals.isEmpty { parts.append(pluralized(plan.removals.count, "song")) }
         if plan.audiobooks.booksToRemove > 0 { parts.append(pluralized(plan.audiobooks.booksToRemove, "audiobook")) }
+        if !plan.podcasts.removals.isEmpty { parts.append(pluralized(plan.podcasts.removals.count, "podcast episode")) }
         return parts.joined(separator: ", ")
     }
 
@@ -155,6 +157,7 @@ struct SyncPreviewView: View {
     private var hasNothingToList: Bool {
         plan.isEmpty && plan.cardOnly.isEmpty && plan.skipped.isEmpty
             && plan.audiobooks.skipped.isEmpty && plan.audiobooks.note == nil
+            && plan.podcasts.skipped.isEmpty && plan.podcasts.note == nil
     }
 
     var body: some View {
@@ -167,10 +170,6 @@ struct SyncPreviewView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 14)
                 if !hasNothingToList {
-                    Divider()
-                    searchField
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
                     Divider()
                     details
                 }
@@ -257,20 +256,29 @@ struct SyncPreviewView: View {
 
             decisions
 
-            Button {
-                withAnimation(.snappy) { showsDetails.toggle() }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.bold())
-                        .rotationEffect(.degrees(showsDetails ? 90 : 0))
-                    Text("Details")
+            // The list's filter sits at the right of the Details row
+            // (only while Details is open) rather than on a row of its own,
+            // so the list gets that height.
+            HStack {
+                Button {
+                    withAnimation(.snappy) { showsDetails.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .rotationEffect(.degrees(showsDetails ? 90 : 0))
+                        Text("Details")
+                    }
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(showsDetails ? "Hide the counts and lists" : "Show every change, song by song")
+                Spacer()
+                if showsDetails && !hasNothingToList {
+                    searchField
+                }
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help(showsDetails ? "Hide the counts and lists" : "Show every change, song by song")
         }
     }
 
@@ -434,6 +442,7 @@ struct SyncPreviewView: View {
         let removing = sync.options.applyRemovals
         let playlists = plan.playlistPlan
         let books = plan.audiobooks
+        let podcasts = plan.podcasts
         let newPlaylists = playlists.writes.filter(\.isNew).count
 
         let songCells: [CountCell] = [
@@ -446,6 +455,11 @@ struct SyncPreviewView: View {
             removing || books.booksToRemove == 0 ? .count(books.booksToRemove) : .notRemoving(books.booksToRemove),
             .count(books.skipped.count),
         ]
+        let podcastCells: [CountCell] = [
+            .count(podcasts.episodesToAdd), .count(podcasts.episodesToUpdate), .notApplicable,
+            removing || podcasts.removals.isEmpty ? .count(podcasts.removals.count) : .notRemoving(podcasts.removals.count),
+            .count(podcasts.skipped.count),
+        ]
         let playlistCells: [CountCell] = [
             .count(newPlaylists), .count(playlists.writes.count - newPlaylists), .notApplicable,
             .count(playlists.removals.count), .count(playlists.overLimit.count),
@@ -456,9 +470,10 @@ struct SyncPreviewView: View {
         ]
 
         return VStack(alignment: .leading, spacing: 6) {
-            if [songCells, bookCells, playlistCells, coverCells].contains(where: hasWork) { countHeader }
+            if [songCells, bookCells, podcastCells, playlistCells, coverCells].contains(where: hasWork) { countHeader }
             if hasWork(songCells) { countRow("Songs", songCells) }
             if hasWork(bookCells) { countRow("Audiobooks", bookCells) }
+            if hasWork(podcastCells) { countRow("Podcasts", podcastCells) }
             if hasWork(playlistCells) { countRow("Playlists", playlistCells) }
             if hasWork(coverCells) { countRow("Album Covers", coverCells) }
             // Sizes and free space are in the summary at the top, so
@@ -580,6 +595,8 @@ struct SyncPreviewView: View {
         if songs > 0 { onCard.append(pluralized(songs, "song")) }
         let unchangedBooks = books.unchangedBooks + books.adoptions.count
         if unchangedBooks > 0 { onCard.append(pluralized(unchangedBooks, "audiobook")) }
+        let unchangedEpisodes = plan.podcasts.unchangedEpisodes + plan.podcasts.alreadyOnCard
+        if unchangedEpisodes > 0 { onCard.append(pluralized(unchangedEpisodes, "podcast episode")) }
         var parts: [String] = []
         if !onCard.isEmpty { parts.append("Already on the card: " + onCard.joined(separator: ", ")) }
         // Not removed because Remove Them is off (#78): the counts show 0.
@@ -604,13 +621,15 @@ struct SyncPreviewView: View {
 
     private var addCount: Int { plan.copies.lazy.filter { $0.kind == .add }.count }
 
-    /// A search box above the list.
+    /// A compact filter for the list (not the counts), at the right of the
+    /// Details row.
     private var searchField: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Filter by song, artist, album or path", text: $searchText)
+            TextField("Filter list", text: $searchText)
                 .textFieldStyle(.plain)
                 .focused($isSearchFocused)
+                .help("Filter the list by song, artist, album or path")
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
@@ -621,6 +640,11 @@ struct SyncPreviewView: View {
                 .help("Clear the filter")
             }
         }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .frame(width: 200)
+        .background(RoundedRectangle(cornerRadius: 6).fill(.background))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.separator))
     }
 
     private var trimmedSearch: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -707,6 +731,7 @@ struct SyncPreviewView: View {
                 row(cover.albumName, detail: cover.path, symbol: "photo", color: .indigo)
             }
             audiobookSections
+            podcastSections
             collapsibleSection("coverRemovals", "Remove Covers", lists.coverRemovals.map(CoverRemovalRow.init),
                                footer: "Album covers are turned off in Settings.") { removal in
                 row((removal.path as NSString).deletingLastPathComponent, detail: removal.path,
@@ -745,24 +770,42 @@ struct SyncPreviewView: View {
         }
     }
 
-    /// Removal switches (always shown) and the songs to remove.
+    /// Podcast episodes to copy, remove or that can't be synced, one row
+    /// per episode, e.g. "The Daily — The Election".
+    @ViewBuilder
+    private var podcastSections: some View {
+        let podcasts = plan.podcasts
+        collapsibleSection("podcastCopies", "Copy Podcast Episodes", podcasts.copies,
+                           footer: podcasts.note) { copy in
+            row("\(copy.showTitle) — \(copy.title)", detail: copy.destination,
+                symbol: copy.kind == .add ? "plus.circle" : "arrow.triangle.2.circlepath", color: .green)
+        }
+        collapsibleSection("podcastRemovals", "Remove Podcast Episodes", podcasts.removals,
+                           footer: "Removed only if you tick Remove Them. Only episodes Q2 Sync copied are removed.") { removal in
+            row("\(removal.showTitle) — \(removal.title)", detail: removal.reason.explanation,
+                symbol: "minus.circle", color: .red)
+        }
+        collapsibleSection("podcastSkipped", "Podcast Episodes That Can't Sync", podcasts.skipped) { episode in
+            row("\(episode.showTitle) — \(episode.title)", detail: episode.unsyncableReason ?? "",
+                symbol: episode.isProtected ? "lock" : "video", color: .orange)
+        }
+        if podcasts.copies.isEmpty, let text = podcasts.note {
+            Section { note(text) } header: { Text("Podcasts") }
+        }
+    }
+
+    /// The songs to remove.
     @ViewBuilder
     private func removalSection(_ removals: [RemoveOperation]) -> some View {
         if !plan.removals.isEmpty {
             let expanded = isExpanded("remove")
             Section {
-                Toggle("Remove the \(noLongerSyncedList.replacingOccurrences(of: ", ", with: " and ")) you no longer sync",
-                       isOn: Binding(get: { sync.options.applyRemovals },
-                                     set: { sync.options.applyRemovals = $0 }))
-                if assessment.needsLargeRemovalConfirmation {
-                    Label("That's \(removalPercent)% of the songs on this card. You'll be asked to confirm.",
-                          systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                }
+                // The one Remove Them checkbox (and the large-removal
+                // warning) is in the box at the top; it isn't repeated here.
                 collapsibleRows(removals, expanded: expanded) { removal in
                     row(removal.entry.title, detail: removal.entry.path, symbol: "minus.circle", color: .red)
                 }
-                note("Removals are off unless you turn them on. Removed songs are deleted from the card; they're still in your library, so tick them again to put them back. Songs not put there by Q2 Sync are never removed here.")
+                note("Removed only if you tick Remove Them. Removed songs are deleted from the card; they're still in your library, so tick them again to put them back. Songs not put there by Q2 Sync are never removed here.")
             } header: {
                 sectionHeader("Remove", shown: removals.count, total: plan.removals.count, expanded: expanded)
             }
@@ -1339,9 +1382,27 @@ struct SyncResultView: View {
         if report.coversWritten > 0 { parts.append("\(pluralized(report.coversWritten, "album cover")) added") }
         if report.audiobooksCopied > 0 { parts.append("\(pluralized(report.audiobooksCopied, "audiobook")) copied") }
         if report.audiobooksRemoved > 0 { parts.append("\(pluralized(report.audiobooksRemoved, "audiobook")) removed") }
+        if report.podcastEpisodesCopied > 0 { parts.append("\(pluralized(report.podcastEpisodesCopied, "podcast episode")) copied") }
+        if report.podcastEpisodesRemoved > 0 { parts.append("\(pluralized(report.podcastEpisodesRemoved, "podcast episode")) removed") }
+        if !report.skippedPodcastEpisodes.isEmpty {
+            parts.append("\(pluralized(report.skippedPodcastEpisodes.count, "podcast episode")) can't be synced (video or protected)")
+        }
         let copied = report.bytesCopied == 0
             ? "nothing copied"
             : "\(Int64(report.bytesCopied).formatted(ByteCountFormatStyle(style: .file))) copied"
         return parts.joined(separator: ", ") + " · \(copied)"
+    }
+}
+
+extension PodcastRemoval.Reason {
+
+    /// Why the review sheet will remove an episode, in words.
+    var explanation: String {
+        switch self {
+        case .notDownloaded: "No longer downloaded in Podcasts"
+        case .showNotChosen: "Its show isn't chosen any more"
+        case .played: "Played, and “Unplayed only” is on"
+        case .podcastsOff: "Podcasts are turned off for this Q2"
+        }
     }
 }

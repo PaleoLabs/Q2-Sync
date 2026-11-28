@@ -158,6 +158,11 @@ struct NavigationCommands: Commands {
                     .keyboardShortcut("6", modifiers: .command)
                     .disabled(unavailable)
             }
+            if controller.devices.syncsPodcastsOnAnyQ2 {
+                Button("Episodes") { controller.show(.podcasts) }
+                    .keyboardShortcut("7", modifiers: .command)
+                    .disabled(unavailable)
+            }
             Divider()
             // With no Q2, this is the "Connect Your Q2" page.
             Button("Show Q2") { controller.showQ2() }
@@ -223,21 +228,30 @@ struct DeviceCommands: Commands {
 }
 
 /// View › Show Song Info (⌘I): shows or hides the panel with the selected
-/// song's details. On the Books browser it's Show Book Info instead.
+/// song's details. On the Books browser it's Show Book Info instead, and
+/// on the Episodes browser Show Episode Info.
 /// Dimmed unless the main window is on one of those.
 struct SongInfoCommands: Commands {
     // The same stored settings the browsers' panels and toolbars use.
     @AppStorage("showSongInfo") private var showSongInfo = false
     @AppStorage("showBookInfo") private var showBookInfo = false
+    @AppStorage("showEpisodeInfo") private var showEpisodeInfo = false
 
     /// Set by `LibraryCategoryView` while it's in the frontmost window.
     @FocusedValue(\.offersSongInfo) private var offersSongInfo
     /// Set by `AudiobookBrowserView` while it's in the frontmost window.
     @FocusedValue(\.offersBookInfo) private var offersBookInfo
+    /// Set by `PodcastBrowserView` while it's in the frontmost window.
+    @FocusedValue(\.offersEpisodeInfo) private var offersEpisodeInfo
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
-            if offersBookInfo == true {
+            if offersEpisodeInfo == true {
+                Button(showEpisodeInfo ? "Hide Episode Info" : "Show Episode Info") {
+                    showEpisodeInfo.toggle()
+                }
+                .keyboardShortcut("i", modifiers: .command)
+            } else if offersBookInfo == true {
                 Button(showBookInfo ? "Hide Book Info" : "Show Book Info") {
                     showBookInfo.toggle()
                 }

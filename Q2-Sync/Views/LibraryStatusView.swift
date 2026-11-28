@@ -133,6 +133,54 @@ struct AudiobookStatusView: View {
     }
 }
 
+/// The sidebar's footer on Podcasts › Episodes: how many episodes are
+/// downloaded, and how many can't sync and why.
+struct PodcastStatusView: View {
+
+    let model: PodcastLibraryModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            switch model.state {
+            case .idle:
+                Label(model.source == nil ? "Podcasts app not allowed yet" : "Podcasts app not read yet",
+                      systemImage: "circle.dashed")
+                    .foregroundStyle(.secondary)
+            case .loading:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Reading the Podcasts app…")
+                }
+            case .failed(let message):
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Button("Try Again") { Task { await model.load() } }
+                    .controlSize(.small)
+            case .loaded(let shows):
+                let episodes = shows.flatMap(\.episodes)
+                let bytes = episodes.reduce(UInt64(0)) { $0 + $1.fileSize }
+                Text("\(pluralized(episodes.count, "episode")) · \(Int64(bytes).formatted(.byteCount(style: .file)))")
+                    .fontWeight(.medium)
+                Text(pluralized(shows.count, "show")).foregroundStyle(.secondary)
+                let video = episodes.count { $0.kind == .video && !$0.isProtected }
+                let protected = episodes.count(where: \.isProtected)
+                if video > 0 {
+                    Label("Video: \(video.formatted())", systemImage: "film")
+                        .help("Video podcasts aren't synced yet.")
+                }
+                if protected > 0 {
+                    Label("Protected: \(protected.formatted())", systemImage: "lock.fill")
+                        .help("Protected episodes can't be copied.")
+                }
+            }
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
+    }
+}
+
 // MARK: - Presentation helpers for availability
 
 extension TrackAvailability {
@@ -199,6 +247,9 @@ enum LibraryWording {
 
     /// Tooltip for Refresh Audiobooks.
     static let refreshAudiobooksHelp = "Re-read the audiobooks in Apple Books on this Mac. Only DRM-free books downloaded to this Mac can be copied to your Q2. Q2 Sync never changes your books."
+
+    /// Tooltip for Refresh Podcasts.
+    static let refreshPodcastsHelp = "Re-read the episodes the Podcasts app has downloaded to this Mac. Only audio episodes that aren't protected can be copied to your Q2. Q2 Sync never changes your podcasts."
 
     /// Tooltip for Refresh Music Library.
     static let refreshHelp = "Re-read the Music app's library on this Mac. Only song files stored on this Mac can be copied to your Q2, not Apple Music subscription songs. Q2 Sync never changes your library."

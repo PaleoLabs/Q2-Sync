@@ -64,6 +64,12 @@ final class AutoSyncController {
     /// The audiobooks in Apple Books, for the Audiobooks tab and syncing.
     let audiobooks: AudiobookLibraryModel
 
+    /// Permission to read the Podcasts app's episodes (one for all Q2s).
+    let podcastsAccess: PodcastsAccess
+
+    /// The Podcasts app's downloaded episodes, for the Podcasts tab and syncing.
+    let podcasts: PodcastLibraryModel
+
     /// Opens (or brings forward) the main window. Set by a view that has
     /// SwiftUI's `openWindow` action, since only views can get it.
     @ObservationIgnored var openMainWindow: (() -> Void)?
@@ -80,6 +86,9 @@ final class AutoSyncController {
         let booksAccess = BooksAccess()
         self.booksAccess = booksAccess
         self.audiobooks = AudiobookLibraryModel(access: booksAccess)
+        let podcastsAccess = PodcastsAccess()
+        self.podcastsAccess = podcastsAccess
+        self.podcasts = PodcastLibraryModel(access: podcastsAccess)
 
         notifications.configure()
         // `[weak self]` avoids a retain cycle: these closures are stored by
@@ -263,7 +272,8 @@ final class AutoSyncController {
         guard let connected = devices.connected, !isCardInUse() else { return }
         if !automatic { showMainWindow() }
         await sync.prepare(connected: connected, library: library, devices: devices,
-                           audiobooks: audiobooks.source, automatic: automatic)
+                           audiobooks: audiobooks.source, podcasts: podcasts.source,
+                           automatic: automatic)
     }
 
     /// Checks for Q2 Pod updates (if turned on, at most daily) and announces
