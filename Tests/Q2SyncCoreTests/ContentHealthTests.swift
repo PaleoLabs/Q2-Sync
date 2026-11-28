@@ -77,6 +77,12 @@ struct ContentHealthTests {
         #expect(PodcastHealthCheck.evaluate(folder: folder).isHealthy)
     }
 
+    @Test("Photos needs access; an empty library is fine")
+    func photos() {
+        #expect(PhotoHealthCheck.evaluate(isAllowed: true).isHealthy)
+        #expect(!PhotoHealthCheck.evaluate(isAllowed: false).isHealthy)
+    }
+
     @Test("Read time: whole seconds, one decimal under a second")
     func readTime() {
         let us = Locale(identifier: "en_US")

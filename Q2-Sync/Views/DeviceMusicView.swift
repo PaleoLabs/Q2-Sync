@@ -347,6 +347,9 @@ final class MusicTabCache {
         var audiobookSettings: AudiobookSelection?
         var podcasts: [PodcastShow]?
         var podcastSettings: PodcastSelection?
+        /// `PhotoLibraryModel.loadCount`, not the library (big to compare).
+        var photoLoad: Int?
+        var photoSettings: PhotoSelection?
     }
 
     private var key: Key?

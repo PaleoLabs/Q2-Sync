@@ -72,6 +72,12 @@ final class AutoSyncController {
     /// The Podcasts app's downloaded episodes, for the Podcasts tab and syncing.
     let podcasts: PodcastLibraryModel
 
+    /// Permission to read the Photos library (one for all Q2s).
+    let photosAccess: PhotosAccess
+
+    /// The Photos library's photos and albums, for the Photos tab and syncing.
+    let photos: PhotoLibraryModel
+
     /// Opens (or brings forward) the main window. Set by a view that has
     /// SwiftUI's `openWindow` action, since only views can get it.
     @ObservationIgnored var openMainWindow: (() -> Void)?
@@ -91,6 +97,9 @@ final class AutoSyncController {
         let podcastsAccess = PodcastsAccess()
         self.podcastsAccess = podcastsAccess
         self.podcasts = PodcastLibraryModel(access: podcastsAccess)
+        let photosAccess = PhotosAccess()
+        self.photosAccess = photosAccess
+        self.photos = PhotoLibraryModel(access: photosAccess)
 
         notifications.configure()
         // `[weak self]` avoids a retain cycle: these closures are stored by
@@ -313,9 +322,10 @@ final class AutoSyncController {
     func startSync(automatic: Bool) async {
         guard let connected = devices.connected, !isCardInUse() else { return }
         if !automatic { showMainWindow() }
+        photosAccess.refresh() // May have changed in System Settings.
         await sync.prepare(connected: connected, library: library, devices: devices,
                            audiobooks: audiobooks.source, podcasts: podcasts.source,
-                           automatic: automatic)
+                           photos: photos.source, automatic: automatic)
     }
 
     /// Checks for Q2 Pod updates (if turned on, at most daily) and announces

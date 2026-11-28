@@ -75,7 +75,7 @@ flowchart TB
 | Folder | What's in it |
 | --- | --- |
 | `Q2-Sync/Core/Models` | Plain values: `Track`, `Playlist`, `LibrarySnapshot`, `SyncSelection` |
-| `Q2-Sync/Core/Library` | Reading Apple Music: `LibrarySource`, `ITunesLibrarySource` (also `LibraryArtworkReader`, which reads album artwork for covers, read-only), `FixtureLibrarySource`, `LibraryHealthCheck`; `ContentHealthCheck.swift` (`AudiobookHealthCheck`, `PodcastHealthCheck`, `ReadTimeWording`) |
+| `Q2-Sync/Core/Library` | Reading Apple Music: `LibrarySource`, `ITunesLibrarySource` (also `LibraryArtworkReader`, which reads album artwork for covers, read-only), `FixtureLibrarySource`, `LibraryHealthCheck`; `ContentHealthCheck.swift` (`AudiobookHealthCheck`, `PodcastHealthCheck`, `PhotoHealthCheck`, `ReadTimeWording`) |
 | `Q2-Sync/Core/Device` | Device facts: `DeviceProfile`, `ReservedItemRules`, `VolumeInfo`, `CardConnection`, `DeviceStore`, `FirmwareUpdates`, `FirmwareSources`, `FirmwareImage`, `ZipExtractor` |
 | `Q2-Sync/Core/SyncEngine` | Planning, diffing, copying, playlists, path guard, safety |
 | `Q2-Sync/Core/Help` | `UserGuide`: reading the user guide for the help window |
@@ -276,6 +276,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   with `selection: nil`) have missing files; cloud-only and protected books
   don't count. **`PodcastHealthCheck.evaluate(folder:)`** · the database is
   readable and the downloads folder exists; no episodes is still healthy.
+  **`PhotoHealthCheck.evaluate(isAllowed:)`** · Photos access is allowed
+  (fully or limited); an empty library is still healthy.
   Fixture sources skip the folder rules (protocol extension defaults).
 - **`ReadTimeWording.text(_:locale:)`** · "Read in 4s", or "Read in 0.4s"
   under a second.
@@ -542,8 +544,26 @@ The real file size goes in the `PhotoRecord`. A photo the renderer can't
 supply counts in `SyncReport.photosNotRead` and is left for the next sync.
 Redone photos replace their file in place, so `SyncSafety` counts
 `PhotoPlan.bytesFreedByUpdates`; `CapacityEstimate` has `photoBytes` (from
-`PhotoPlanner.wantedKeys`). Not yet wired into the app (no PhotoKit
-source, renderer, tab or coordinator step).
+`PhotoPlanner.wantedKeys`), fed by `DeviceView`'s capacity bar once the
+library has been read (`MusicTabCache.Key` compares
+`PhotoLibraryModel.loadCount`, not the whole library).
+
+In the app, `App/PhotosAccess.swift` asks macOS once with its privacy prompt
+(`PHPhotoLibrary.requestAuthorization(for: .readWrite)`, the only level macOS
+offers; nothing ever calls `performChanges`). `App/PhotoKitSource.swift` is
+both the `PhotoSource` (every photo, hidden included; Favorites, Recently
+Added, the photo media types, Hidden and user albums inside folders; shared
+albums left out) and the `PhotoRendering` (synchronous `PHImageManager`
+requests with network access, so iCloud-only photos download: a drawn image
+fitting 750 × 580, or `requestImageDataAndOrientation` at full resolution).
+`App/PhotoLibraryModel.swift` holds the last read for the views.
+`SyncCoordinator.prepare` reads the library when photos are on (with photos
+off it plans every recorded photo as a `photosOff` removal without reading
+it), scans `Photos/` with loose files, calls `PhotoPlanner.plan` and hands the
+source to `SyncExecutor.photoRenderer` through `SyncPreview`. No access, a
+read error or an unsafe health check leaves photos on the card as they are,
+with a note. The Photos tab, sidebar browser, footer line and sync sheet rows
+aren't built yet.
 
 **Podcasts** (#20) are read, never written, from the Podcasts app's group
 container (`~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts`),
@@ -584,6 +604,7 @@ Defense in depth: several independent layers, each enough on its own.
 | `app-sandbox` | Turns the sandbox on. |
 | `assets.music.read-only` | **Read-only** access to `~/Music` for ITLibrary and copying. There is deliberately no read-write variant. |
 | `files.user-selected.read-write` + `files.bookmarks.app-scope` | Write access to the card you choose once in an Open panel, remembered with a security-scoped bookmark; the same for a Q2 Pod backup folder you choose instead of the default. Apple Books' folder (audiobooks) and the Podcasts app's group container are allowed the same way, each with a **read-only** bookmark (`App/BooksAccess.swift`, `App/PodcastsAccess.swift`). |
+| `personal-information.photos-library` | Reading the Photos library with PhotoKit, after macOS's own prompt (`NSPhotoLibraryUsageDescription`). macOS grants read-write; Q2 Sync never calls `performChanges` (`App/PhotosAccess.swift`). |
 | `files.user-selected.executable` | Stops macOS adding `com.apple.quarantine` to files written to the card (exFAT would store it in `._` companion files that players list as broken songs). |
 | `files.downloads.read-write` | "Move to Mac" into `~/Downloads/Q2 Recovered`; Q2 Pod data backups into `~/Downloads/Q2 Sync Backups` (the default backup folder). |
 | `network.client` | The check for new Q2 Sync releases, the optional GitHub firmware check, and firmware downloads you start (GitHub, Shanling's page, Google Drive). |

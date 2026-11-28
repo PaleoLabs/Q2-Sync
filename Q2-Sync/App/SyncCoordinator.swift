@@ -40,6 +40,8 @@ struct SyncPreview {
     let protectedFolders: [URL]
     /// Reads album artwork for the planned covers (read-only), if any.
     var artwork: (any AlbumArtworkProviding)? = nil
+    /// Reads the planned photos from the Photos library (read-only), if any.
+    var photoRenderer: (any PhotoRendering)? = nil
 
     /// Safety assessment for the user's current choices.
     func assessment(for options: SyncOptions) -> SafetyAssessment {
@@ -143,6 +145,7 @@ final class SyncCoordinator {
     /// - Side effects: Reads the library and card. Never writes to the card.
     func prepare(connected: ConnectedDevice, library: LibraryModel, devices: DeviceMonitor,
                  audiobooks: (any AudiobookSource)? = nil, podcasts: (any PodcastSource)? = nil,
+                 photos: (any PhotoSource & PhotoRendering)? = nil,
                  automatic: Bool = false) async {
         guard phase == .idle else { return }
         devices.flushPendingSave() // The selection on disk matches what's synced.
@@ -249,6 +252,34 @@ final class SyncCoordinator {
             }
         }
 
+        // Photos (Q2 Pod only): read the Photos library now, like podcasts.
+        // Without access, or if it can't be read, photos are left as they
+        // are on the card. With photos off the library isn't read: every
+        // photo Q2 Sync put on the card is planned as a removal ("Photos is
+        // turned off"), which needs Remove Them like any removal.
+        var photoLibrary: PhotoLibraryContents?
+        var photoNote: String?
+        let photoSelection = connected.device.effectivePhotos
+        if connected.device.profile.photosFolderName != nil {
+            if !photoSelection.isEnabled {
+                photoLibrary = PhotoLibraryContents()
+            } else if let photos {
+                phase = .planning("Reading your Photos library…")
+                do {
+                    photoLibrary = try await photos.loadPhotos()
+                } catch {
+                    photoNote = error.localizedDescription + " Photos on the card weren't changed."
+                }
+                if photoLibrary != nil, case .unsafe(let reason) = photos.health() {
+                    photoLibrary = nil
+                    photoNote = reason + " Photos on the card weren't changed."
+                }
+                guard isCurrentPlanning(generation) else { return }
+            } else if photoSelection.isEnabled {
+                photoNote = "Q2 Sync can't read your Photos library, so photos weren't synced. Allow access on the Photos tab."
+            }
+        }
+
         phase = .planning("Checking the card…")
         do {
             let pathGuard = try PathGuard(
@@ -271,7 +302,9 @@ final class SyncCoordinator {
                                                             books: books, audiobookSelection: audiobookSelection,
                                                             audiobookNote: audiobookNote,
                                                             shows: shows, podcastSelection: podcastSelection,
-                                                            podcastNote: podcastNote)
+                                                            podcastNote: podcastNote,
+                                                            photoLibrary: photoLibrary, photoSelection: photoSelection,
+                                                            photoNote: photoNote)
             // Cancelled while the card was being scanned: drop the plan.
             guard isCurrentPlanning(generation) else { return }
 
@@ -290,7 +323,8 @@ final class SyncCoordinator {
                                       + [snapshot.mediaFolderURL].compactMap { $0 },
                                   // Music off: no covers to write, and the library isn't opened.
                                   artwork: musicSelection.isEnabled
-                                      ? library.artworkReader(for: Set(plan.coverWrites.map(\.trackID))) : nil)
+                                      ? library.artworkReader(for: Set(plan.coverWrites.map(\.trackID))) : nil,
+                                  photoRenderer: plan.photos.copies.isEmpty ? nil : photos)
             phase = .preview
             if automatic, let preview { decideAutomatically(preview, devices: devices) }
         } catch {
@@ -342,7 +376,9 @@ final class SyncCoordinator {
                                   books: [Audiobook]?, audiobookSelection: AudiobookSelection,
                                   audiobookNote: String?,
                                   shows: [PodcastShow]?, podcastSelection: PodcastSelection,
-                                  podcastNote: String?) async throws
+                                  podcastNote: String?,
+                                  photoLibrary: PhotoLibraryContents?, photoSelection: PhotoSelection,
+                                  photoNote: String?) async throws
         -> (SyncManifest, SyncPlan) {
         let manifest = try SyncManifest.load(from: fileSystem)
         // The card is listed once (slow over the Q2's USB); the music and
@@ -394,6 +430,19 @@ final class SyncCoordinator {
             if let podcastNote { adjusted.podcasts.note = podcastNote }
         }
 
+        // Photos, in their own reserved folder (see PhotoSync.swift),
+        // loose files included. Without a fresh read nothing is planned.
+        if let folderName = profile.photosFolderName {
+            if let photoLibrary {
+                adjusted.photos = PhotoPlanner.plan(library: photoLibrary, selection: photoSelection,
+                                                    manifest: manifest,
+                                                    card: CardFolderListing.scan(folderName: folderName, on: fileSystem,
+                                                                                 includeLooseFiles: true),
+                                                    folderName: folderName)
+            }
+            if let photoNote { adjusted.photos.note = photoNote }
+        }
+
         adjusted.playlistPlan.onlyChangedForImport = onlyChangedPlaylists
         adjusted.playlistPlan.reimportAll = reimportAllPlaylists
         PlaylistWriter.dropUnchangedWrites(in: &adjusted, manifest: manifest, profile: profile) { path in
@@ -418,6 +467,7 @@ final class SyncCoordinator {
         removalEstimator = .forRemovals()
         var executor = SyncExecutor(fileSystem: preview.fileSystem, deviceName: preview.deviceName)
         executor.artwork = preview.artwork
+        executor.photoRenderer = preview.photoRenderer
         executor.recoveryCopier = RecoveryCopier(stagingFolder: RecoveryCopier.defaultStagingFolder,
                                                  protectedFolders: preview.protectedFolders)
         let options = options

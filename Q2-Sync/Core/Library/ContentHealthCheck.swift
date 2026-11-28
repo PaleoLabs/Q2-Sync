@@ -3,7 +3,7 @@
 //  Q2-Sync › Core › Library
 //
 //  PURPOSE
-//  The "looks healthy" checks for Apple Books and the Podcasts app, the
+//  The "looks healthy" checks for Apple Books, the Podcasts app and Photos, the
 //  counterparts of the Music library's `LibraryHealthCheck`, plus the
 //  "Read in 4s" wording shared by the sidebar footers.
 //
@@ -90,6 +90,27 @@ enum PodcastHealthCheck {
         let downloads = folder.appending(path: ApplePodcastsSource.downloadsPath, directoryHint: .isDirectory)
         guard fileManager.fileExists(atPath: downloads.path, isDirectory: &isDirectory), isDirectory.boolValue else {
             return .unsafe("The Podcasts app's downloads folder isn't there, so Q2 Sync can't tell which episodes you have.")
+        }
+        return .healthy
+    }
+}
+
+/// Decides whether the Photos library just read can be trusted.
+enum PhotoHealthCheck {
+
+    /// Checks the Photos library.
+    ///
+    /// An empty library is trusted (a new Mac, or a Mac that keeps no
+    /// photos). Removing photos never happens without review anyway
+    /// (`SyncSafety`, `AutoSyncPolicy`).
+    ///
+    /// - Parameter isAllowed: Access to Photos is allowed (fully, or for
+    ///   the photos the user picked).
+    /// - Returns: `.healthy`, or `.unsafe` with the reason.
+    /// - Side effects: None.
+    static func evaluate(isAllowed: Bool) -> LibraryHealth {
+        guard isAllowed else {
+            return .unsafe("Q2 Sync isn't allowed to read your Photos library, so it can't tell which photos you have.")
         }
         return .healthy
     }

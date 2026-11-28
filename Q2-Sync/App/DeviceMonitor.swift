@@ -558,11 +558,12 @@ final class DeviceMonitor {
     }
 
     /// `true` if the connected card holds anything Q2 Sync put there
-    /// (songs, audiobooks, podcasts…). A sync that chooses nothing then still has
+    /// (songs, audiobooks, podcasts, photos…). A sync that chooses nothing then still has
     /// something to do: offer to remove it.
     var cardHasQ2SyncContent: Bool {
         cardHasQ2SyncSongs || !(cardManifest?.audiobooks?.isEmpty ?? true)
             || !(cardManifest?.podcasts?.isEmpty ?? true)
+            || !(cardManifest?.photos?.isEmpty ?? true)
     }
 
     // MARK: - Unapplied changes (Revert / Apply)

@@ -105,7 +105,8 @@ struct DeviceView: View {
             totalBytes: connected.volume.totalCapacity ?? 0, freeBytes: connected.volume.availableCapacity ?? 0,
             cardReadable: connected.accessURL != nil,
             audiobooks: audiobookInputs.map { $0.books }, audiobookSettings: audiobookInputs?.selection,
-            podcasts: podcastInputs.map { $0.shows }, podcastSettings: podcastInputs?.selection)
+            podcasts: podcastInputs.map { $0.shows }, podcastSettings: podcastInputs?.selection,
+            photoLoad: photoInputs == nil ? nil : autoSync.photos.loadCount, photoSettings: photoInputs?.selection)
         let (resolved, estimate) = cache.values(for: key) {
             let resolved = SelectionResolver.resolve(selection, in: snapshot)
             return (resolved, capacity(for: resolved))
@@ -131,6 +132,15 @@ struct DeviceView: View {
         return (shows, devices.shownSyncSettings?.podcasts ?? connected.device.effectivePodcasts)
     }
 
+    /// The Photos library and the shown Photos settings, for the capacity
+    /// bar, or `nil` if this Q2 doesn't sync photos or the library hasn't
+    /// been read.
+    private var photoInputs: (library: PhotoLibraryContents, selection: PhotoSelection)? {
+        guard connected.device.profile.photosFolderName != nil,
+              let library = autoSync.photos.contents else { return nil }
+        return (library, devices.shownSyncSettings?.photos ?? connected.device.effectivePhotos)
+    }
+
     /// Capacity numbers for the connected card and a selection.
     ///
     /// - Parameter resolved: The resolved selection, or `nil` before the
@@ -142,7 +152,8 @@ struct DeviceView: View {
                                  selection: resolved,
                                  cardReadable: connected.accessURL != nil,
                                  audiobooks: audiobookInputs,
-                                 podcasts: podcastInputs)
+                                 podcasts: podcastInputs,
+                                 photos: photoInputs)
     }
 }
 

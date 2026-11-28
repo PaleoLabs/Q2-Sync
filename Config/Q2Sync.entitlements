@@ -44,6 +44,14 @@
         different backup folder you choose uses files.user-selected instead.
         Each refuses any path outside its folder.
 
+    • personal-information.photos-library
+        Lets the app ask once (macOS's own privacy prompt) to read your
+        Photos library, to copy photos you choose to a Q2 Pod card's
+        Photos folder. macOS only offers read-and-write access to Photos,
+        but Q2 Sync only ever reads: it never asks Photos to change,
+        add or delete anything. You can turn it off in System Settings ›
+        Privacy & Security › Photos.
+
     • network.client
         Outgoing connections only, for two things. New versions of Q2 Sync:
         a check of GitHub (api.github.com) at launch and daily, which you
@@ -66,6 +74,8 @@
     <key>com.apple.security.files.user-selected.executable</key>
     <true/>
     <key>com.apple.security.files.downloads.read-write</key>
+    <true/>
+    <key>com.apple.security.personal-information.photos-library</key>
     <true/>
     <key>com.apple.security.network.client</key>
     <true/>
