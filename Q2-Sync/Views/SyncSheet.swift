@@ -404,16 +404,32 @@ struct SyncPreviewView: View {
     /// happen for that kind of content (e.g. renaming an album cover).
     private enum CountCell {
         case count(Int)
-        /// A removal the user turned off with Remove Them: shown as "Kept".
-        case kept(Int)
+        /// Removals the user left off with Remove Them: the sync removes
+        /// nothing, so the cell shows 0 (#78). The number is in the tooltip
+        /// and in the line under the counts.
+        case notRemoving(Int)
         case notApplicable
     }
 
-    /// The counts (#64): one full-width grey row per kind of content that
-    /// has something to do, each with the same five columns (Add, Update,
-    /// Rename, Remove, Can't Sync) so they line up down the sheet. A zero
-    /// is dimmed; a dash means the action doesn't apply. The sheet grows by
-    /// one row per kind, never by action.
+    /// The five columns of the counts, in order.
+    private static let countColumns: [(title: String, symbol: String, color: Color)] = [
+        ("Add", "plus.circle.fill", .green),
+        ("Update", "arrow.triangle.2.circlepath", .blue),
+        ("Rename", "pencil.circle.fill", .purple),
+        ("Remove", "minus.circle.fill", .red),
+        ("Can't Sync", "exclamationmark.circle.fill", .orange),
+    ]
+
+    /// Width of the kind's name at the start of each counts row; the
+    /// header leaves the same space so its words sit over the icons.
+    private static let countNameWidth: CGFloat = 92
+
+    /// The counts (#64, #78): a header row with the action names (Add,
+    /// Update, Rename, Remove, Can't Sync), then one full-width grey row
+    /// per kind of content that has something to do, each cell an icon and
+    /// a number under its header. The counts say only what this sync will
+    /// do: a zero is dimmed; a dash means the action doesn't apply. The
+    /// sheet grows by one row per kind, never by action.
     private var counts: some View {
         let removing = sync.options.applyRemovals
         let playlists = plan.playlistPlan
@@ -422,12 +438,12 @@ struct SyncPreviewView: View {
 
         let songCells: [CountCell] = [
             .count(addCount), .count(plan.copies.count - addCount), .count(plan.moves.count),
-            removing || plan.removals.isEmpty ? .count(plan.removals.count) : .kept(plan.removals.count),
+            removing || plan.removals.isEmpty ? .count(plan.removals.count) : .notRemoving(plan.removals.count),
             .count(plan.skipped.count),
         ]
         let bookCells: [CountCell] = [
             .count(books.booksToAdd), .count(books.booksToUpdate), .notApplicable,
-            removing || books.booksToRemove == 0 ? .count(books.booksToRemove) : .kept(books.booksToRemove),
+            removing || books.booksToRemove == 0 ? .count(books.booksToRemove) : .notRemoving(books.booksToRemove),
             .count(books.skipped.count),
         ]
         let playlistCells: [CountCell] = [
@@ -440,6 +456,7 @@ struct SyncPreviewView: View {
         ]
 
         return VStack(alignment: .leading, spacing: 6) {
+            if [songCells, bookCells, playlistCells, coverCells].contains(where: hasWork) { countHeader }
             if hasWork(songCells) { countRow("Songs", songCells) }
             if hasWork(bookCells) { countRow("Audiobooks", bookCells) }
             if hasWork(playlistCells) { countRow("Playlists", playlistCells) }
@@ -459,29 +476,47 @@ struct SyncPreviewView: View {
     private func hasWork(_ cells: [CountCell]) -> Bool {
         cells.contains {
             switch $0 {
-            case .count(let n), .kept(let n): n > 0
-            case .notApplicable: false
+            case .count(let n): n > 0
+            case .notRemoving, .notApplicable: false
             }
         }
+    }
+
+    /// The action names, once, above the counts rows (#78). Same layout as
+    /// a row (name slot, spacing, padding), so each word starts over its
+    /// column's icon. It sits closer to the first row than the rows sit to
+    /// each other, so it reads as part of them. VoiceOver skips it: each
+    /// row reads its actions by name.
+    private var countHeader: some View {
+        HStack(spacing: 8) {
+            Color.clear.frame(width: Self.countNameWidth, height: 1)
+            ForEach(Self.countColumns.indices, id: \.self) { index in
+                Text(Self.countColumns[index].title)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .font(.callout)
+        .fontWeight(.semibold)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .padding(.horizontal, 10)
+        .padding(.top, 4)
+        .padding(.bottom, -3)
+        .accessibilityHidden(true)
     }
 
     /// One kind of content across the sheet: its name, then the five
     /// columns, each the same width in every row.
     private func countRow(_ title: String, _ cells: [CountCell]) -> some View {
-        let columns: [(title: String, symbol: String, color: Color)] = [
-            ("Add", "plus.circle.fill", .green),
-            ("Update", "arrow.triangle.2.circlepath", .blue),
-            ("Rename", "pencil.circle.fill", .purple),
-            ("Remove", "minus.circle.fill", .red),
-            ("Can't Sync", "exclamationmark.circle.fill", .orange),
-        ]
+        let columns = Self.countColumns
         return HStack(spacing: 8) {
             Text(title)
                 .fontWeight(.semibold)
                 .lineLimit(1)
-                .frame(width: 92, alignment: .leading)
+                .frame(width: Self.countNameWidth, alignment: .leading)
             ForEach(columns.indices, id: \.self) { index in
-                countCell(columns[index].title, cells[index], columns[index].symbol, columns[index].color)
+                countCell(title, columns[index].title, cells[index], columns[index].symbol, columns[index].color)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -489,26 +524,25 @@ struct SyncPreviewView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title + ": " + columns.indices.map { spoken(columns[$0].title, cells[$0]) }
+            .joined(separator: ", "))
     }
 
-    /// Icon, action and number. Zero, kept and dash are dimmed.
-    private func countCell(_ title: String, _ cell: CountCell, _ symbol: String, _ color: Color) -> some View {
-        let label: String
+    /// Icon and number. Zero and dash are dimmed; the action's name is in
+    /// the header.
+    private func countCell(_ kind: String, _ title: String, _ cell: CountCell,
+                           _ symbol: String, _ color: Color) -> some View {
         let value: String
         let dimmed: Bool
         switch cell {
-        case .count(let n):
-            (label, value, dimmed) = (title, n.formatted(), n == 0)
-        case .kept(let n):
-            (label, value, dimmed) = ("Kept", n.formatted(), true)
-        case .notApplicable:
-            (label, value, dimmed) = (title, "–", true)
+        case .count(let n): (value, dimmed) = (n.formatted(), n == 0)
+        case .notRemoving: (value, dimmed) = (0.formatted(), true)
+        case .notApplicable: (value, dimmed) = ("–", true)
         }
         return HStack(spacing: 4) {
             Image(systemName: symbol)
                 .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(color))
-            Text(label)
-                .foregroundStyle(dimmed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
             Text(value)
                 .monospacedDigit()
                 .fontWeight(dimmed ? .regular : .semibold)
@@ -516,14 +550,25 @@ struct SyncPreviewView: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.8)
-        .help(helpText(title, cell))
+        .help(helpText(kind, title, cell))
     }
 
-    private func helpText(_ title: String, _ cell: CountCell) -> String {
+    /// e.g. "Rename doesn't apply to audiobooks".
+    private func helpText(_ kind: String, _ title: String, _ cell: CountCell) -> String {
         switch cell {
         case .count: ""
-        case .kept(let n): "\(n.formatted()) no longer synced, kept on the card because Remove Them is off"
-        case .notApplicable: "\(title) doesn't apply here"
+        case .notRemoving(let n):
+            "\(n.formatted()) you no longer sync stay on the card because Remove Them is off"
+        case .notApplicable: "\(title) doesn't apply to \(kind.lowercased())"
+        }
+    }
+
+    /// What VoiceOver reads for one cell, e.g. "Add 34", "Rename doesn't apply".
+    private func spoken(_ title: String, _ cell: CountCell) -> String {
+        switch cell {
+        case .count(let n): "\(title) \(n.formatted())"
+        case .notRemoving(let n): "\(title) 0, \(n.formatted()) kept"
+        case .notApplicable: "\(title) doesn't apply"
         }
     }
 
@@ -538,6 +583,11 @@ struct SyncPreviewView: View {
         if unchangedBooks > 0 { onCard.append(pluralized(unchangedBooks, "audiobook")) }
         var parts: [String] = []
         if !onCard.isEmpty { parts.append("Already on the card: " + onCard.joined(separator: ", ")) }
+        // Not removed because Remove Them is off (#78): the counts show 0.
+        if !sync.options.applyRemovals && noLongerSyncedCount > 0 {
+            let list = noLongerSyncedList.replacingOccurrences(of: ", ", with: " and ")
+            parts.append("\(list) you no longer sync will stay")
+        }
         if !plan.cardOnly.isEmpty { parts.append("\(pluralized(plan.cardOnly.count, "song")) only on the card") }
         let imported = sync.options.playlistsWereImported ? plan.playlistPlan.leavingImport.count : 0
         if imported > 0 { parts.append("\(pluralized(imported, "playlist")) already imported") }

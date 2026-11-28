@@ -348,12 +348,15 @@ marks above, so it works without the Q2 connected.
    will be free. If something needs your choice (songs you no longer sync,
    or music that's only on the card), a box below it asks.
    Click **Details** for the counts and every change, song by song. The
-   counts are one row per kind of content with something to do (**Songs**,
-   **Audiobooks**, **Playlists**, **Album Covers**), each with the same
-   columns: **Add**, **Update**, **Rename**, **Remove** and **Can't Sync**.
-   A count of 0 is greyed out, and a dash means the action doesn't apply
-   (audiobooks are never renamed, for example). A line below the counts
-   says what's already on the card and what's only on the card. The lists
+   counts have a header row with the actions (**Add**, **Update**,
+   **Rename**, **Remove**, **Can't Sync**), then one row per kind of
+   content with something to do (**Songs**, **Audiobooks**, **Playlists**,
+   **Album Covers**), with an icon and a number under each action. The
+   counts say only what this sync will do. A count of 0 is greyed out, and
+   a dash means the action doesn't apply (audiobooks are never renamed,
+   for example); hold the pointer over a dash or a 0 to see why. A line
+   below the counts says what's already on the card, what you no longer
+   sync that will stay on it, and what's only on the card. The lists
    below follow the same order, after the sections that need a choice. Q2
    Sync remembers whether you left Details open.
 3. **Nothing changes until you click Sync** (or **Sync and Remove …**, see
@@ -364,8 +367,9 @@ marks above, so it works without the Q2 connected.
    tick it. Unticked, the box is orange and says what you no longer sync
    will stay on the card; ticked, it turns red and says it will be deleted
    from the card, and the button reads **Sync and Remove** with the number
-   of items. Under Details the Remove count then reads **Kept** while the
-   box is unticked. Removed songs and books are deleted from the card only.
+   of items. While the box is unticked, the Remove count under Details
+   reads 0 and the line below the counts says what will stay; tick it and
+   the count shows what will be removed. Removed songs and books are deleted from the card only.
    They're still in your library, so ticking them again puts them back at
    the next sync. If that's more than 20% of the songs on the card, you'll
    be asked to confirm.

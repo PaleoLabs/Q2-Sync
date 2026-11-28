@@ -2,6 +2,11 @@
 
 Release notes for each Q2 Sync build. Downloads are on [Releases](https://github.com/PaleoLabs/Q2-Sync/releases).
 
+## Unreleased
+
+### Changed
+- **Clearer counts in the sync preview's Details.** The action names (Add, Update, Rename, Remove, Can't Sync) are in one header row, and each kind's row shows only the icons and numbers, so the counts are easier to scan. The counts say only what this sync will do: with **Remove Them** unticked, Remove reads 0, and the line under the counts says what you no longer sync will stay on the card. ([#78](https://github.com/PaleoLabs/Q2-Sync/issues/78))
+
 ## 0.4.0 (2026-11-27)
 
 ### Added
