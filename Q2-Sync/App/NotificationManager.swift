@@ -43,6 +43,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     private enum Category {
         static let connected = "Q2_CONNECTED"
         static let finished = "SYNC_FINISHED"
+        /// A finished sync that left something to look at in the window.
+        static let finishedReview = "SYNC_FINISHED_REVIEW"
         static let review = "SYNC_REVIEW"
     }
 
@@ -59,6 +61,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         center.setNotificationCategories([
             UNNotificationCategory(identifier: Category.connected, actions: [sync], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.finished, actions: [eject, verify], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Category.finishedReview, actions: [open, eject, verify],
+                                   intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.review, actions: [open], intentIdentifiers: []),
         ])
     }
@@ -67,6 +71,15 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     /// remembers the answer).
     func requestPermission() async {
         _ = try? await center.requestAuthorization(options: [.alert, .sound])
+    }
+
+    /// `true` if a notification would actually appear on screen: allowed
+    /// for Q2 Sync, with a banner or persistent style (not None) in
+    /// System Settings › Notifications.
+    func canShowAlerts() async -> Bool {
+        let settings = await center.notificationSettings()
+        let allowed = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+        return allowed && settings.alertSetting == .enabled && settings.alertStyle != .none
     }
 
     // MARK: - Posting
@@ -78,8 +91,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
 
     /// A finished (or failed) automatic sync.
-    func postFinished(title: String, body: String, offerEject: Bool) {
-        post(title: title, body: body, category: offerEject ? Category.finished : Category.review, id: "finished")
+    ///
+    /// - Parameter offerOpen: Adds an Open Q2 Sync button, for a sync that
+    ///   left something to review (files on the card not in your library).
+    func postFinished(title: String, body: String, offerEject: Bool, offerOpen: Bool = false) {
+        let category = !offerEject ? Category.review : offerOpen ? Category.finishedReview : Category.finished
+        post(title: title, body: body, category: category, id: "finished")
     }
 
     /// An eject worked while the main window wasn't there to show it.

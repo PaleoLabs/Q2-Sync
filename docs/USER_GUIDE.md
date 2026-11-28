@@ -90,8 +90,10 @@ in a card reader.
    Your Q2**, with the steps above and what happens next. Meanwhile you can
    browse your Music library.
 5. When your Q2's card is connected, a window asks **"Is this your Shanling Q2?"**
-   If Q2 Sync's window is closed (it keeps running in the menu bar), a
-   notification says **Set Up Your Q2?**: click it to open the window.
+   If you're in another app (or Q2 Sync's window is closed; it keeps running
+   in the menu bar), a notification says **Set Up Your Q2?** and the window
+   waits behind your other windows: click the notification to bring it
+   forward. See [When Q2 Sync needs you](#when-q2-sync-needs-you).
    - Choose which firmware it runs: **Shanling (stock)** or **Q2 Pod**.
      Neither is selected to start with, and **Continue…** waits until you
      choose. If you're not sure: Q2 Pod looks like an iPod; stock is
@@ -640,12 +642,34 @@ Q2 Sync can notice when your Q2 connects. On your Q2's **General** tab, under
 
 Automatic syncs follow every safety rule. They **never remove songs and never
 eject**. If anything needs your decision (the first sync with a card, songs
-you unticked, songs gone from your library, or not enough space), they stop,
-open the preview in Q2 Sync, and notify you. When an automatic sync finishes,
+you unticked, songs gone from your library, or not enough space), they stop
+with the preview waiting in Q2 Sync, and notify you (see below). When an
+automatic sync finishes,
 a notification has **Eject** and **Verify Card** buttons. The steps for your Q2
 are in the Sync Complete window, so open Q2 Sync to read them (**Verify Card**
 closes that window; the steps are also under **After Each Sync** while the card
 is connected).
+
+### When Q2 Sync needs you
+
+Some moments need your decision: an automatic sync stopped for review, a new
+Q2 to set up, the **Did the Firmware Update Finish?** question, or a finished
+sync that left files on the card that aren't in your library. Q2 Sync handles
+them all the same way, like other Mac apps, and **never takes focus from the
+app you're using**:
+
+- **Q2 Sync is in front:** the window shows it straight away, with no
+  notification.
+- **You're in another app, or the window is closed:** a notification says what
+  needs you, and Q2 Sync's window opens *behind* your other windows (the Dock
+  icon comes back), with the preview or question ready. Click the notification
+  (or **Open Q2 Sync**) to bring it forward.
+- **Notifications are off for Q2 Sync:** its Dock icon also bounces once, so
+  you still find out.
+
+**Tip:** so you can't miss these, set Q2 Sync's notifications to
+**Persistent** in **System Settings › Notifications › Q2 Sync**. They then
+stay on screen until you click or dismiss them.
 
 For auto-sync to work, Q2 Sync must be running. It stays in the **menu bar**
 when you close its window. To start it automatically, open **Q2 Sync ›

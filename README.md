@@ -117,7 +117,8 @@ glance, with a warning when your selection won't fit.
 
 ### 🔌 Plug in and forget
 **Auto-sync** when your Q2 connects (or ask first), notifications when it's
-done (with Eject and Verify Card) and when you eject with the window out of
+done (with Eject and Verify Card) or needs your decision (without stealing
+focus from the app you're in) and when you eject with the window out of
 sight, a menu bar item (the Dock icon hides while the window is
 closed), **Sync Now** and **Eject** in the Dock menu, and an option to open at
 login (in Settings, and suggested when you turn on auto-sync).

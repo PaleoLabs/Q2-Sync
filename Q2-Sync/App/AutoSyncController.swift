@@ -9,8 +9,10 @@
 //    • it turns automatic syncs' outcomes into notifications;
 //    • it handles the notification buttons (Sync Now, Eject, Verify Card,
 //      Open);
-//    • it tells you about a new Q2 that needs setting up when the window
-//      isn't in front.
+//    • it tells you when something needs your input (a sync stopped for
+//      review, a new Q2 to set up, the firmware question): a notification
+//      and the window ready behind your other windows, never taking focus
+//      (`needsAttention`, #76).
 //  Connect notifications are only posted while Q2 Sync isn't in front
 //  (when it is, you're already looking at the Q2), and notification
 //  permission is only asked for when one is actually posted.
@@ -121,12 +123,10 @@ final class AutoSyncController {
     private func deviceConnected(_ connected: ConnectedDevice) {
         if installer.askAboutPendingIfNeeded(for: connected) {
             // Auto-sync waits for the answer (it may change the firmware).
-            Task {
-                await notifications.requestPermission()
-                notifications.postFirmware(title: "Did the Firmware Update Finish?",
-                                           body: "Open Q2 Sync to tell it which firmware your Q2 runs now.")
+            needsAttention {
+                $0.postFirmware(title: "Did the Firmware Update Finish?",
+                                body: "Open Q2 Sync to tell it which firmware your Q2 runs now.")
             }
-            showMainWindow()
             return
         }
         runConnectBehaviour(connected)
@@ -158,10 +158,10 @@ final class AutoSyncController {
         }
     }
 
-    /// A new drive that looks like a Q2 is waiting for setup. If the window
-    /// isn't in front, say so; the notification opens it to the sheet.
+    /// A new drive that looks like a Q2 is waiting for setup, in a sheet in
+    /// the main window.
     private func newDriveNeedsSetUp(_ volume: VolumeInfo) {
-        postIfInBackground { $0.postNewDevice(name: volume.name) }
+        needsAttention { $0.postNewDevice(name: volume.name) }
     }
 
     // MARK: - In front or not
@@ -183,6 +183,43 @@ final class AutoSyncController {
             await notifications.requestPermission()
             post(notifications)
         }
+    }
+
+    // MARK: - Needs your input (#76)
+
+    /// Something needs your input: an automatic sync stopped for review,
+    /// the "Did the firmware update finish?" question, a new Q2 to set up,
+    /// or a finished sync left files to review. The one rule for all of
+    /// them, following macOS (an app in the background doesn't take focus):
+    ///   • Q2 Sync in front: the window already shows it; no notification.
+    ///   • In the background: the window opens behind your other windows
+    ///     (Dock icon back, the sheet or preview ready), and `post` says
+    ///     why. The notification's Open button brings it forward.
+    ///   • Notifications off for Q2 Sync: also bounce the Dock icon once,
+    ///     or you might not find out.
+    /// Waits a moment first so that, at launch, the window has had time to
+    /// open before deciding whether it's in front.
+    private func needsAttention(_ post: @escaping (NotificationManager) -> Void) {
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !isInFront else { return }
+            prepareMainWindow()
+            await notifications.requestPermission()
+            post(notifications)
+            if !(await notifications.canShowAlerts()) {
+                DockIconController.shared.bounceOnce()
+            }
+        }
+    }
+
+    /// Gets the main window ready without bringing it forward: the Dock
+    /// icon comes back, and a closed window reopens behind your other
+    /// windows. A minimised window stays in the Dock.
+    private func prepareMainWindow() {
+        DockIconController.shared.showDockIcon()
+        guard !NSApp.windows.contains(where: DockIconController.isMainWindow) else { return }
+        openMainWindow?()
+        DockIconController.shared.keepBehind(where: DockIconController.isMainWindow)
     }
 
     // MARK: - Card busy state
@@ -297,8 +334,7 @@ final class AutoSyncController {
             notifications.postFinished(title: "“\(name)” Is Up to Date",
                                        body: "Nothing needed syncing.", offerEject: true)
         case .needsReview(let reasons):
-            notifications.postNeedsReview(reasons: reasons)
-            showMainWindow()
+            needsAttention { $0.postNeedsReview(reasons: reasons) }
         case .finished(let report):
             if report.succeeded {
                 var body = "Added \(report.added), updated \(report.updated)."
@@ -309,7 +345,15 @@ final class AutoSyncController {
                 // The notification can eject the card without the window
                 // ever being seen, and the steps are there.
                 body += " Open Q2 Sync for next steps."
-                notifications.postFinished(title: "Sync Complete", body: body, offerEject: true)
+                if cardOnly > 0 {
+                    // Something to review: the same rule as the other
+                    // "needs your input" cases (no notification in front).
+                    needsAttention {
+                        $0.postFinished(title: "Sync Complete", body: body, offerEject: true, offerOpen: true)
+                    }
+                } else {
+                    notifications.postFinished(title: "Sync Complete", body: body, offerEject: true)
+                }
             } else {
                 let reason = report.abortReason ?? (report.wasCancelled ? "It was cancelled."
                                                     : "\(pluralized(report.errors.count, "song")) had problems.")
@@ -433,6 +477,8 @@ final class AutoSyncController {
 
     /// Brings the app and its main window to the front: an open (or
     /// minimised) window is brought forward; a closed one is reopened.
+    /// Only for something you just did (a menu item, a notification
+    /// button); when Q2 Sync needs you, `needsAttention` doesn't take focus.
     func showMainWindow() {
         // `NSApp` is nil until the app has launched; try again then (the
         // window opens at launch anyway).

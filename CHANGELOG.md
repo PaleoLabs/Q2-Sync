@@ -10,6 +10,7 @@ Release notes for each Q2 Sync build. Downloads are on [Releases](https://github
 
 ### Changed
 - **Clearer counts in the sync preview's Details.** The action names (Add, Update, Rename, Remove, Can't Sync) are in one header row, and each kind's row shows only the icons and numbers, so the counts are easier to scan. The counts say only what this sync will do: with **Remove Them** unticked, Remove reads 0, and the line under the counts says what you no longer sync will stay on the card. ([#78](https://github.com/PaleoLabs/Q2-Sync/issues/78))
+- **Q2 Sync no longer jumps in front of the app you're using.** When something needs your decision (an automatic sync stopped for review, a new Q2 to set up, the firmware question, or files on the card that aren't in your library), Q2 Sync now does the same thing every time, like other Mac apps: a notification, with its window waiting behind your other windows, ready to bring forward. If Q2 Sync is already in front, it just shows it. If notifications are off for Q2 Sync, its Dock icon bounces once instead. Tip: set its notifications to **Persistent** in System Settings so they stay until you deal with them. ([#76](https://github.com/PaleoLabs/Q2-Sync/issues/76))
 - **Q2 Sync gives up on a stuck Music library sooner.** If the library doesn't answer, it says "The Music library isn't responding" after 30 seconds instead of a minute, with **Try Again**.
 
 ## 0.4.0 (2026-11-27)

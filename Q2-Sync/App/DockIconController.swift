@@ -14,7 +14,9 @@
 //  The exception: while the help window or About panel is open, the Dock
 //  icon stays until that closes too.
 //  `AutoSyncController.showMainWindow()` calls `showDockIcon()` before
-//  bringing the window back.
+//  bringing the window back. When something needs your input while you're
+//  in another app, `AutoSyncController.needsAttention` uses `keepBehind`
+//  and `bounceOnce` instead, so Q2 Sync never takes focus on its own (#76).
 //
 //  ACTIVATION POLICY (explained)
 //  `NSApp.setActivationPolicy(.regular)` is a normal app with a Dock icon;
@@ -122,6 +124,30 @@ final class DockIconController {
             if window.isMiniaturized { window.deminiaturize(nil) }
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
+        }
+    }
+
+    /// Keeps a window that was just opened for later behind the other
+    /// apps' windows, without making Q2 Sync active (#76: something needs
+    /// your input, but you're working elsewhere). Waits a moment, like
+    /// `bringToFront`, for a newly created window to exist. If you switched
+    /// to Q2 Sync in the meantime, it's left where it is.
+    func keepBehind(where matches: @escaping (NSWindow) -> Bool) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard !NSApp.isActive, let window = NSApp.windows.first(where: matches),
+                  window.isVisible else { return }
+            window.orderBack(nil)
+        }
+    }
+
+    /// Bounces the Dock icon once: the standard macOS way for an app in the
+    /// background to ask for attention. It needs the Dock icon, so this
+    /// puts it back first. Does nothing while Q2 Sync is active.
+    func bounceOnce() {
+        showDockIcon()
+        // A run-loop pass later, so the Dock icon is there to bounce.
+        DispatchQueue.main.async {
+            NSApp.requestUserAttention(.informationalRequest)
         }
     }
 
