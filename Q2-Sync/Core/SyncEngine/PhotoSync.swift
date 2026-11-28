@@ -106,6 +106,8 @@ struct PhotoCopy: Sendable, Hashable, Identifiable {
     let fullResolution: Bool
     /// A guess at the card file's size, for the capacity bar.
     let estimatedSize: UInt64
+    /// For an update, the size of the card file it replaces (0 if missing).
+    var replacedSize: UInt64 = 0
 
     /// The manifest key for this photo in this folder.
     var key: String { PhotoPlanner.key(assetID: assetID, albumID: albumID) }
@@ -170,6 +172,8 @@ struct PhotoPlan: Sendable, Equatable {
     var note: String?
 
     var bytesToCopy: UInt64 { copies.reduce(0) { $0 + $1.estimatedSize } }
+    /// Space freed by the files updates replace.
+    var bytesFreedByUpdates: UInt64 { copies.reduce(0) { $0 + $1.replacedSize } }
     var bytesFreedByRemovals: UInt64 { removals.reduce(0) { $0 + $1.cardSize } }
     var photosToAdd: Int { copies.filter { $0.kind == .add }.count }
     var photosToUpdate: Int { copies.filter { $0.kind == .update }.count }
@@ -248,7 +252,9 @@ enum PhotoPlanner {
                    record.fullResolution == selection.fullResolution {
                     plan.unchangedPhotos += 1
                 } else {
-                    plan.copies.append(copy(placement, kind: .update, to: record.path, selection: selection))
+                    var update = copy(placement, kind: .update, to: record.path, selection: selection)
+                    update.replacedSize = onCard?.size ?? 0
+                    plan.copies.append(update)
                 }
                 continue
             }
@@ -308,6 +314,17 @@ enum PhotoPlanner {
         guard fullResolution else { return screenCopySize }
         let pixels = UInt64(max(asset.pixelWidth, 0)) * UInt64(max(asset.pixelHeight, 0))
         return max(pixels / 3, screenCopySize)
+    }
+
+    /// The manifest keys of every photo the settings want, with the photo:
+    /// for the capacity bar, which has no card listing. Empty if photos
+    /// are off; `nil` for a source that isn't available yet.
+    static func wantedKeys(library: PhotoLibraryContents, selection: PhotoSelection,
+                           now: Date = .now, calendar: Calendar = .current) -> [String: PhotoAsset]? {
+        guard selection.source == .photosLibrary else { return nil }
+        guard selection.isEnabled else { return [:] }
+        let placements = wanted(library: library, selection: selection, now: now, calendar: calendar)
+        return Dictionary(placements.map { ($0.key, $0.asset) }, uniquingKeysWith: { first, _ in first })
     }
 
     // MARK: - Choosing

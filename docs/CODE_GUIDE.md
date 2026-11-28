@@ -376,6 +376,7 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `PlaylistImportRule.needsImport(...)` / `digest` | a playlist's bytes + its last fingerprint → whether it goes up for the Q2's Import (with the setting on, only changed playlists are added to `_explaylist_data`; unchanged ones come out only when `SyncOptions.playlistsWereImported` is set from the sync window's checkbox) | none |
 | `AlbumCovers.plan(tracks:finalPaths:manifest:cardFiles:)` | songs' final paths → `[CoverWrite]` (one `cover.jpg` per album folder; skips folders with the user's own cover/folder image; manifest `albumCovers` records Q2 Sync's) | none |
 | `CoverImage.makeJPEG(from:maxPixels:)` | artwork bytes → baseline RGB JPEG ≤ 1000 px (what the Q2 decodes cheaply) | none |
+| `PhotoImage.makeJPEG(from:fullResolution:)` | a photo (bytes or `CGImage`) → upright baseline RGB JPEG fitting 750 × 580, or at its own size; no metadata kept | none |
 | `TimeRemainingEstimator.update(bytesCopied:totalBytes:at:)` / `describe` | progress samples → seconds left, "About 12 minutes remaining". Counts bytes for music; `forCovers()` counts covers for the album-cover step (`SyncProgress.isAddingCovers`, `coversDone`/`coversTotal`), which has its own bar | none |
 | `CardVerifier.verify(manifest:tracks:fileSystem:onProgress:)` / `repairPlan` | managed songs → byte-for-byte comparison with the Mac → `VerifyResult`; failed songs → a copies-only `SyncPlan` | none (reads only) |
 | `CardScanner.scan(folder:on:)` / `files(in:from:)` | card folder → files keyed by case-insensitive path (reserved items skipped); `files(in:from:)` takes one top-level folder from a whole-card scan | none |
@@ -531,8 +532,18 @@ name rather than overwrite anything. A recorded photo is redone when it was
 edited, its file is missing or a different size, or "Include full-resolution
 photos" changed. Q2 Pod's limits (500 photos per grid, 200 albums) give
 `PhotoPlan.overLimit` / `tooManyAlbums` warnings; everything is still copied.
-Copy sizes are estimates (`estimatedCardSize`). Not yet wired into the
-coordinator or executor.
+Copy sizes are estimates (`estimatedCardSize`). `SyncExecutor` step 5d
+removes (only with the user's "remove" choice, like podcasts; an automatic
+sync waits for review), then asks its `photoRenderer` (`PhotoRendering`:
+encoded bytes or a drawn `CGImage` per asset) for each photo and makes the
+card file with `PhotoImage`: fits 750 × 580 (full resolution keeps its
+size), upright, baseline RGB JPEG at 0.85 with no metadata (no location).
+The real file size goes in the `PhotoRecord`. A photo the renderer can't
+supply counts in `SyncReport.photosNotRead` and is left for the next sync.
+Redone photos replace their file in place, so `SyncSafety` counts
+`PhotoPlan.bytesFreedByUpdates`; `CapacityEstimate` has `photoBytes` (from
+`PhotoPlanner.wantedKeys`). Not yet wired into the app (no PhotoKit
+source, renderer, tab or coordinator step).
 
 **Podcasts** (#20) are read, never written, from the Podcasts app's group
 container (`~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts`),

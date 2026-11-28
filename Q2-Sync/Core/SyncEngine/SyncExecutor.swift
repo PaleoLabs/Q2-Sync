@@ -20,6 +20,9 @@
 //  5. Copies (new and changed songs).
 //  5b. Audiobooks (Q2 Pod): removals, adoptions, then copies.
 //  5c. Podcasts (Q2 Pod): removals (emptied show folders go too), then copies.
+//  5d. Photos (Q2 Pod): removals (emptied album folders go too), then each
+//      photo is read from the Photos library, made into a JPEG
+//      (`PhotoImage`) and written.
 //  6. Album covers: Q2 Sync's covers are removed if covers were turned
 //     off, or if their folder has no songs left (so the folder can go);
 //     then new covers are written.
@@ -96,6 +99,12 @@ struct SyncReport: Sendable, Equatable {
     var podcastEpisodesRemoved = 0
     /// Episodes of chosen shows that couldn't be copied (video, protected).
     var skippedPodcastEpisodes: [PodcastEpisode] = []
+    /// Photos written (added or updated) and removed.
+    var photosCopied = 0
+    var photosRemoved = 0
+    /// Planned photos the Photos library couldn't supply (deleted since,
+    /// not downloaded from iCloud…): left for the next sync, not errors.
+    var photosNotRead = 0
     /// Songs left out of playlists because they aren't on the card.
     var playlistSongsMissing = 0
     var skipped: [Track] = []
@@ -144,6 +153,9 @@ struct SyncExecutor: Sendable {
     var recoveryCopier: RecoveryCopier?
     /// Reads album artwork from the library. `nil` writes no covers.
     var artwork: (any AlbumArtworkProviding)?
+    /// Reads photos from the Photos library. `nil` writes no photos (the
+    /// planned ones count as not read).
+    var photoRenderer: (any PhotoRendering)?
     /// Where logs go (tests pass a temp folder).
     var logsDirectory: URL = SyncLog.logsDirectory
 
@@ -187,6 +199,8 @@ struct SyncExecutor: Sendable {
             + ((options.applyRemovals && removalsAllowed) ? plan.audiobooks.bookRemovals : [])
         // Podcast episodes: only with the same choice and limit as songs.
         let podcastRemovals = (options.applyRemovals && removalsAllowed) ? plan.podcasts.removals : []
+        // Photos: the same.
+        let photoRemovals = (options.applyRemovals && removalsAllowed) ? plan.photos.removals : []
         report.skippedPodcastEpisodes = plan.podcasts.skipped
         let cardOnlyCopies = plan.cardOnly.filter { options.cardOnlyActions[$0.path] == .moveToMac }
         let cardOnlyRemovals = removalsAllowed
@@ -202,7 +216,8 @@ struct SyncExecutor: Sendable {
                 + plan.coverWrites.count
                 + plan.coverRemovals.count
                 + audiobookRemovals.count + plan.audiobooks.copies.count
-                + podcastRemovals.count + plan.podcasts.copies.count,
+                + podcastRemovals.count + plan.podcasts.copies.count
+                + photoRemovals.count + plan.photos.copies.count,
             totalBytes: plan.allBytesToCopy,
             coversTotal: plan.coverWrites.count,
             removalsTotal: cardOnlyRemovals.count + removals.count)
@@ -474,6 +489,66 @@ struct SyncExecutor: Sendable {
                 try finishOperation()
             }
 
+            // 5d. Photos: removals, forgotten records, then copies. Only
+            //     files recorded in the manifest are ever replaced or
+            //     removed; new photos were given free names when planned.
+            var photos = manifest.photos ?? [:]
+            for removal in photoRemovals {
+                try Task.checkCancellation()
+                progress.currentItem = "Removing photos"
+                publish()
+                do {
+                    try fileSystem.removeFile(removal.path)
+                    fileSystem.removeAppleDoubleCompanion(of: removal.path)
+                    log.write("REMOVE PHOTO  \(removal.path)")
+                    photos[removal.key] = nil
+                    report.photosRemoved += 1
+                    fileSystem.removeEmptyFolders(above: removal.path)
+                } catch let error where Self.isPerSongError(error) {
+                    record(error, path: removal.path, in: &report, log: log)
+                }
+                manifest.photos = photos
+                try finishOperation()
+            }
+            for key in plan.photos.forgotten { photos[key] = nil }
+            manifest.photos = photos
+            for copy in plan.photos.copies {
+                try Task.checkCancellation()
+                progress.currentItem = "Copying photos"
+                publish()
+                // A pool per photo: the original, the decoded image and
+                // the JPEG are freed as we go (thousands of photos).
+                try autoreleasepool {
+                    defer {
+                        // The bar moves by the estimate the total was made of.
+                        progress.bytesCopied += copy.estimatedSize
+                    }
+                    guard let content = photoRenderer?.content(for: copy.assetID, fullResolution: copy.fullResolution),
+                          let jpeg = PhotoImage.makeJPEG(from: content, fullResolution: copy.fullResolution) else {
+                        report.photosNotRead += 1
+                        log.write("NOTE  Photo not read from the Photos library, left for the next sync: \(copy.destination)")
+                        try finishOperation()
+                        return
+                    }
+                    do {
+                        try fileSystem.writeAtomically(jpeg, to: copy.destination)
+                        fileSystem.removeAppleDoubleCompanion(of: copy.destination)
+                        let size = UInt64(jpeg.count)
+                        photos[copy.key] = PhotoRecord(path: copy.destination, assetID: copy.assetID,
+                                                       albumID: copy.albumID, albumTitle: copy.albumTitle,
+                                                       modified: copy.modified, fullResolution: copy.fullResolution,
+                                                       cardSize: size, syncedAt: .now)
+                        manifest.photos = photos
+                        report.photosCopied += 1
+                        report.bytesCopied += size
+                        log.write("\(copy.kind == .add ? "ADD" : "UPDATE") PHOTO  \(copy.destination)  (\(SyncLog.size(size)))")
+                    } catch let error where Self.isPerSongError(error) {
+                        record(error, path: copy.destination, in: &report, log: log)
+                    }
+                    try finishOperation()
+                }
+            }
+
             // 6. Album covers. First remove Q2 Sync's covers from folders
             //    with no managed song left (so the empty folder can go),
             //    then write the planned covers into folders that still
@@ -626,6 +701,8 @@ struct SyncExecutor: Sendable {
             + "card-only moved to Mac \(report.cardOnlyMovedToMac) / deleted \(report.cardOnlyRemoved), "
             + "playlists written \(report.playlistsWritten) / unchanged \(report.playlistsUnchanged) / removed \(report.playlistsRemoved), "
             + "covers written \(report.coversWritten) / removed \(report.coversRemoved), "
+            + (plan.photos.isEmpty ? "" : "photos written \(report.photosCopied) / removed \(report.photosRemoved)"
+               + " / not read \(report.photosNotRead), ")
             + "skipped \(report.skipped.count), errors \(report.errors.count). "
             + "Copied \(SyncLog.size(report.bytesCopied)) in \(report.duration.formatted(.units(allowed: [.minutes, .seconds])))")
         onProgress(progress)

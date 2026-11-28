@@ -59,6 +59,8 @@ struct CapacityEstimate: Sendable, Equatable {
     var audiobookBytes: Int64 = 0
     /// Podcast episodes Q2 Sync has on the card that are still synced.
     var podcastBytes: Int64 = 0
+    /// Photos Q2 Sync has on the card that are still synced.
+    var photoBytes: Int64 = 0
     /// Everything else on the card.
     var otherBytes: Int64
     /// Selected songs not on the card yet.
@@ -101,13 +103,18 @@ struct CapacityEstimate: Sendable, Equatable {
     ///     settings, or `nil` if not read; counted the same way as
     ///     audiobooks. An episode a q2-podcasts copy already covers still
     ///     counts as to add (a slight overestimate).
+    ///   - photos: The Photos library and the Q2's Photos settings, or
+    ///     `nil` if not read; counted per photo per folder from the
+    ///     manifest. Photos to add count at their estimated card size
+    ///     (`PhotoPlanner.estimatedCardSize`): they're made as they're written.
     /// - Returns: The estimate.
     static func compute(totalBytes: Int64, freeBytes: Int64, manifest: SyncManifest?,
                         selection: ResolvedSelection?,
                         reserve: Int64 = SyncSafety.reservedFreeBytes,
                         cardReadable: Bool = true,
                         audiobooks: (books: [Audiobook], selection: AudiobookSelection)? = nil,
-                        podcasts: (shows: [PodcastShow], selection: PodcastSelection)? = nil) -> CapacityEstimate {
+                        podcasts: (shows: [PodcastShow], selection: PodcastSelection)? = nil,
+                        photos: (library: PhotoLibraryContents, selection: PhotoSelection)? = nil) -> CapacityEstimate {
         guard cardReadable else {
             return CapacityEstimate(totalBytes: totalBytes, freeBytes: freeBytes,
                                     selectedMusicBytes: 0, deselectedMusicBytes: 0,
@@ -176,8 +183,28 @@ struct CapacityEstimate: Sendable, Equatable {
             }
         }
 
+        // Photos (see PhotoSync.swift): by photo and folder, from the manifest.
+        // A photo whose size setting changed counts its growth as to add.
+        var photoOnCard: Int64 = 0
+        let photoRecords = manifest?.photos ?? [:]
+        let wantedPhotos = photos.flatMap { PhotoPlanner.wantedKeys(library: $0.library, selection: $0.selection) }
+        for (key, record) in photoRecords {
+            if wantedPhotos.map({ $0[key] != nil }) ?? true { photoOnCard += Int64(record.cardSize) }
+            else { deselectedMusic += Int64(record.cardSize) }
+        }
+        if let wantedPhotos, let fullResolution = photos?.selection.fullResolution {
+            for (key, asset) in wantedPhotos {
+                let estimate = Int64(PhotoPlanner.estimatedCardSize(for: asset, fullResolution: fullResolution))
+                if let record = photoRecords[key] {
+                    if record.fullResolution != fullResolution { toAdd += max(0, estimate - Int64(record.cardSize)) }
+                } else {
+                    toAdd += estimate
+                }
+            }
+        }
+
         let used = max(0, totalBytes - freeBytes)
-        let other = max(0, used - selectedMusic - deselectedMusic - audiobookOnCard - podcastOnCard)
+        let other = max(0, used - selectedMusic - deselectedMusic - audiobookOnCard - podcastOnCard - photoOnCard)
 
         let fit: Fit
         if freeBytes - toAdd >= reserve {
@@ -191,6 +218,7 @@ struct CapacityEstimate: Sendable, Equatable {
         return CapacityEstimate(totalBytes: totalBytes, freeBytes: freeBytes,
                                 selectedMusicBytes: selectedMusic, deselectedMusicBytes: deselectedMusic,
                                 audiobookBytes: audiobookOnCard, podcastBytes: podcastOnCard,
+                                photoBytes: photoOnCard,
                                 otherBytes: other, toAddBytes: toAdd, fit: fit)
     }
 }

@@ -80,6 +80,9 @@ enum AutoSyncPolicy {
         if !plan.podcasts.removals.isEmpty {
             reasons.append("\(pluralized(plan.podcasts.removals.count, "podcast episode")) no longer synced would be removed.")
         }
+        if !plan.photos.removals.isEmpty {
+            reasons.append("\(pluralized(plan.photos.removals.count, "photo")) no longer synced would be removed.")
+        }
         if !plan.orphanedEntries.isEmpty {
             reasons.append("\(pluralized(plan.orphanedEntries.count, "song")) on the card \(plan.orphanedEntries.count == 1 ? "is" : "are") no longer in your library.")
         }

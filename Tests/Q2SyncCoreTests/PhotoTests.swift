@@ -4,14 +4,17 @@
 //
 //  PURPOSE
 //  Tests for photos (issue #68): the Photos tab's settings, saving them
-//  per Q2, and the path guard's `Photos/` exception.
+//  per Q2, the path guard's `Photos/` exception, planning, making the
+//  JPEGs, writing and removing them, and the capacity and safety checks.
 //
 //  SAFETY
 //  Uses temporary folders only; never the real Photos library or a real
 //  card.
 //
 
+import CoreGraphics
 import Foundation
+import ImageIO
 import Testing
 @testable import Q2SyncCore
 
@@ -459,5 +462,214 @@ struct PhotoPlannerTests {
         let with = CardFolderListing.scan(folderName: "Photos", on: card.fileSystem, includeLooseFiles: true)
         #expect(without.files.count == 1 && with.files.count == 2)
         #expect(with.folders == [CardLayout.caseKey("Photos/A")])
+    }
+}
+
+// MARK: - Making the JPEGs
+
+/// A test JPEG `width`×`height` with an EXIF orientation and a location.
+private func cameraPhoto(width: Int, height: Int, orientation: Int = 1) -> Data {
+    let space = CGColorSpace(name: CGColorSpace.sRGB)!
+    let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                            space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    context.setFillColor(CGColor(srgbRed: 0.8, green: 0.3, blue: 0.1, alpha: 1))
+    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    let output = NSMutableData()
+    let destination = CGImageDestinationCreateWithData(output as CFMutableData, "public.jpeg" as CFString, 1, nil)!
+    let properties: [CFString: Any] = [
+        kCGImagePropertyOrientation: orientation,
+        kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 64.1, kCGImagePropertyGPSLatitudeRef: "N"],
+    ]
+    CGImageDestinationAddImage(destination, context.makeImage()!, properties as CFDictionary)
+    CGImageDestinationFinalize(destination)
+    return output as Data
+}
+
+private func properties(_ jpeg: Data) throws -> [CFString: Any] {
+    let source = try #require(CGImageSourceCreateWithData(jpeg as CFData, nil))
+    return try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
+}
+
+/// Hands out test photos by asset id.
+private struct FakePhotos: PhotoRendering {
+    let photos: [String: Data]
+    func content(for assetID: String, fullResolution: Bool) -> PhotoImageContent? {
+        photos[assetID].map { .data($0) }
+    }
+}
+
+@Suite("Photos on the card: making the JPEGs")
+struct PhotoImageTests {
+
+    @Test("Screen copies fit 750 × 580 keeping their shape; full resolution and small photos keep their size")
+    func sizes() {
+        #expect(PhotoImage.outputSize(width: 4_000, height: 3_000, fullResolution: false) == (750, 563))
+        #expect(PhotoImage.outputSize(width: 3_000, height: 4_000, fullResolution: false) == (435, 580))
+        #expect(PhotoImage.outputSize(width: 4_000, height: 3_000, fullResolution: true) == (4_000, 3_000))
+        #expect(PhotoImage.outputSize(width: 300, height: 200, fullResolution: false) == (300, 200))
+        #expect(PhotoImage.outputSize(width: 0, height: 200, fullResolution: false) == (0, 0))
+    }
+
+    @Test("Photos become baseline RGB JPEGs, turned upright, with no location or orientation tag")
+    func format() throws {
+        // Stored 1600 × 1200 but tagged "turn a quarter": upright it's 1200 × 1600.
+        let jpeg = try #require(PhotoImage.makeJPEG(from: cameraPhoto(width: 1_600, height: 1_200, orientation: 6),
+                                                    fullResolution: false))
+        let props = try properties(jpeg)
+        #expect(props[kCGImagePropertyPixelWidth] as? Int == 435)
+        #expect(props[kCGImagePropertyPixelHeight] as? Int == 580)
+        #expect(props[kCGImagePropertyColorModel] as? String == "RGB")
+        #expect(props[kCGImagePropertyGPSDictionary] == nil)
+        #expect((props[kCGImagePropertyOrientation] as? Int ?? 1) == 1)
+        let bytes = [UInt8](jpeg)
+        let hasSOF2 = zip(bytes, bytes.dropFirst()).contains { $0 == 0xFF && $1 == 0xC2 }
+        #expect(!hasSOF2)
+
+        let full = try #require(PhotoImage.makeJPEG(from: cameraPhoto(width: 1_600, height: 1_200), fullResolution: true))
+        #expect(try properties(full)[kCGImagePropertyPixelWidth] as? Int == 1_600)
+        #expect(PhotoImage.makeJPEG(from: Data("not a photo".utf8), fullResolution: false) == nil)
+    }
+
+    @Test("An image PhotoKit drew is scaled the same way")
+    func fromImage() throws {
+        let source = try #require(CGImageSourceCreateWithData(cameraPhoto(width: 2_000, height: 1_000) as CFData, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let jpeg = try #require(PhotoImage.makeJPEG(from: .image(image), fullResolution: false))
+        #expect(try properties(jpeg)[kCGImagePropertyPixelWidth] as? Int == 750)
+        #expect(try properties(jpeg)[kCGImagePropertyPixelHeight] as? Int == 375)
+    }
+}
+
+// MARK: - Writing and removing
+
+@Suite("Photos on the card: syncing")
+struct PhotoExecutorTests {
+
+    private func sync(_ library: PhotoLibraryContents, _ selection: PhotoSelection, card: TestCard,
+                      executor: SyncExecutor, removals: Bool = false) async throws -> (PhotoPlan, SyncReport) {
+        let manifest = try SyncManifest.load(from: card.fileSystem)
+        var sync = SyncPlan()
+        sync.photos = plan(library, selection, card: card, manifest: manifest)
+        var options = SyncOptions()
+        options.applyRemovals = removals
+        let report = await executor.run(plan: sync, manifest: manifest, options: options) { _ in }
+        return (sync.photos, report)
+    }
+
+    @Test("Syncing writes and records photos, a repeat does nothing, and removals take emptied album folders")
+    func writesAndRemoves() async throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let logs = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: logs) }
+        var executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
+        executor.photoRenderer = FakePhotos(photos: Dictionary(uniqueKeysWithValues: ["1", "2", "3", "4"].map {
+            ($0, cameraPhoto(width: 1_600, height: 1_200))
+        }))
+        let on = PhotoSelection(isEnabled: true)
+
+        var (photoPlan, report) = try await sync(library, on, card: card, executor: executor)
+        #expect(report.succeeded && report.photosCopied == 5 && report.photosNotRead == 0)
+        let shared = card.root.appending(path: "Photos/Norway/2024-07-02 IMG_2.jpg")
+        let data = try Data(contentsOf: shared)
+        #expect(try properties(data)[kCGImagePropertyPixelWidth] as? Int == 750)
+        var manifest = try SyncManifest.load(from: card.fileSystem)
+        #expect(manifest.photos?.count == 5)
+        #expect(manifest.photos?["2|nor"]?.cardSize == UInt64(data.count))
+        #expect(report.bytesCopied == manifest.photos?.values.reduce(0) { $0 + $1.cardSize })
+
+        (photoPlan, _) = try await sync(library, on, card: card, executor: executor)
+        #expect(photoPlan.isEmpty && photoPlan.unchangedPhotos == 5)
+
+        // Someone else's photo in an album folder stays, and keeps the folder.
+        try write(card, "Photos/Iceland/Mine.jpg")
+        // Photos off without "remove": nothing goes.
+        (photoPlan, report) = try await sync(library, PhotoSelection(), card: card, executor: executor)
+        #expect(photoPlan.removals.count == 5 && report.photosRemoved == 0)
+        #expect(FileManager.default.fileExists(atPath: shared.path))
+        // With "remove": Q2 Sync's photos go, and Norway's folder with them.
+        (_, report) = try await sync(library, PhotoSelection(), card: card, executor: executor, removals: true)
+        #expect(report.succeeded && report.photosRemoved == 5)
+        #expect(!FileManager.default.fileExists(atPath: card.root.appending(path: "Photos/Norway").path))
+        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Photos/Iceland/Mine.jpg").path))
+        manifest = try SyncManifest.load(from: card.fileSystem)
+        #expect(manifest.photos?.isEmpty ?? true)
+    }
+
+    @Test("A photo the library can't supply is left for the next sync, not an error")
+    func notRead() async throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let logs = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: logs) }
+        var executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
+        executor.photoRenderer = FakePhotos(photos: ["1": cameraPhoto(width: 100, height: 100)])
+        let lib = PhotoLibraryContents(assets: [photo("1"), photo("2", day: 1)], albums: [])
+        let (_, report) = try await sync(lib, PhotoSelection(isEnabled: true), card: card, executor: executor)
+        #expect(report.succeeded && report.photosCopied == 1 && report.photosNotRead == 1)
+        executor.photoRenderer = FakePhotos(photos: ["2": cameraPhoto(width: 100, height: 100)])
+        let (photoPlan, again) = try await sync(lib, PhotoSelection(isEnabled: true), card: card, executor: executor)
+        #expect(photoPlan.photosToAdd == 1 && again.photosCopied == 1)
+    }
+
+    @Test("Turning on full resolution redoes photos in place, and the safety check counts the space they free")
+    func fullResolution() async throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let logs = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: logs) }
+        var executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
+        executor.photoRenderer = FakePhotos(photos: ["1": cameraPhoto(width: 1_600, height: 1_200)])
+        let lib = PhotoLibraryContents(assets: [photo("1", size: (1_600, 1_200))], albums: [])
+        _ = try await sync(lib, PhotoSelection(isEnabled: true), card: card, executor: executor)
+        let oldSize = try SyncManifest.load(from: card.fileSystem).photos?["1|"]?.cardSize ?? 0
+
+        let full = PhotoSelection(isEnabled: true, fullResolution: true)
+        let redo = plan(lib, full, card: card, manifest: try SyncManifest.load(from: card.fileSystem))
+        #expect(redo.photosToUpdate == 1 && redo.bytesFreedByUpdates == oldSize)
+        var redoPlan = SyncPlan(); redoPlan.photos = redo
+        let assessment = SyncSafety.assess(plan: redoPlan, health: .healthy, isFirstSync: false,
+                                           availableBytes: 1_000_000_000, includeRemovals: false)
+        #expect(assessment.projectedFreeBytes == 1_000_000_000 + Int64(oldSize) - Int64(redo.bytesToCopy))
+
+        let (_, report) = try await sync(lib, full, card: card, executor: executor)
+        #expect(report.photosCopied == 1)
+        let record = try #require(try SyncManifest.load(from: card.fileSystem).photos?["1|"])
+        #expect(record.fullResolution && record.path == "Photos/2024-07-01 IMG_1.jpg")
+        let data = try Data(contentsOf: card.root.appending(path: record.path))
+        #expect(try properties(data)[kCGImagePropertyPixelWidth] as? Int == 1_600)
+    }
+}
+
+// MARK: - Capacity and automatic syncs
+
+@Suite("Photos on the card: capacity and automatic syncs")
+struct PhotoCapacityTests {
+
+    @Test("The capacity bar counts synced photos, photos to add, and photos no longer wanted")
+    func capacity() {
+        let gb: Int64 = 1_000_000_000
+        // On the card: Iceland's two (still wanted) and one from a gone album.
+        let m = manifest([record("Photos/Iceland/a.jpg", asset: "1", album: "ice", size: 100_000),
+                          record("Photos/Iceland/b.jpg", asset: "2", album: "ice", size: 100_000),
+                          record("Photos/Old/c.jpg", asset: "3", album: "gone", size: 50_000)])
+        let estimate = CapacityEstimate.compute(totalBytes: 64 * gb, freeBytes: 60 * gb, manifest: m, selection: nil,
+                                                photos: (library, PhotoSelection(isEnabled: true)))
+        #expect(estimate.photoBytes == 200_000)
+        #expect(estimate.deselectedMusicBytes == 50_000)
+        // Norway's two and the loose one are to add, at the estimate.
+        #expect(estimate.toAddBytes == 3 * Int64(PhotoPlanner.screenCopySize))
+
+        // Not read yet: everything on the card counts as synced, nothing to add.
+        let unknown = CapacityEstimate.compute(totalBytes: 64 * gb, freeBytes: 60 * gb, manifest: m, selection: nil)
+        #expect(unknown.photoBytes == 250_000 && unknown.toAddBytes == 0)
+    }
+
+    @Test("An automatic sync waits for review when photos would be removed")
+    func autoSync() throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        try write(card, "Photos/Iceland/a.jpg")
+        var sync = SyncPlan()
+        sync.photos = plan(library, PhotoSelection(), card: card,
+                           manifest: manifest([record("Photos/Iceland/a.jpg", asset: "1", album: "ice")]))
+        #expect(sync.photos.removals.count == 1)
+        guard case .needsReview(let reasons) = AutoSyncPolicy.decide(plan: sync, assessment: SafetyAssessment()) else {
+            Issue.record("expected a review"); return
+        }
+        #expect(reasons == ["1 photo no longer synced would be removed."])
     }
 }

@@ -47,17 +47,26 @@ enum CoverImage {
             return nil
         }
 
-        // Redraw into plain 8-bit sRGB with no alpha, so greyscale, palette,
-        // CMYK or transparent artwork all come out as ordinary RGB.
-        let width = thumbnail.width, height = thumbnail.height
+        return baselineJPEG(from: thumbnail, width: thumbnail.width, height: thumbnail.height, quality: quality)
+    }
+
+    /// Draws an image at `width` × `height` into plain 8-bit sRGB with no
+    /// alpha (greyscale, palette, CMYK or transparent images all come out
+    /// as ordinary RGB, white behind transparent parts) and encodes it as
+    /// a BASELINE JPEG. Writes no metadata: no EXIF, GPS or orientation
+    /// (draw the image the right way up first). Also used for photos.
+    ///
+    /// - Returns: The JPEG, or `nil` if it couldn't be made.
+    static func baselineJPEG(from image: CGImage, width: Int, height: Int, quality: Double) -> Data? {
         guard width > 0, height > 0,
               let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
                                       bytesPerRow: 0, space: space,
                                       bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        context.interpolationQuality = .high
         context.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)) // behind transparent parts
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        context.draw(thumbnail, in: CGRect(x: 0, y: 0, width: width, height: height))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
         guard let rgb = context.makeImage() else { return nil }
 
         let output = NSMutableData()
