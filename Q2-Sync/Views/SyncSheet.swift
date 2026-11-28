@@ -114,10 +114,11 @@ struct SyncPreviewView: View {
     }
 
     /// Everything you no longer sync that's still on the card, all kinds
-    /// together (songs, audiobooks, podcast episodes). One Remove choice
+    /// together (songs, audiobooks, podcast episodes, photos). One Remove choice
     /// covers them all.
     private var noLongerSyncedCount: Int {
         plan.removals.count + plan.audiobooks.booksToRemove + plan.podcasts.removals.count
+            + plan.photos.removals.count
     }
 
     /// e.g. "47 songs, 2 audiobooks". Add new kinds of content here.
@@ -126,6 +127,7 @@ struct SyncPreviewView: View {
         if !plan.removals.isEmpty { parts.append(pluralized(plan.removals.count, "song")) }
         if plan.audiobooks.booksToRemove > 0 { parts.append(pluralized(plan.audiobooks.booksToRemove, "audiobook")) }
         if !plan.podcasts.removals.isEmpty { parts.append(pluralized(plan.podcasts.removals.count, "podcast episode")) }
+        if !plan.photos.removals.isEmpty { parts.append(pluralized(plan.photos.removals.count, "photo")) }
         return parts.joined(separator: ", ")
     }
 
@@ -158,6 +160,7 @@ struct SyncPreviewView: View {
         plan.isEmpty && plan.cardOnly.isEmpty && plan.skipped.isEmpty
             && plan.audiobooks.skipped.isEmpty && plan.audiobooks.note == nil
             && plan.podcasts.skipped.isEmpty && plan.podcasts.note == nil
+            && plan.photos.note == nil && plan.photos.overLimit.isEmpty && plan.photos.tooManyAlbums == nil
     }
 
     var body: some View {
@@ -460,6 +463,12 @@ struct SyncPreviewView: View {
             removing || podcasts.removals.isEmpty ? .count(podcasts.removals.count) : .notRemoving(podcasts.removals.count),
             .count(podcasts.skipped.count),
         ]
+        let photos = plan.photos
+        let photoCells: [CountCell] = [
+            .count(photos.photosToAdd), .count(photos.photosToUpdate), .notApplicable,
+            removing || photos.removals.isEmpty ? .count(photos.removals.count) : .notRemoving(photos.removals.count),
+            .notApplicable,
+        ]
         let playlistCells: [CountCell] = [
             .count(newPlaylists), .count(playlists.writes.count - newPlaylists), .notApplicable,
             .count(playlists.removals.count), .count(playlists.overLimit.count),
@@ -470,10 +479,11 @@ struct SyncPreviewView: View {
         ]
 
         return VStack(alignment: .leading, spacing: 6) {
-            if [songCells, bookCells, podcastCells, playlistCells, coverCells].contains(where: hasWork) { countHeader }
+            if [songCells, bookCells, podcastCells, photoCells, playlistCells, coverCells].contains(where: hasWork) { countHeader }
             if hasWork(songCells) { countRow("Songs", songCells) }
             if hasWork(bookCells) { countRow("Audiobooks", bookCells) }
             if hasWork(podcastCells) { countRow("Podcasts", podcastCells) }
+            if hasWork(photoCells) { countRow("Photos", photoCells) }
             if hasWork(playlistCells) { countRow("Playlists", playlistCells) }
             if hasWork(coverCells) { countRow("Album Covers", coverCells) }
             // Sizes and free space are in the summary at the top, so
@@ -597,6 +607,7 @@ struct SyncPreviewView: View {
         if unchangedBooks > 0 { onCard.append(pluralized(unchangedBooks, "audiobook")) }
         let unchangedEpisodes = plan.podcasts.unchangedEpisodes + plan.podcasts.alreadyOnCard
         if unchangedEpisodes > 0 { onCard.append(pluralized(unchangedEpisodes, "podcast episode")) }
+        if plan.photos.unchangedPhotos > 0 { onCard.append(pluralized(plan.photos.unchangedPhotos, "photo")) }
         var parts: [String] = []
         if !onCard.isEmpty { parts.append("Already on the card: " + onCard.joined(separator: ", ")) }
         // Not removed because Remove Them is off (#78): the counts show 0.
@@ -732,6 +743,7 @@ struct SyncPreviewView: View {
             }
             audiobookSections
             podcastSections
+            photoSections
             collapsibleSection("coverRemovals", "Remove Covers", lists.coverRemovals.map(CoverRemovalRow.init),
                                footer: "Album covers are turned off in Settings.") { removal in
                 row((removal.path as NSString).deletingLastPathComponent, detail: removal.path,
@@ -792,6 +804,46 @@ struct SyncPreviewView: View {
         if podcasts.copies.isEmpty, let text = podcasts.note {
             Section { note(text) } header: { Text("Podcasts") }
         }
+    }
+
+    /// Photos to copy or remove, one row per photo per folder, then the
+    /// Q2's limits (500 per grid, 200 albums) and any note.
+    @ViewBuilder
+    private var photoSections: some View {
+        let photos = plan.photos
+        collapsibleSection("photoCopies", "Copy Photos", photos.copies,
+                           footer: photos.copies.contains(where: \.fullResolution)
+                               ? "Full resolution: big photos open slowly on the Q2." : nil) { copy in
+            row((copy.destination as NSString).lastPathComponent, detail: copy.albumTitle ?? "All Photos",
+                symbol: copy.kind == .add ? "plus.circle" : "arrow.triangle.2.circlepath", color: .green)
+        }
+        collapsibleSection("photoRemovals", "Remove Photos", photos.removals,
+                           footer: "Removed only if you tick Remove Them. Only photos Q2 Sync copied are removed.") { removal in
+            row((removal.path as NSString).lastPathComponent, detail: removal.reason.explanation,
+                symbol: "minus.circle", color: .red)
+        }
+        let limits = photoLimitLines(photos)
+        if !limits.isEmpty || photos.note != nil {
+            Section {
+                ForEach(limits, id: \.self) { line in
+                    Label(line, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                }
+                if let text = photos.note { note(text) }
+            } header: { Text("Photos") }
+        }
+    }
+
+    /// e.g. "Holiday has 812 photos: the Q2 shows the first 500."
+    private func photoLimitLines(_ photos: PhotoPlan) -> [String] {
+        let most = PhotoPlanner.maximumPerGrid
+        var lines = photos.overLimit.map { warning in
+            let place = warning.albumTitle.map { "“\($0)”" } ?? "All Photos"
+            return "\(place) has \(warning.count.formatted()) photos: the Q2 shows only the first \(most). All are copied."
+        }
+        if let albums = photos.tooManyAlbums {
+            lines.append("\(albums.formatted()) albums: the Q2 lists only the first \(PhotoPlanner.maximumAlbums).")
+        }
+        return lines
     }
 
     /// The songs to remove.
@@ -1387,6 +1439,11 @@ struct SyncResultView: View {
         if !report.skippedPodcastEpisodes.isEmpty {
             parts.append("\(pluralized(report.skippedPodcastEpisodes.count, "podcast episode")) can't be synced (video or protected)")
         }
+        if report.photosCopied > 0 { parts.append("\(pluralized(report.photosCopied, "photo")) copied") }
+        if report.photosRemoved > 0 { parts.append("\(pluralized(report.photosRemoved, "photo")) removed") }
+        if report.photosNotRead > 0 {
+            parts.append("\(pluralized(report.photosNotRead, "photo")) couldn't be read from Photos (tried again next sync)")
+        }
         let copied = report.bytesCopied == 0
             ? "nothing copied"
             : "\(Int64(report.bytesCopied).formatted(ByteCountFormatStyle(style: .file))) copied"
@@ -1403,6 +1460,22 @@ extension PodcastRemoval.Reason {
         case .showNotChosen: "Its show isn't chosen any more"
         case .played: "Played, and “Unplayed only” is on"
         case .podcastsOff: "Podcasts are turned off for this Q2"
+        }
+    }
+}
+
+extension PhotoRemoval.Reason {
+
+    /// Why the review sheet will remove a photo, in words.
+    var explanation: String {
+        switch self {
+        case .photosOff: "Photos are turned off for this Q2"
+        case .notInLibrary: "No longer in your Photos library"
+        case .notFavorite: "Not a favorite, and “Only favorites” is on"
+        case .hidden: "Hidden in Photos"
+        case .notInAlbum: "No longer in its album (or now in an album’s folder)"
+        case .albumNotChosen: "Its album isn't chosen any more"
+        case .notRecent: "No longer within “Automatically include photos from”"
         }
     }
 }

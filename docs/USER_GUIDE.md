@@ -345,6 +345,88 @@ unplugged:
 - The list is read when you open it. If the Podcasts app downloads an
   episode while it's showing, click **Refresh Podcasts** at the top right.
 
+### Photos (Q2 Pod)
+
+Q2 Sync copies photos from your **Photos** library to the card's `Photos`
+folder, where Q2 Pod shows them under **Photos**. Each album gets its own
+folder (`Photos/Holiday/2026-07-01 IMG_1234.jpg`), which Q2 Pod shows as an
+album; its **All Photos** shows every photo on the card.
+
+1. Click your Q2 in the sidebar, then the **Photos** tab.
+2. The first time, click **Allow Access to Photos…** and allow it in the
+   macOS prompt. Q2 Sync only reads your library, and never changes it. If
+   you choose **Limit Access** there, Q2 Sync only sees the photos you
+   picked (the tab says so, with **Change…**).
+3. Tick **Sync photos onto** your Q2, then choose:
+   - **All photos and albums:** every album of yours, plus the photos in no
+     album, loose in `Photos` so they show in All Photos.
+   - **Selected albums:** only the albums you tick. **Favorites**, **Recently
+     Added**, **Media Types** (Selfies, Portrait, Live Photos, Panoramas,
+     Screenshots and more) and **Hidden** are listed with your own albums.
+     The **Search Albums** box finds albums; **⌘**-click a box to tick or
+     untick every album in that group.
+4. Options:
+   - **Automatically include photos from** (Selected albums only): also copy
+     the photos taken in the last week, month, 2, 3 or 6 months or year,
+     loose in `Photos`, unless a ticked album already brings them.
+   - **Only favorites:** only photos marked as favourites, within the albums
+     chosen.
+   - **Include full-resolution photos:** copy each photo at its original
+     size instead of a copy sized for the Q2's screen. It takes far more
+     space, and big photos open slowly on the Q2.
+5. Click **Apply**, as for music. The bottom of the tab shows how many
+   photos will be on the card and about how much space they take.
+
+- **Copied for the Q2's screen.** Photos are made into JPEGs that fit
+  750 × 580 (about 120 KB each), the right way up, with your edits and
+  without location data. Photos stored only in iCloud are downloaded as
+  they're copied, so the first sync can take a while.
+- **500 photos per album.** Q2 Pod shows at most 500 photos in an album
+  and in All Photos, and at most 200 albums. Everything is still copied; the
+  sync preview warns you, and the tab marks albums over 500 with an orange
+  triangle.
+- **A photo in two albums is copied twice**, once in each album's folder.
+- **Hidden photos** are copied only when you tick the **Hidden** album,
+  never by All photos and albums.
+- **People and Recently Deleted aren't listed.** macOS doesn't let other
+  apps read them. Videos aren't synced yet.
+- **Edited a photo, or changed Include full-resolution photos?** The next
+  sync replaces those photos on the card.
+- A photo you deleted in Photos, an album you untick, or a photo that's no
+  longer a favourite while **Only favorites** is on is removed from the card
+  at the next sync if you tick **Remove Them** in the preview. The preview
+  says why for each one. Q2 Sync only removes photos it copied: anything
+  else in `Photos` is left alone.
+- **Copy photos from** only offers your Photos library for now. Choosing a
+  folder instead comes later.
+- On **stock firmware**, the tab explains that photo sync needs Q2 Pod.
+- A sync always reads your Photos library first, so it never misses a photo.
+
+### Browse your photos
+
+While any of your Q2s has **Sync photos** on, the sidebar has a **Photos**
+section with **Albums** (**View › Albums**, **⌘8**). It shows your library as
+it relates to your Q2, even when the Q2 is unplugged:
+
+- On the left, **All Photos** and your albums, each with how many of its
+  photos are on your Q2 ("12 of 40"), and a check when it's chosen on the
+  Photos tab.
+- On the right, the album's photos: **Name**, **Date**, **Size** (in pixels)
+  and **Q2**, with a heart for favourites. Click a column header to sort.
+  **Search** by file name with the field in the toolbar (**⌘F**).
+- The **Q2** column shows a green check (**On Q2**), a grey arrow (**Next
+  sync**) or a dash (**Not chosen**). A photo in two albums is on the Q2 if
+  either copy is. It follows the settings you've applied, not changes you
+  haven't applied yet.
+- Double-click a photo (or click **Photo Info** in the toolbar, or press
+  **⌘I**, or right-click it and choose **Show Info**) for a panel with a
+  preview, its status, date, size and the albums it's in. The preview uses
+  what's on this Mac; nothing is downloaded from iCloud for it.
+- The bottom of the sidebar shows how many photos and albums there are, how
+  long the library took to read, and whether Photos looks healthy.
+- The library is read when you first open it. A big library takes a while:
+  after changing albums in Photos, click **Refresh Photos** at the top right.
+
 ### Browse your Music library
 
 The **Music Library** section of the sidebar (Artists, Albums, Genres,
@@ -414,7 +496,7 @@ this Q2 syncs from, with its count on the right, for example
 when it looks healthy, a spinner while it's being read, and a red shield
 when something's wrong, with the reason underneath. Hold the pointer over
 a line to see how long the last read took. Click a line to
-browse it (Artists, Books or Episodes). On those pages, the bottom of the
+browse it (Artists, Books, Episodes or Albums). On those pages, the bottom of the
 sidebar has more detail about that place instead.
 
 **"Looks healthy"** means Q2 Sync trusts what it read. If something is
@@ -430,6 +512,8 @@ and the next sync leaves that kind of content on the card as it is:
 - **Podcasts:** the Podcasts app's database or downloads folder is missing.
   Podcasts on the card aren't changed. No downloaded episodes at all is fine:
   the Podcasts app deletes played downloads by default.
+- **Photos:** Q2 Sync isn't allowed to read your Photos library. Photos on
+  the card aren't changed. An empty library is fine.
 
 ---
 
@@ -976,11 +1060,12 @@ Choose **Help › Show Sync Logs**, or click **Show Sync Logs** on your Q2's
 | **⌘5** | Show your Q2 |
 | **⌘6** | Show Books (when the sidebar has an Audiobooks section) |
 | **⌘7** | Show Episodes (when the sidebar has a Podcasts section) |
+| **⌘8** | Show Albums (when the sidebar has a Photos section) |
 | **⌘R** | Refresh the Music library |
 | **⇧⌘R** | Show the selected songs in Finder |
 | **⌘F** | Search your library, or filter the Music tab or the sync preview |
 | **⌘**-click a checkbox | On the Music tab, tick or untick every item shown |
-| **⌘I** | Show or hide Song Info, Book Info on Books, or Episode Info on Episodes |
+| **⌘I** | Show or hide Song Info, Book Info on Books, Episode Info on Episodes, or Photo Info on Albums |
 | **⇧⌘S** | Sync Now |
 | **⌘E** | Eject |
 | **⌘,** | Settings |

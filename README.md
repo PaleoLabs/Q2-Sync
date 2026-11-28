@@ -86,6 +86,14 @@ the q2-podcasts card app downloaded alone. Browse them in the sidebar's
 **Podcasts › Episodes** section, with **Episode Info** (**⌘I**). Needs Q2 Pod
 firmware.
 
+### 🖼️ Photos from your Photos library
+On Q2 Pod, sync **all photos and albums or just the albums you tick**, like
+Finder does for an iPod, with **Only favorites**, recent photos, and an
+optional **full-resolution** copy. Each album becomes a folder in `Photos`,
+copied as JPEGs sized for the Q2's screen without location data. Q2 Sync
+only reads your library. Browse it in the sidebar's **Photos › Albums**
+section, with **Photo Info** (**⌘I**). Needs Q2 Pod firmware.
+
 ### 🔎 Browse your library against your Q2
 The **Music Library** browser marks what's on your Q2, what the next sync adds
 and what can't be copied, even with the Q2 unplugged. Search it by artist,
@@ -94,7 +102,7 @@ open or close **Song Info**: its artwork, tags, file details and plays, with
 **Show in Finder**.
 
 ### 👀 See every change before it happens
-The **Ready to Sync** preview lists every song, audiobook and podcast episode that will be
+The **Ready to Sync** preview lists every song, audiobook, podcast episode and photo that will be
 added, updated, renamed or removed, and how much space is left afterwards.
 Nothing changes until you click **Sync** on it, and nothing is removed unless
 you tick **Remove Them** (the button then reads **Sync and Remove**).
@@ -186,8 +194,9 @@ the card, which you fix by syncing again.
   another drive is never mistaken for it.
 - **"Mac looks empty" guard.** If the library can't be read or your music drive
   is disconnected, the sync stops before touching the card. Apple Books and
-  the Podcasts app have the same kind of check: if one can't be trusted, its
-  audiobooks or episodes on the card are left as they are.
+  the Podcasts app have the same kind of check, and so does Photos: if one
+  can't be trusted, its audiobooks, episodes or photos on the card are left
+  as they are.
 - **Firmware only when you ask.** Firmware is downloaded only when you click
   Install or Update, and checked before and after it's copied to the card.
   Q2 Sync never flashes the Q2 itself: the Q2's own updater does that when

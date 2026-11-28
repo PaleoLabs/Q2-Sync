@@ -5,7 +5,7 @@
 //  PURPOSE
 //  The Finder-style capacity bar at the bottom of the Music tab: one bar
 //  split into coloured parts (files not from Q2 Sync, your synced music,
-//  audiobooks and podcast episodes, what's no longer selected, what the
+//  audiobooks, podcast episodes and photos, what's no longer selected, what the
 //  sync would add, free space),
 //  a legend with sizes, and a warning when the selection won't fit. When
 //  the card can't be read it shows only used and free space; when the card
@@ -46,6 +46,7 @@ struct CapacityBarView: View {
             Segment(id: "music", label: "Music", bytes: estimate.selectedMusicBytes, color: .blue),
             Segment(id: "audiobooks", label: "Audiobooks", bytes: estimate.audiobookBytes, color: .purple),
             Segment(id: "podcasts", label: "Podcasts", bytes: estimate.podcastBytes, color: .teal),
+            Segment(id: "photos", label: "Photos", bytes: estimate.photoBytes, color: .orange),
             Segment(id: "deselected", label: "Not selected", bytes: estimate.deselectedMusicBytes, color: .blue.opacity(0.4)),
             Segment(id: "add", label: "To add", bytes: estimate.toAddBytes, color: .green),
             // "Other", as in Finder: everything that isn't a song in Q2

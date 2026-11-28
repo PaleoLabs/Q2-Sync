@@ -194,8 +194,52 @@ struct PodcastStatusView: View {
     }
 }
 
+/// The sidebar's footer on Photos › Albums: how many photos and albums
+/// the Photos library has, and whether it could be read.
+struct PhotoStatusView: View {
+
+    let model: PhotoLibraryModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            switch model.state {
+            case .idle:
+                Label(model.source == nil ? "Photos not allowed yet" : "Photos not read yet",
+                      systemImage: "circle.dashed")
+                    .foregroundStyle(.secondary)
+            case .loading:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Reading Photos…")
+                }
+            case .failed(let message):
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Button("Try Again") { Task { await model.load() } }
+                    .controlSize(.small)
+            case .loaded(let contents):
+                let albums = contents.albums.count { $0.kind == .user }
+                Text("\(pluralized(contents.assets.count, "photo")) · \(pluralized(albums, "album"))")
+                    .fontWeight(.medium)
+                if case .allowed(limited: true) = model.access.status {
+                    Label("Only the photos you picked", systemImage: "eye.slash")
+                        .help("Q2 Sync can read only the photos you picked for it. Change this in System Settings › Privacy & Security › Photos.")
+                }
+                if let readTime = model.readDuration, !model.isReading {
+                    Text(ReadTimeWording.text(readTime)).foregroundStyle(.secondary)
+                }
+                HealthLabel(health: model.health, healthyText: "Photos looks healthy")
+            }
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
+    }
+}
+
 /// The sidebar's footer on a Q2's page: one line for each source this Q2
-/// syncs (Music, Books, Podcasts), each with its own state and health.
+/// syncs (Music, Books, Podcasts, Photos), each with its own state and health.
 /// Clicking a line shows that source's browser. It shows the sources'
 /// state, not sync progress (the sync sheet shows that).
 struct DeviceSourcesStatusView: View {
@@ -205,6 +249,7 @@ struct DeviceSourcesStatusView: View {
     let library: LibraryModel
     let audiobooks: AudiobookLibraryModel
     let podcasts: PodcastLibraryModel
+    let photos: PhotoLibraryModel
     let navigation: AppNavigation
 
     var body: some View {
@@ -212,7 +257,8 @@ struct DeviceSourcesStatusView: View {
             let settings = device.syncSettings
             let syncsBooks = device.profile.audiobooksFolderName != nil && settings.audiobooks.isEnabled
             let syncsPodcasts = device.profile.podcastsFolderName != nil && settings.podcasts.isEnabled
-            if !settings.music.isEnabled && !syncsBooks && !syncsPodcasts {
+            let syncsPhotos = device.profile.photosFolderName != nil && settings.photos.isEnabled
+            if !settings.music.isEnabled && !syncsBooks && !syncsPodcasts && !syncsPhotos {
                 Label("Nothing set to sync yet", systemImage: "circle.dashed")
                     .foregroundStyle(.secondary)
             }
@@ -224,6 +270,9 @@ struct DeviceSourcesStatusView: View {
             }
             if syncsPodcasts {
                 sourceLine(podcastsLine, to: .podcasts)
+            }
+            if syncsPhotos {
+                sourceLine(photosLine, to: .photos)
             }
         }
         .font(.caption)
@@ -358,6 +407,24 @@ struct DeviceSourcesStatusView: View {
         }
         return line
     }
+
+    private var photosLine: Line {
+        var line = Line(source: "Photos", isReading: photos.isReading, text: "")
+        switch photos.state {
+        case .idle:
+            line.text = photos.source == nil ? "not allowed yet" : "not read yet"
+        case .loading:
+            line.text = "reading…"
+        case .failed(let message):
+            line.text = "couldn't be read"
+            line.failure = message
+        case .loaded(let contents):
+            line.text = pluralized(contents.assets.count, "photo")
+            line.health = photos.health
+            line.readTime = photos.readDuration
+        }
+        return line
+    }
 }
 
 // MARK: - Presentation helpers for availability
@@ -429,6 +496,9 @@ enum LibraryWording {
 
     /// Tooltip for Refresh Podcasts.
     static let refreshPodcastsHelp = "Re-read the episodes the Podcasts app has downloaded to this Mac. Only audio episodes that aren't protected can be copied to your Q2. Q2 Sync never changes your podcasts."
+
+    /// Tooltip for Refresh Photos.
+    static let refreshPhotosHelp = "Re-read the photos and albums in your Photos library. Q2 Sync only reads it and never changes your photos."
 
     /// Tooltip for Refresh Music Library.
     static let refreshHelp = "Re-read the Music app's library on this Mac. Only song files stored on this Mac can be copied to your Q2, not Apple Music subscription songs. Q2 Sync never changes your library."

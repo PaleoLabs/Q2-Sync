@@ -3,9 +3,9 @@
 //  Q2-Sync › Core › Device
 //
 //  PURPOSE
-//  A small Mac-side note of which songs, audiobooks and podcast episodes
-//  Q2 Sync has put on each Q2's card, so the library, Books and Episodes
-//  browsers can mark "On Q2" while the Q2 is unplugged.
+//  A small Mac-side note of which songs, audiobooks, podcast episodes and
+//  photos Q2 Sync has put on each Q2's card, so the library, Books,
+//  Episodes and Albums browsers can mark "On Q2" while the Q2 is unplugged.
 //
 //  HOW IT FITS
 //  The card's own manifest (`.q2sync/manifest.json`) stays the source of
@@ -17,7 +17,7 @@
 //  WHERE IT LIVES
 //  `Application Support/Q2 Sync/Card Contents/<volume UUID>.json` inside
 //  the app's sandbox container: app data, not a user document, so not in
-//  Downloads or Documents. It holds song, book and episode IDs only (no
+//  Downloads or Documents. It holds song, book, episode and photo IDs only (no
 //  titles or paths).
 //  Forgetting a Q2 deletes its record.
 //
@@ -50,6 +50,11 @@ struct CardContentsRecord: Codable, Sendable, Equatable {
     /// until the Q2 is next read.
     var podcastEpisodeIDs: Set<String>?
 
+    /// Photos library ids of the photos Q2 Sync manages on the card (a
+    /// photo in two albums is listed once). `nil` in records saved before
+    /// photos were recorded: unknown until the Q2 is next read.
+    var photoAssetIDs: Set<String>?
+
     /// Builds a record from the card's manifest.
     ///
     /// - Parameters:
@@ -63,6 +68,7 @@ struct CardContentsRecord: Codable, Sendable, Equatable {
         self.trackIDs = Set(manifest.entries.keys)
         self.audiobookIDs = manifest.audiobooks.map { Set($0.keys) } ?? []
         self.podcastEpisodeIDs = manifest.podcasts.map { Set($0.keys) } ?? []
+        self.photoAssetIDs = Set(manifest.photos?.values.map(\.assetID) ?? [])
     }
 }
 

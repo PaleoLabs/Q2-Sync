@@ -136,8 +136,8 @@ struct FindCommands: Commands {
     }
 }
 
-/// View: the library lists (⌘1–⌘4), Books (⌘6, while the sidebar shows
-/// it) and the Q2's page (⌘5).
+/// View: the library lists (⌘1–⌘4), Books (⌘6), Episodes (⌘7) and
+/// Albums (⌘8) while the sidebar shows them, and the Q2's page (⌘5).
 struct NavigationCommands: Commands {
     let controller: AutoSyncController
 
@@ -161,6 +161,11 @@ struct NavigationCommands: Commands {
             if controller.devices.syncsPodcastsOnAnyQ2 {
                 Button("Episodes") { controller.show(.podcasts) }
                     .keyboardShortcut("7", modifiers: .command)
+                    .disabled(unavailable)
+            }
+            if controller.devices.syncsPhotosOnAnyQ2 {
+                Button("Albums") { controller.show(.photos) }
+                    .keyboardShortcut("8", modifiers: .command)
                     .disabled(unavailable)
             }
             Divider()
@@ -229,13 +234,15 @@ struct DeviceCommands: Commands {
 
 /// View › Show Song Info (⌘I): shows or hides the panel with the selected
 /// song's details. On the Books browser it's Show Book Info instead, and
-/// on the Episodes browser Show Episode Info.
+/// on the Episodes browser Show Episode Info, and on the Albums browser
+/// Show Photo Info.
 /// Dimmed unless the main window is on one of those.
 struct SongInfoCommands: Commands {
     // The same stored settings the browsers' panels and toolbars use.
     @AppStorage("showSongInfo") private var showSongInfo = false
     @AppStorage("showBookInfo") private var showBookInfo = false
     @AppStorage("showEpisodeInfo") private var showEpisodeInfo = false
+    @AppStorage("showPhotoInfo") private var showPhotoInfo = false
 
     /// Set by `LibraryCategoryView` while it's in the frontmost window.
     @FocusedValue(\.offersSongInfo) private var offersSongInfo
@@ -243,10 +250,17 @@ struct SongInfoCommands: Commands {
     @FocusedValue(\.offersBookInfo) private var offersBookInfo
     /// Set by `PodcastBrowserView` while it's in the frontmost window.
     @FocusedValue(\.offersEpisodeInfo) private var offersEpisodeInfo
+    /// Set by `PhotoBrowserView` while it's in the frontmost window.
+    @FocusedValue(\.offersPhotoInfo) private var offersPhotoInfo
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
-            if offersEpisodeInfo == true {
+            if offersPhotoInfo == true {
+                Button(showPhotoInfo ? "Hide Photo Info" : "Show Photo Info") {
+                    showPhotoInfo.toggle()
+                }
+                .keyboardShortcut("i", modifiers: .command)
+            } else if offersEpisodeInfo == true {
                 Button(showEpisodeInfo ? "Hide Episode Info" : "Show Episode Info") {
                     showEpisodeInfo.toggle()
                 }

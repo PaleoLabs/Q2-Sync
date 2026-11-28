@@ -180,6 +180,27 @@ struct PhotoKitSource: PhotoSource, PhotoRendering {
         return result.content
     }
 
+    /// A small preview of one photo for the Photo Info panel, from what's
+    /// already on this Mac (nothing is downloaded from iCloud), or `nil`.
+    static func thumbnail(for assetID: String, side: CGFloat) async -> NSImage? {
+        let fetch = PHFetchOptions()
+        fetch.includeHiddenAssets = true
+        guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: fetch).firstObject else {
+            return nil
+        }
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat // One answer, not a quick one then a better one.
+        options.version = .current
+        options.isNetworkAccessAllowed = false
+        let size = CGSize(width: side * 2, height: side * 2)
+        return await withCheckedContinuation { continuation in
+            PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFit,
+                                                  options: options) { image, _ in
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
     /// Holds a synchronous request's result (set before the request returns).
     private final class ResultBox: @unchecked Sendable {
         var content: PhotoImageContent?

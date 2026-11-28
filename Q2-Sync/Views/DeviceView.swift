@@ -6,7 +6,7 @@
 //  The page shown when the Q2 is selected in the sidebar, laid out like
 //  Finder's iPod page: a header (icon, name, firmware, capacity, Eject)
 //  and tabs in Finder's order: "General" (firmware and card), then what
-//  to sync: "Music", "Audiobooks" and "Podcasts".
+//  to sync: "Music", "Audiobooks", "Podcasts" and "Photos".
 //
 //  HOW IT FITS
 //  Shown by `RootView`. Actions go through `DeviceMonitor`; library data
@@ -22,6 +22,7 @@ enum DeviceTab: String, CaseIterable, Identifiable {
     case music = "Music"
     case audiobooks = "Audiobooks"
     case podcasts = "Podcasts"
+    case photos = "Photos"
     var id: String { rawValue }
 }
 
@@ -64,6 +65,8 @@ struct DeviceView: View {
                     DeviceAudiobooksView(connected: connected, devices: devices)
                 case .podcasts:
                     DevicePodcastsView(connected: connected, devices: devices)
+                case .photos:
+                    DevicePhotosView(connected: connected, devices: devices)
                 case .general:
                     DeviceGeneralView(connected: connected, devices: devices)
                 }
@@ -79,10 +82,14 @@ struct DeviceView: View {
         // never floats to the middle when the content below is short.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .navigationTitle(connected.device.name)
-        // Audiobooks and podcasts count on the capacity bar on every tab.
+        // Audiobooks, podcasts and photos count on the capacity bar on every tab.
         .task(id: connected.device.volumeUUID) {
             if connected.device.profile.audiobooksFolderName != nil { await autoSync.audiobooks.load() }
             if connected.device.profile.podcastsFolderName != nil { await autoSync.podcasts.load() }
+            // Photos only when on: a big library takes a while to read.
+            if connected.device.profile.photosFolderName != nil, connected.device.effectivePhotos.isEnabled {
+                await autoSync.photos.load()
+            }
         }
     }
 

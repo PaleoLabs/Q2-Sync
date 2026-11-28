@@ -147,6 +147,9 @@ final class DeviceMonitor {
     /// `true` when any known Q2 syncs podcasts (the sidebar's Podcasts section).
     var syncsPodcastsOnAnyQ2: Bool { store.knownDevices.anySyncsPodcasts }
 
+    /// `true` when any known Q2 syncs photos (the sidebar's Photos section).
+    var syncsPhotosOnAnyQ2: Bool { store.knownDevices.anySyncsPhotos }
+
     /// The Q2 the library browser compares against: the connected one, or
     /// else the one read most recently. `nil` before any Q2 has been read.
     var referenceContents: (device: KnownDevice, record: CardContentsRecord)? {

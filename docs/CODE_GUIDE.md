@@ -250,7 +250,8 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
 | `LibraryMarks` | The library browser's marks: per song `TrackPlacement` (on Q2 / next sync / not chosen / can't sync), per group `GroupMarks` counts | Built once per library read, card record and selection (it resolves the selection); compares against `CardContentsRecord`. |
 | `LibrarySearch` | The library browser's search (`results(in:of:includingSubtitles:)`): which groups stay listed, and the songs shown for each | Every word must be in the group's name, or in one song's title, artist, album artist or album (`localizedStandardContains`: case and accents ignored). Goes through every song, so the view runs it off the main thread. |
 | `SongListCSV` | CSV text of the songs on the Q2 or chosen for it (`make(snapshot:marks:)`) | Pure text. File › Export Song List… (`SongListCommands` in `AppCommands`) builds the marks for `devices.referenceContents` and saves it with an `NSSavePanel`. |
-| `PhotoSelection`, `PhotoAsset`, `PhotoAlbum` (#68, in progress) | The Photos tab's settings for one Q2 (source, All or Selected albums, Only favorites, the recent period, full resolution), and our read-only view of the Photos library | `PhotoSyncSource.folder` is stored but not built yet. `PhotoAlbumKind.isIncludedByAll`: only user albums come with "All"; Favorites, Recently Added, media types and Hidden must be ticked. A `PhotoSource` reads the library (`FixturePhotoSource` in tests). Not wired to the app yet. |
+| `PhotoSelection`, `PhotoAsset`, `PhotoAlbum` (#68) | The Photos tab's settings for one Q2 (source, All or Selected albums, Only favorites, the recent period, full resolution), and our read-only view of the Photos library | `PhotoSyncSource.folder` is stored but not built yet. `PhotoAlbumKind.isIncludedByAll`: only user albums come with "All"; Favorites, Recently Added, media types and Hidden must be ticked. A `PhotoSource` reads the library (`FixturePhotoSource` in tests). |
+| `PhotoMarks` | The Albums browser's marks: per photo `TrackPlacement` (on Q2 / next sync / not chosen) and per-album "on Q2" counts; `anySyncsPhotos` decides whether the sidebar shows Photos | Marked per photo, not per copy: a photo in two albums is on the Q2 if either copy is (`CardContentsRecord.photoAssetIDs`). "Next sync" is `PhotoPlanner.wantedKeys` for the Q2's applied settings, so it matches what the sync copies. |
 | `SyncSelection` | What you ticked for a device | Stores *intent* (artist/album/genre/playlist IDs) so new albums by a ticked artist sync automatically. |
 
 ### Help (`Core/Help`)
@@ -328,8 +329,9 @@ Each entry: **purpose · inputs → outputs · options · side effects**.
   `KnownDevice.followVolumeName(_:)` takes the mounted volume's name, so a
   renamed card shows its new name.
 - **`CardContentsRecord` / `CardContentsStore`** · a Mac-side note of which
-  songs (IDs only) Q2 Sync put on each card, saved whenever `DeviceMonitor`
-  reads the card's manifest, so the library browser can mark "On Q2" while
+  songs, audiobooks, episodes and photos (IDs only; `photoAssetIDs` lists each
+  photo once) Q2 Sync put on each card, saved whenever `DeviceMonitor`
+  reads the card's manifest, so the browsers can mark "On Q2" while
   the Q2 is unplugged. Display only: syncing always uses the card's manifest.
   Deleted when the Q2 is forgotten.
 - **`FirmwareUpdateChecker`** · `fetchLatest()` reads GitHub's latest Q2 Pod
@@ -427,10 +429,11 @@ preview's album rows (by folder and album tag).
 
 ### Views (`Q2-Sync/Views`)
 
-`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, General/Music/Audiobooks/Podcasts tabs,
+`RootView` (sidebar + detail, sheets; other set-up cards and waiting drives share one always-present sidebar row, `OtherDrivesSidebarRow`, since adding a row while a sheet was open blanked the whole sidebar list), `PinnedSidebar` (keeps that sidebar from being collapsed, through the AppKit split view; there's also no toolbar button or menu item for hiding it), `DeviceView` (header, General/Music/Audiobooks/Podcasts/Photos tabs,
 `DeviceGeneralView`), `UpdateNoticeView` (a new version, up to date, or a failed check), `DeviceMusicView` (selection checkboxes in `ChecklistTableView`, an AppKit
 table like the browser's; summary bar; the "Choose what to put on your Q2" line wraps with `frame(maxWidth:)`, not `fixedSize(vertical:)`, which made the page overflow the window on a new card; the line stays laid out but goes invisible once something is ticked, so the list doesn't jump up),
 `DevicePodcastsView` (the Podcasts tab: shows with their downloaded episodes; video, protected and, with Unplayed only on, played episodes dimmed), `PodcastBrowserView` + `EpisodeInspectorView` (the sidebar's Podcasts › Episodes table and Episode Info, marked from the Q2's *applied* settings by `PodcastMarks`; `PodcastStatusView` is its sidebar footer),
+`DevicePhotosView` (the Photos tab: source menu, All or Selected albums, the options, albums grouped as in Photos; loaded only when the profile has a Photos folder and photos are on, since a big library is slow to read), `PhotoBrowserView` (the sidebar's Photos › Albums: an album list and that album's photos in a `Table`, marked by `PhotoMarks`, with `PhotoInspectorView` for Photo Info (⌘I, the `offersPhotoInfo` focused value); reads the library only if it hasn't been read, Refresh Photos re-reads; `PhotoStatusView` is its sidebar footer),
 `CapacityBarView` (its notes follow the same rule: outside a scroll view, `fixedSize(vertical:)` on wrapping text blanks the sidebar), `SyncSheet` (`SyncPreviewView`, `SyncProgressView`,
 `SyncResultView`), `NumberedSteps` (the next-steps list in the sync result
 and Install Firmware sheets), `NewDeviceSheet`, `FirstLaunchNoticeView`,
@@ -460,9 +463,9 @@ opened on first use), `HelpView` (the Help › Q2 Sync Help window,
 `HelpCommand`; draws `UserGuide` from the copy of the guide in the app's
 resources, added to the target in the project file; the Dock icon stays while
 it's open), `LibraryStatusView` (also `AudiobookStatusView`,
-`PodcastStatusView`, and `DeviceSourcesStatusView`, the footer on a Q2's page:
+`PodcastStatusView`, `PhotoStatusView`, and `DeviceSourcesStatusView`, the footer on a Q2's page:
 one clickable line per source the Q2 syncs, from `LibraryModel`,
-`AudiobookLibraryModel`/`PodcastLibraryModel` `isReading` and `health`;
+`AudiobookLibraryModel`/`PodcastLibraryModel`/`PhotoLibraryModel` `isReading` and `health`;
 `RootView` picks the footer from the sidebar selection), `MenuBarContent`,
 `AppSettingsView`.
 
@@ -562,8 +565,10 @@ off it plans every recorded photo as a `photosOff` removal without reading
 it), scans `Photos/` with loose files, calls `PhotoPlanner.plan` and hands the
 source to `SyncExecutor.photoRenderer` through `SyncPreview`. No access, a
 read error or an unsafe health check leaves photos on the card as they are,
-with a note. The Photos tab, sidebar browser, footer line and sync sheet rows
-aren't built yet.
+with a note. The Photos tab is `DevicePhotosView`; the sidebar's Photos ›
+Albums is `PhotoBrowserView` (see Views). The Photo Info preview comes from
+`PhotoKitSource.thumbnail(for:side:)`, an async request that never downloads
+from iCloud.
 
 **Podcasts** (#20) are read, never written, from the Podcasts app's group
 container (`~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts`),
