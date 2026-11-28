@@ -242,58 +242,68 @@ struct DeviceSourcesStatusView: View {
         /// A problem reading it (shown in red, with Try Again on the page).
         var failure: String?
         var readTime: Duration?
+
+        /// Why it can't be trusted, if it can't.
+        var unsafeReason: String? {
+            if case .unsafe(let reason)? = health { return reason }
+            return nil
+        }
     }
 
-    /// One clickable line, plus the reason underneath when it needs attention.
+    /// One clickable row: status icon, source name, count on the right.
+    /// Health and read time are in the tooltip; a problem's reason shows
+    /// underneath in red, since it needs reading.
     private func sourceLine(_ line: Line, to item: SidebarItem) -> some View {
         Button {
             navigation.selection = item
         } label: {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    if line.isReading {
-                        ProgressView().controlSize(.mini)
-                    }
-                    Text(summary(line))
-                        .lineLimit(2)
+                HStack(spacing: 6) {
+                    statusIcon(line)
+                        .frame(width: 14)
+                    Text(line.source).fontWeight(.medium)
+                    Spacer(minLength: 4)
+                    Text(line.text)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
-                if let failure = line.failure {
-                    Text(failure).foregroundStyle(.red)
-                } else if case .unsafe(let reason) = line.health {
-                    Text(reason).foregroundStyle(.red)
+                if let reason = line.failure ?? line.unsafeReason {
+                    Text(reason)
+                        .foregroundStyle(.red)
+                        .padding(.leading, 20)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .help("Show \(line.source)")
+        .help(tooltip(line))
     }
 
-    /// "Music: 9,890 songs · looks healthy · read in 4s", with the health
-    /// word colored.
-    private func summary(_ line: Line) -> AttributedString {
-        var text = AttributedString("\(line.source): ")
-        text.font = .caption.weight(.medium)
-        text += AttributedString(line.text)
-        switch line.health {
-        case .healthy?:
-            var word = AttributedString(" · looks healthy")
-            word.foregroundColor = .green
-            text += word
-        case .unsafe?:
-            var word = AttributedString(" · needs attention")
-            word.foregroundColor = .red
-            text += word
-        case nil:
-            break
+    /// Spinner while reading, a green shield when healthy, red when it
+    /// needs attention, a dashed circle before it's read.
+    @ViewBuilder
+    private func statusIcon(_ line: Line) -> some View {
+        if line.isReading {
+            ProgressView().controlSize(.mini)
+        } else if line.failure != nil || line.unsafeReason != nil {
+            Image(systemName: "xmark.shield").foregroundStyle(.red)
+        } else if line.health == .healthy {
+            Image(systemName: "checkmark.shield").foregroundStyle(.green)
+        } else {
+            Image(systemName: "circle.dashed").foregroundStyle(.secondary)
         }
+    }
+
+    /// e.g. "Music looks healthy. Read in 4s. Click to show Music."
+    private func tooltip(_ line: Line) -> String {
+        var parts: [String] = []
+        if line.health == .healthy { parts.append("\(line.source) looks healthy.") }
         if let readTime = line.readTime, !line.isReading {
-            var time = AttributedString(" · " + ReadTimeWording.text(readTime).lowercased())
-            time.foregroundColor = .secondary
-            text += time
+            parts.append(ReadTimeWording.text(readTime) + ".")
         }
-        return text
+        parts.append("Click to show \(line.source).")
+        return parts.joined(separator: " ")
     }
 
     private var musicLine: Line {

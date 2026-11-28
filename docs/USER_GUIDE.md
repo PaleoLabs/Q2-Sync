@@ -409,13 +409,11 @@ marks above, so it works without the Q2 connected.
 ### The bottom of the sidebar
 
 On your Q2's page, the bottom of the sidebar has one line for each place
-this Q2 syncs from, for example:
-
-- **Music:** 9,890 songs · looks healthy · read in 4s
-- **Books:** 19 audiobooks · looks healthy
-- **Podcasts:** 7 episodes · looks healthy
-
-A line shows a spinner while that place is being read. Click a line to
+this Q2 syncs from, with its count on the right, for example
+**Music** 9,890 songs. The icon in front shows its state: a green shield
+when it looks healthy, a spinner while it's being read, and a red shield
+when something's wrong, with the reason underneath. Hold the pointer over
+a line to see how long the last read took. Click a line to
 browse it (Artists, Books or Episodes). On those pages, the bottom of the
 sidebar has more detail about that place instead.
 
