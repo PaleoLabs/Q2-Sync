@@ -664,8 +664,10 @@ app you're using**:
   needs you, and Q2 Sync's window opens *behind* your other windows (the Dock
   icon comes back), with the preview or question ready. Click the notification
   (or **Open Q2 Sync**) to bring it forward.
-- **Notifications are off for Q2 Sync:** its Dock icon also bounces once, so
-  you still find out.
+- **Notifications are off for Q2 Sync:** its Dock icon also bounces, so you
+  still find out. When Q2 Sync can't carry on without you (a sync stopped for
+  review, setup, the firmware question), it keeps bouncing until you click
+  Q2 Sync; for files on the card that aren't in your library, it bounces once.
 
 **Tip:** so you can't miss these, set Q2 Sync's notifications to
 **Persistent** in **System Settings › Notifications › Q2 Sync**. They then

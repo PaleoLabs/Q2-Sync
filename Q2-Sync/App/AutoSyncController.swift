@@ -195,11 +195,16 @@ final class AutoSyncController {
     ///   • In the background: the window opens behind your other windows
     ///     (Dock icon back, the sheet or preview ready), and `post` says
     ///     why. The notification's Open button brings it forward.
-    ///   • Notifications off for Q2 Sync: also bounce the Dock icon once,
-    ///     or you might not find out.
+    ///   • Notifications off for Q2 Sync: also bounce the Dock icon, or you
+    ///     might not find out. Until you switch to Q2 Sync if it's stuck
+    ///     waiting for you; once if not.
     /// Waits a moment first so that, at launch, the window has had time to
     /// open before deciding whether it's in front.
-    private func needsAttention(_ post: @escaping (NotificationManager) -> Void) {
+    ///
+    /// - Parameter blocking: `true` (a review stop, setup, the firmware
+    ///   question) if Q2 Sync can't carry on until you answer; `false` for
+    ///   something to look at when convenient (card-only files).
+    private func needsAttention(blocking: Bool = true, _ post: @escaping (NotificationManager) -> Void) {
         Task {
             try? await Task.sleep(for: .seconds(1.5))
             guard !isInFront else { return }
@@ -207,7 +212,7 @@ final class AutoSyncController {
             await notifications.requestPermission()
             post(notifications)
             if !(await notifications.canShowAlerts()) {
-                DockIconController.shared.bounceOnce()
+                DockIconController.shared.bounce(untilActive: blocking)
             }
         }
     }
@@ -348,7 +353,7 @@ final class AutoSyncController {
                 if cardOnly > 0 {
                     // Something to review: the same rule as the other
                     // "needs your input" cases (no notification in front).
-                    needsAttention {
+                    needsAttention(blocking: false) {
                         $0.postFinished(title: "Sync Complete", body: body, offerEject: true, offerOpen: true)
                     }
                 } else {

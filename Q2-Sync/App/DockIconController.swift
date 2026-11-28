@@ -16,7 +16,7 @@
 //  `AutoSyncController.showMainWindow()` calls `showDockIcon()` before
 //  bringing the window back. When something needs your input while you're
 //  in another app, `AutoSyncController.needsAttention` uses `keepBehind`
-//  and `bounceOnce` instead, so Q2 Sync never takes focus on its own (#76).
+//  and `bounce(untilActive:)` instead, so Q2 Sync never takes focus on its own (#76).
 //
 //  ACTIVATION POLICY (explained)
 //  `NSApp.setActivationPolicy(.regular)` is a normal app with a Dock icon;
@@ -140,14 +140,18 @@ final class DockIconController {
         }
     }
 
-    /// Bounces the Dock icon once: the standard macOS way for an app in the
+    /// Bounces the Dock icon: the standard macOS way for an app in the
     /// background to ask for attention. It needs the Dock icon, so this
     /// puts it back first. Does nothing while Q2 Sync is active.
-    func bounceOnce() {
+    ///
+    /// - Parameter untilActive: `true` keeps bouncing until you switch to
+    ///   Q2 Sync (`criticalRequest`), for something that's stuck until you
+    ///   answer; `false` bounces once (`informationalRequest`).
+    func bounce(untilActive: Bool) {
         showDockIcon()
         // A run-loop pass later, so the Dock icon is there to bounce.
         DispatchQueue.main.async {
-            NSApp.requestUserAttention(.informationalRequest)
+            NSApp.requestUserAttention(untilActive ? .criticalRequest : .informationalRequest)
         }
     }
 
