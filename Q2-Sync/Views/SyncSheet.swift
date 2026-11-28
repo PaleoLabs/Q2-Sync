@@ -499,7 +499,6 @@ struct SyncPreviewView: View {
         .fontWeight(.semibold)
         .foregroundStyle(.secondary)
         .lineLimit(1)
-        .minimumScaleFactor(0.8)
         .padding(.horizontal, 10)
         .padding(.top, 4)
         .padding(.bottom, -3)
