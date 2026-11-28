@@ -762,7 +762,7 @@ when it's needed. Music you add or change shows up after **Refresh Library**,
 or at your next sync.
 
 **It says "The Music library isn't responding".**
-Reading your library normally takes a few seconds; after a minute, Q2 Sync
+Reading your library normally takes a few seconds; after 30 seconds, Q2 Sync
 stops waiting and says so, and nothing is synced. Click **Try Again** (at the
 bottom of the sidebar). If it keeps happening, open the Music app, or restart
 your Mac. To restart just the library service instead, run

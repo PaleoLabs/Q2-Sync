@@ -111,7 +111,7 @@ final class LibraryModel {
 
     /// How long to wait for the library before saying it isn't responding.
     /// A normal read of ~10,000 songs takes a few seconds.
-    static let readTimeLimit: Duration = .seconds(60)
+    static let readTimeLimit: Duration = .seconds(30)
 
     /// Shown when the read takes longer than `readTimeLimit`.
     static let notRespondingMessage = "The Music library isn't responding. Try again in a moment. If it keeps happening, open the Music app, or restart your Mac."

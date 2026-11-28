@@ -158,7 +158,7 @@ sequenceDiagram
    round trip to the library service per song, which got far slower on each
    re-read in the same run) are remembered across reads by
    `SongLocationCache` while a song's size and date are unchanged. A read
-   that takes longer than `LibraryModel.readTimeLimit` (60 s) fails with "isn't
+   that takes longer than `LibraryModel.readTimeLimit` (30 s) fails with "isn't
    responding" (`TimeLimit.result` races it; `ITLibrary` can't be canceled),
    and the sync stops rather than using the previous snapshot. Try Again waits
    on that same read, and if it finishes on its own its result is used.
