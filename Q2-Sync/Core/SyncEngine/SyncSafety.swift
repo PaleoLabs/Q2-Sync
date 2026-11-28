@@ -78,7 +78,8 @@ enum SyncSafety {
             .filter { cardOnlyActions[$0.path]?.removesFromCard == true }
             .reduce(Int64(0)) { $0 + Int64($1.size) }
         let removalsFreed = includeRemovals
-            ? Int64(plan.bytesFreedByRemovals + plan.audiobooks.bytesFreedByRemovals) : 0
+            ? Int64(plan.bytesFreedByRemovals + plan.audiobooks.bytesFreedByRemovals
+                    + plan.podcasts.bytesFreedByRemovals) : 0
         let replacedAudiobookFiles = Int64(plan.audiobooks.replacedFiles.reduce(0) { $0 + $1.cardSize })
         let freed = Int64(plan.bytesFreedByUpdates) + cardOnlyFreed + removalsFreed + replacedAudiobookFiles
         result.projectedFreeBytes = availableBytes + freed - Int64(plan.allBytesToCopy)

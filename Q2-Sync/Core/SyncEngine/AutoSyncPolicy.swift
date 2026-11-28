@@ -77,6 +77,9 @@ enum AutoSyncPolicy {
         if plan.audiobooks.booksToRemove > 0 {
             reasons.append("\(pluralized(plan.audiobooks.booksToRemove, "audiobook")) no longer chosen would be removed.")
         }
+        if !plan.podcasts.removals.isEmpty {
+            reasons.append("\(pluralized(plan.podcasts.removals.count, "podcast episode")) no longer synced would be removed.")
+        }
         if !plan.orphanedEntries.isEmpty {
             reasons.append("\(pluralized(plan.orphanedEntries.count, "song")) on the card \(plan.orphanedEntries.count == 1 ? "is" : "are") no longer in your library.")
         }

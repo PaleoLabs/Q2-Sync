@@ -19,6 +19,7 @@
 //  4. Moves (renames for retagged songs).
 //  5. Copies (new and changed songs).
 //  5b. Audiobooks (Q2 Pod): removals, adoptions, then copies.
+//  5c. Podcasts (Q2 Pod): removals (emptied show folders go too), then copies.
 //  6. Album covers: Q2 Sync's covers are removed if covers were turned
 //     off, or if their folder has no songs left (so the folder can go);
 //     then new covers are written.
@@ -90,6 +91,11 @@ struct SyncReport: Sendable, Equatable {
     var audiobooksRemoved = 0
     /// Chosen audiobooks that couldn't be copied (protected, not downloaded…).
     var skippedAudiobooks: [Audiobook] = []
+    /// Podcast episodes copied (added or updated) and removed.
+    var podcastEpisodesCopied = 0
+    var podcastEpisodesRemoved = 0
+    /// Episodes of chosen shows that couldn't be copied (video, protected).
+    var skippedPodcastEpisodes: [PodcastEpisode] = []
     /// Songs left out of playlists because they aren't on the card.
     var playlistSongsMissing = 0
     var skipped: [Track] = []
@@ -179,6 +185,9 @@ struct SyncExecutor: Sendable {
         // no longer wanted only with the same choice and limit as songs.
         let audiobookRemovals = plan.audiobooks.replacedFiles
             + ((options.applyRemovals && removalsAllowed) ? plan.audiobooks.bookRemovals : [])
+        // Podcast episodes: only with the same choice and limit as songs.
+        let podcastRemovals = (options.applyRemovals && removalsAllowed) ? plan.podcasts.removals : []
+        report.skippedPodcastEpisodes = plan.podcasts.skipped
         let cardOnlyCopies = plan.cardOnly.filter { options.cardOnlyActions[$0.path] == .moveToMac }
         let cardOnlyRemovals = removalsAllowed
             ? plan.cardOnly.filter { options.cardOnlyActions[$0.path]?.removesFromCard == true } : []
@@ -192,7 +201,8 @@ struct SyncExecutor: Sendable {
                 + playlistPlan.writes.count + playlistPlan.leavingImport.count + playlistPlan.removals.count
                 + plan.coverWrites.count
                 + plan.coverRemovals.count
-                + audiobookRemovals.count + plan.audiobooks.copies.count,
+                + audiobookRemovals.count + plan.audiobooks.copies.count
+                + podcastRemovals.count + plan.podcasts.copies.count,
             totalBytes: plan.allBytesToCopy,
             coversTotal: plan.coverWrites.count,
             removalsTotal: cardOnlyRemovals.count + removals.count)
@@ -420,6 +430,49 @@ struct SyncExecutor: Sendable {
                 try finishOperation()
             }
             report.audiobooksCopied = copiedBooks.count
+
+            // 5c. Podcasts: removals, forgotten records, then copies. Only
+            //     files recorded in the manifest are ever touched.
+            var episodes = manifest.podcasts ?? [:]
+            for removal in podcastRemovals {
+                try Task.checkCancellation()
+                progress.currentItem = "Removing “\(removal.title)”"
+                publish()
+                do {
+                    try fileSystem.removeFile(removal.path)
+                    log.write("REMOVE PODCAST EPISODE  \(removal.path)")
+                    episodes[removal.episodeID] = nil
+                    report.podcastEpisodesRemoved += 1
+                    fileSystem.removeEmptyFolders(above: removal.path)
+                } catch let error where Self.isPerSongError(error) {
+                    record(error, path: removal.path, in: &report, log: log)
+                }
+                manifest.podcasts = episodes
+                try finishOperation()
+            }
+            for id in plan.podcasts.forgotten { episodes[id] = nil }
+            manifest.podcasts = episodes
+            for copy in plan.podcasts.copies {
+                try Task.checkCancellation()
+                progress.currentItem = "Copying “\(copy.title)”"
+                publish(force: true)
+                do {
+                    let size = try fileSystem.copyFromMac(source: copy.source, to: copy.destination) { bytes in
+                        progress.bytesCopied += UInt64(bytes)
+                        report.bytesCopied += UInt64(bytes)
+                        publish()
+                    }
+                    episodes[copy.episodeID] = PodcastEpisodeRecord(
+                        path: copy.destination, showID: copy.showID, showTitle: copy.showTitle, title: copy.title,
+                        sourceSize: copy.sourceSize, cardSize: size, syncedAt: .now)
+                    manifest.podcasts = episodes
+                    report.podcastEpisodesCopied += 1
+                    log.write("\(copy.kind == .add ? "ADD" : "UPDATE") PODCAST EPISODE  \(copy.destination)  (\(SyncLog.size(size)))")
+                } catch let error where Self.isPerSongError(error) {
+                    record(error, path: copy.destination, in: &report, log: log)
+                }
+                try finishOperation()
+            }
 
             // 6. Album covers. First remove Q2 Sync's covers from folders
             //    with no managed song left (so the empty folder can go),

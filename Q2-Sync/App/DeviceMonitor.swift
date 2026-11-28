@@ -555,10 +555,11 @@ final class DeviceMonitor {
     }
 
     /// `true` if the connected card holds anything Q2 Sync put there
-    /// (songs, audiobooks…). A sync that chooses nothing then still has
+    /// (songs, audiobooks, podcasts…). A sync that chooses nothing then still has
     /// something to do: offer to remove it.
     var cardHasQ2SyncContent: Bool {
         cardHasQ2SyncSongs || !(cardManifest?.audiobooks?.isEmpty ?? true)
+            || !(cardManifest?.podcasts?.isEmpty ?? true)
     }
 
     // MARK: - Unapplied changes (Revert / Apply)
@@ -620,6 +621,9 @@ final class DeviceMonitor {
         flushPendingSave()
         if connected?.device.effectiveAudiobooks != settings.audiobooks {
             updateConnectedDevice { $0.audiobooks = settings.audiobooks }
+        }
+        if connected?.device.effectivePodcasts != settings.podcasts {
+            updateConnectedDevice { $0.podcasts = settings.podcasts }
         }
     }
 

@@ -57,6 +57,8 @@ struct CapacityEstimate: Sendable, Equatable {
     var deselectedMusicBytes: Int64
     /// Audiobooks Q2 Sync has on the card that are still chosen.
     var audiobookBytes: Int64 = 0
+    /// Podcast episodes Q2 Sync has on the card that are still synced.
+    var podcastBytes: Int64 = 0
     /// Everything else on the card.
     var otherBytes: Int64
     /// Selected songs not on the card yet.
@@ -95,12 +97,17 @@ struct CapacityEstimate: Sendable, Equatable {
     ///     settings, or `nil` if not read (then audiobooks on the card
     ///     count as chosen, and nothing as to add). Audiobooks no longer
     ///     chosen count with deselected songs; new ones with songs to add.
+    ///   - podcasts: The downloaded podcasts and the Q2's Podcasts
+    ///     settings, or `nil` if not read; counted the same way as
+    ///     audiobooks. An episode a q2-podcasts copy already covers still
+    ///     counts as to add (a slight overestimate).
     /// - Returns: The estimate.
     static func compute(totalBytes: Int64, freeBytes: Int64, manifest: SyncManifest?,
                         selection: ResolvedSelection?,
                         reserve: Int64 = SyncSafety.reservedFreeBytes,
                         cardReadable: Bool = true,
-                        audiobooks: (books: [Audiobook], selection: AudiobookSelection)? = nil) -> CapacityEstimate {
+                        audiobooks: (books: [Audiobook], selection: AudiobookSelection)? = nil,
+                        podcasts: (shows: [PodcastShow], selection: PodcastSelection)? = nil) -> CapacityEstimate {
         guard cardReadable else {
             return CapacityEstimate(totalBytes: totalBytes, freeBytes: freeBytes,
                                     selectedMusicBytes: 0, deselectedMusicBytes: 0,
@@ -149,8 +156,28 @@ struct CapacityEstimate: Sendable, Equatable {
             }
         }
 
+        // Podcasts (see PodcastSync.swift): by episode, from the manifest.
+        // Kept: still synced, or in a chosen show but not copyable now.
+        var podcastOnCard: Int64 = 0
+        let episodeRecords = manifest?.podcasts ?? [:]
+        let keptEpisodes: Set<String>? = podcasts.map { shows, settings in
+            Set(shows.flatMap(\.episodes).filter {
+                settings.includes($0)
+                    || (settings.isEnabled && !$0.canSync && (settings.includesAll || settings.showIDs.contains($0.showID)))
+            }.map(\.id))
+        }
+        for (id, record) in episodeRecords {
+            if keptEpisodes?.contains(id) ?? true { podcastOnCard += Int64(record.cardSize) }
+            else { deselectedMusic += Int64(record.cardSize) }
+        }
+        if let (shows, settings) = podcasts {
+            for episode in settings.episodes(from: shows) where episodeRecords[episode.id] == nil {
+                toAdd += Int64(episode.fileSize)
+            }
+        }
+
         let used = max(0, totalBytes - freeBytes)
-        let other = max(0, used - selectedMusic - deselectedMusic - audiobookOnCard)
+        let other = max(0, used - selectedMusic - deselectedMusic - audiobookOnCard - podcastOnCard)
 
         let fit: Fit
         if freeBytes - toAdd >= reserve {
@@ -163,7 +190,7 @@ struct CapacityEstimate: Sendable, Equatable {
 
         return CapacityEstimate(totalBytes: totalBytes, freeBytes: freeBytes,
                                 selectedMusicBytes: selectedMusic, deselectedMusicBytes: deselectedMusic,
-                                audiobookBytes: audiobookOnCard,
+                                audiobookBytes: audiobookOnCard, podcastBytes: podcastOnCard,
                                 otherBytes: other, toAddBytes: toAdd, fit: fit)
     }
 }

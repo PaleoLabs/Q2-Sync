@@ -108,12 +108,14 @@ struct SyncPlan: Sendable {
     var coverRemovals: [CardPath] = []
     /// Audiobooks to copy, keep or remove (Q2 Pod only; see AudiobookSync.swift).
     var audiobooks = AudiobookPlan()
+    /// Podcast episodes to copy, keep or remove (Q2 Pod only; see PodcastSync.swift).
+    var podcasts = PodcastPlan()
 
     /// Bytes that will be copied.
     var bytesToCopy: UInt64 { copies.reduce(0) { $0 + $1.track.fileSize } }
 
-    /// Bytes copied for songs and audiobooks together.
-    var allBytesToCopy: UInt64 { bytesToCopy + audiobooks.bytesToCopy }
+    /// Bytes copied for songs, audiobooks and podcasts together.
+    var allBytesToCopy: UInt64 { bytesToCopy + audiobooks.bytesToCopy + podcasts.bytesToCopy }
     /// Bytes freed if removals are applied.
     var bytesFreedByRemovals: UInt64 { removals.reduce(0) { $0 + $1.entry.cardSize } }
 
@@ -142,6 +144,7 @@ struct SyncPlan: Sendable {
             && coverWrites.isEmpty
             && coverRemovals.isEmpty
             && audiobooks.isEmpty
+            && podcasts.isEmpty
     }
 }
 
@@ -345,6 +348,12 @@ extension SyncPlan {
         if !audiobooks.adoptions.isEmpty {
             changes.append("record \(Self.count(audiobooks.adoptions.count, "audiobook")) already on the card")
         }
+        if !podcasts.copies.isEmpty {
+            changes.append("copy \(Self.count(podcasts.copies.count, "podcast episode")) (\(Int64(podcasts.bytesToCopy).formatted(ByteCountFormatStyle(style: .file))))")
+        }
+        if applyRemovals && !podcasts.removals.isEmpty {
+            changes.append("remove \(Self.count(podcasts.removals.count, "podcast episode"))")
+        }
         // Housekeeping that copies nothing, named so the sentence never
         // says "nothing to do" while Sync has work.
         if !adoptions.isEmpty {
@@ -361,7 +370,8 @@ extension SyncPlan {
         let list = changes.count == 1 ? changes[0]
             : changes.dropLast().joined(separator: ", ") + " and " + changes[changes.count - 1]
         var text = "This sync will \(list)."
-        if unchangedCount + adoptions.count + audiobooks.unchangedBooks > 0 {
+        if unchangedCount + adoptions.count + audiobooks.unchangedBooks
+            + podcasts.unchangedEpisodes + podcasts.alreadyOnCard > 0 {
             text += " Everything else you chose is already on the card."
         }
         return text

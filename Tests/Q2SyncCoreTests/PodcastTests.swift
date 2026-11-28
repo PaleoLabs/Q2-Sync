@@ -417,3 +417,109 @@ struct PodcastPlannerTests {
         #expect(manifest.podcasts == nil)
     }
 }
+
+// MARK: - Executing, capacity, settings
+
+/// Runs a sync made only of this podcast plan.
+private func run(_ podcasts: PodcastPlan, manifest: SyncManifest, card: TestCard,
+                 removals: Bool = false) async throws -> SyncReport {
+    let logs = try makeTempFolder()
+    var syncPlan = SyncPlan()
+    syncPlan.podcasts = podcasts
+    var options = SyncOptions()
+    options.applyRemovals = removals
+    let executor = SyncExecutor(fileSystem: card.fileSystem, deviceName: "Test", logsDirectory: logs)
+    return await executor.run(plan: syncPlan, manifest: manifest, options: options) { _ in }
+}
+
+/// An episode whose file really exists on the "Mac".
+private func realEpisode(_ id: String, title: String, in mac: URL, bytes: Int = 6,
+                         state: PodcastPlayState = .unplayed) throws -> PodcastEpisode {
+    try Data(repeating: 7, count: bytes).write(to: mac.appending(path: "\(id).mp3"))
+    return episode(id, title: title, size: UInt64(bytes), state: state, folder: mac)
+}
+
+@Suite("Podcasts on the card: syncing")
+struct PodcastExecutorTests {
+
+    @Test("Copies and records episodes; a repeat sync does nothing; removals need Remove Them")
+    func roundTrip() async throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let mac = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: mac) }
+        try write(card, "Podcasts/The Daily/from q2-podcasts.mp3", bytes: 3)
+        let one = try realEpisode("1", title: "One", in: mac)
+        let two = try realEpisode("2", title: "Two", in: mac)
+
+        let first = plan([show([one, two])], card: card)
+        var report = try await run(first, manifest: SyncManifest(), card: card)
+        #expect(report.errors.isEmpty && report.podcastEpisodesCopied == 2)
+        var manifest = try SyncManifest.load(from: card.fileSystem)
+        #expect(manifest.podcasts?.count == 2)
+        let onePath = try #require(manifest.podcasts?["1"]?.path)
+        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: onePath).path))
+
+        #expect(plan([show([one, two])], card: card, manifest: manifest).isEmpty)
+
+        // "One" is played; with Unplayed only it's planned for removal.
+        let played = try realEpisode("1", title: "One", in: mac, state: .played)
+        let selection = PodcastSelection(isEnabled: true, unplayedOnly: true)
+        let second = plan([show([played, two])], selection, card: card, manifest: manifest)
+        #expect(second.removals.map(\.episodeID) == ["1"])
+        report = try await run(second, manifest: manifest, card: card, removals: false)
+        #expect(report.podcastEpisodesRemoved == 0)
+        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: onePath).path))
+
+        report = try await run(second, manifest: manifest, card: card, removals: true)
+        #expect(report.podcastEpisodesRemoved == 1)
+        manifest = try SyncManifest.load(from: card.fileSystem)
+        #expect(manifest.podcasts?.keys.sorted() == ["2"])
+        #expect(!FileManager.default.fileExists(atPath: card.root.appending(path: onePath).path))
+        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Podcasts/The Daily/from q2-podcasts.mp3").path))
+    }
+
+    @Test("A show folder emptied by removals goes; Podcasts itself stays")
+    func emptyFolder() async throws {
+        let card = try TestCard(); defer { card.cleanUp() }
+        let mac = try makeTempFolder(); defer { try? FileManager.default.removeItem(at: mac) }
+        let one = try realEpisode("1", title: "One", in: mac)
+        _ = try await run(plan([show([one])], card: card), manifest: SyncManifest(), card: card)
+        let manifest = try SyncManifest.load(from: card.fileSystem)
+        let report = try await run(plan([], card: card, manifest: manifest), manifest: manifest, card: card, removals: true)
+        #expect(report.podcastEpisodesRemoved == 1)
+        #expect(!FileManager.default.fileExists(atPath: card.root.appending(path: "Podcasts/The Daily").path))
+        #expect(FileManager.default.fileExists(atPath: card.root.appending(path: "Podcasts").path))
+    }
+
+    @Test("Auto-sync waits for review when episodes would be removed")
+    func autoSync() {
+        var syncPlan = SyncPlan()
+        syncPlan.podcasts.removals = [PodcastRemoval(episodeID: "1", showTitle: "S", title: "T", path: "Podcasts/S/T.mp3",
+                                                     cardSize: 1, reason: .played)]
+        guard case .needsReview = AutoSyncPolicy.decide(plan: syncPlan, assessment: SafetyAssessment()) else {
+            Issue.record("expected review"); return
+        }
+        #expect(syncPlan.summary(applyRemovals: true).contains("remove 1 podcast episode"))
+    }
+
+    @Test("Capacity: synced episodes are podcasts, unsynced ones count as removable, new ones as to add")
+    func capacity() {
+        var manifest = SyncManifest()
+        manifest.podcasts = ["1": record("Podcasts/The Daily/1.mp3", size: 100),
+                             "2": record("Podcasts/The Daily/2.mp3", size: 50)]
+        let shows = [show([episode("1", size: 100), episode("2", size: 50, state: .played), episode("3", size: 30)])]
+        let estimate = CapacityEstimate.compute(totalBytes: 10_000_000_000, freeBytes: 9_000_000_000, manifest: manifest,
+                                                selection: nil,
+                                                podcasts: (shows, PodcastSelection(isEnabled: true, unplayedOnly: true)))
+        #expect(estimate.podcastBytes == 100)
+        #expect(estimate.deselectedMusicBytes == 50)
+        #expect(estimate.toAddBytes == 30)
+    }
+
+    @Test("Podcast settings are part of a Q2's settings and choosesNothing")
+    func settings() {
+        var settings = DeviceSyncSettings(music: SyncSelection())
+        settings.podcasts = PodcastSelection(isEnabled: true)
+        #expect(!settings.podcasts.choosesNothing && !settings.choosesNothing)
+        #expect(settings.contentChoices.count == 3)
+    }
+}

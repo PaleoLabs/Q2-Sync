@@ -113,6 +113,13 @@ struct KnownDevice: Codable, Hashable, Identifiable, Sendable {
     /// The audiobook settings, or the default (off) if none were saved.
     var effectiveAudiobooks: AudiobookSelection { audiobooks ?? AudiobookSelection() }
 
+    /// What the Podcasts tab is set to. Optional so older `devices.json`
+    /// files still load. Use `effectivePodcasts`.
+    var podcasts: PodcastSelection?
+
+    /// The podcast settings, or the default (off) if none were saved.
+    var effectivePodcasts: PodcastSelection { podcasts ?? PodcastSelection() }
+
     var id: String { volumeUUID }
 
     /// This device's firmware profile.
