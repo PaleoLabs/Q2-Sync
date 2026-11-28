@@ -20,6 +20,7 @@
 //  Photos need Q2 Pod; on stock firmware the tab says so.
 //
 
+import AppKit
 import SwiftUI
 
 struct DevicePhotosView: View {
@@ -174,19 +175,33 @@ struct DevicePhotosView: View {
         }
     }
 
-    /// Where photos come from. Only the Photos library for now.
+    /// Where photos come from. Only the Photos library for now. A pop-up
+    /// menu like Finder's: Photos with its app icon and a tick, then
+    /// "Choose Folder…" (not yet available, so it can't be picked).
     private var sourceMenu: some View {
-        Menu {
-            Button { } label: { Label("Photos", systemImage: "checkmark") }
+        Picker("Copy photos from:", selection: .constant(0)) {
+            Label { Text("Photos") } icon: { Image(nsImage: Self.photosAppIcon) }
+                .tag(0)
             Divider()
-            Button("Choose Folder… (Coming Later)") { }
-                .disabled(true)
-        } label: {
-            Text("Photos")
+            Text("Choose Folder… (Coming Later)")
+                .tag(1)
+                .selectionDisabled()
         }
+        .labelsHidden()
         .fixedSize()
         .help("Copying photos from a folder instead of your Photos library is planned for a later version.")
     }
+
+    /// The Photos app's icon at menu size (a generic photo icon if Photos
+    /// can't be found).
+    private static let photosAppIcon: NSImage = {
+        let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Photos")
+            .map { NSWorkspace.shared.icon(forFile: $0.path) }
+            ?? NSImage(systemSymbolName: "photo.on.rectangle", accessibilityDescription: nil)
+            ?? NSImage()
+        icon.size = NSSize(width: 16, height: 16)
+        return icon
+    }()
 
     /// `true` if the card holds photos Q2 Sync copied there.
     private var hasQ2SyncPhotos: Bool {
